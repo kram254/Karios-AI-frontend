@@ -8,6 +8,16 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
-    port: 3000
+    port: 3000,
+    host: true, // Needed for Docker/Render deployment
+  },
+  preview: {
+    port: 3000,
+    host: true,
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: true,
   },
 });

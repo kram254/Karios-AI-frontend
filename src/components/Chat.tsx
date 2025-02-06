@@ -55,7 +55,7 @@ const Chat: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/retrieve", {
+      const response = await fetch("https://agentando-ai-backend-1.onrender.com/api/retrieve", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

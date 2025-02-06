@@ -30,7 +30,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, onSyst
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/admin/update-knowledge', {
+      const response = await fetch('https://agentando-ai-backend-1.onrender.com/api/admin/update-knowledge', {
         method: 'POST',
         body: formData,
       });

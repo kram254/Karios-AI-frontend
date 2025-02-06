@@ -8,11 +8,11 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Check if we're on the chat route
-  const isChat = window.location.pathname === '/chat';
+  // Check if we're on a valid route
+  const isValidRoute = window.location.pathname === '/chat' || window.location.pathname === '/';
 
-  if (!isChat) {
-    return null; // Don't render anything on non-chat routes
+  if (!isValidRoute) {
+    return null; // Don't render anything on non-valid routes
   }
 
   return (

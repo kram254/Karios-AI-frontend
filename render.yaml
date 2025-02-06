@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: aichat-frontend
+    name: agentando-frontend
     env: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
@@ -8,9 +8,9 @@ services:
       - key: NODE_VERSION
         value: 18.0.0
       - key: VITE_BACKEND_URL
-        value: https://aichat-backend.onrender.com
+        value: https://agentando-ai-backend.onrender.com
       - key: VITE_WS_URL
-        value: wss://aichat-backend.onrender.com
+        value: wss://agentando-ai-backend.onrender.com
     routes:
       - type: rewrite
         source: /*

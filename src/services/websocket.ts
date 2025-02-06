@@ -23,16 +23,26 @@ class WebSocketService {
   private responseResolver: ((value: Message) => void) | null = null;
 
   connect() {
-    this.socket = io('http://localhost:8000', {
+    const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    this.socket = io(wsUrl, {
       transports: ['websocket'],
       autoConnect: true,
       withCredentials: true,
-      reconnectionAttempts: 3,
-      timeout: 5000
+      reconnectionAttempts: 5,
+      timeout: 10000,
+      path: '/socket.io/',
+      forceNew: true
     });
 
     this.socket.on('connect', () => {
-      console.log('Connected to WebSocket');
+      console.log('Connected to WebSocket', this.socket?.id);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+      notify.error(`Connection error: ${error.message}`);
     });
 
     this.socket.on('message', (message: Message | string) => {
@@ -71,8 +81,10 @@ class WebSocketService {
 
   async sendMessage(message: ChatMessage): Promise<void> {
     if (!this.socket) {
+      console.error('WebSocket is not connected');
       throw new Error('WebSocket is not connected');
     }
+    console.log('Sending message:', message);
     this.socket.emit('message', message);
   }
 

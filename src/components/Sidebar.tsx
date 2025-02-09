@@ -1,8 +1,9 @@
-import React, { memo } from 'react';
-import { MessageSquare, Settings, Shield, ChevronLeft, ChevronRight, Plus, MessageCircle, Trash2, Edit2 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useChat } from '../context/ChatContext';
+import React, { useState } from 'react';
+import { PanelLeftOpen, PanelLeft, Plus, Settings as SettingsIcon, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { useChat } from '../context/ChatContext';
+import toast from 'react-hot-toast';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -10,138 +11,197 @@ interface SidebarProps {
   onOpenSettings: () => void;
 }
 
-const ConversationItem = memo(({ chat, onSelect, onDelete, onEdit, isActive }: {
-  chat: any;
-  onSelect: () => void;
-  onDelete: () => void;
-  onEdit: () => void;
-  isActive: boolean;
-}) => (
-  <motion.div
-    whileHover={{ scale: 1.01 }}
-    whileTap={{ scale: 0.99 }}
-    className={`w-full p-3 rounded-lg transition-colors group relative ${
-      isActive ? 'bg-[#1A1A1A]' : 'hover:bg-[#1A1A1A]'
-    }`}
-  >
-    <button
-      onClick={onSelect}
-      className="w-full flex items-center space-x-3 text-left"
-    >
-      <MessageCircle className={`w-5 h-5 ${isActive ? 'text-[#00F3FF]' : 'text-gray-400 group-hover:text-[#00F3FF]'}`} />
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-white truncate">{chat.title}</span>
-        <span className="text-xs text-gray-500">
-          {format(new Date(chat.updated_at), 'MMM d, yyyy')}
-        </span>
-      </div>
-    </button>
-    
-    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-      <button
-        onClick={onEdit}
-        className="p-1 hover:bg-[#2A2A2A] rounded-md"
-      >
-        <Edit2 className="w-4 h-4 text-gray-400 hover:text-[#00F3FF]" />
-      </button>
-      <button
-        onClick={onDelete}
-        className="p-1 hover:bg-[#2A2A2A] rounded-md"
-      >
-        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-400" />
-      </button>
-    </div>
-  </motion.div>
-));
-
 export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
   onOpenSettings,
 }) => {
-  const {
-    chats,
-    currentChat,
-    createNewChat,
-    setCurrentChat,
-    deleteChat,
-    updateChatTitle,
-  } = useChat();
+  const { chats, currentChat, setCurrentChat, createNewChat, deleteChat, updateChatTitle, loading } = useChat();
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
-  const handleNewChat = () => {
-    createNewChat();
-  };
-
-  const handleEditTitle = async (chatId: string) => {
-    const chat = chats.find(c => c.id === chatId);
-    if (!chat) return;
-
-    const newTitle = prompt('Enter new title:', chat.title);
-    if (newTitle && newTitle !== chat.title) {
-      await updateChatTitle(chatId, newTitle);
+  const handleCreateNewChat = async () => {
+    setIsCreatingChat(true);
+    try {
+      await createNewChat();
+    } finally {
+      setIsCreatingChat(false);
     }
   };
 
-  return (
-    <div
-      className={`${
-        isCollapsed ? 'w-16' : 'w-72'
-      } h-full flex flex-col bg-[#0A0A0A] border-r border-[#00F3FF]/20 transition-all duration-300 ease-in-out relative`}
-    >
-      <div className="p-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <MessageSquare className="w-6 h-6 text-[#00F3FF] flex-shrink-0" />
-          {!isCollapsed && <h1 className="text-xl font-bold text-white">Agentando AI</h1>}
-        </div>
+  const handleEditTitle = (chatId: string, currentTitle: string) => {
+    setEditingChatId(chatId);
+    setNewTitle(currentTitle);
+  };
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleNewChat}
-          className={`w-full p-2 bg-[#00F3FF] text-black rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center space-x-2 mb-4`}
+  const handleSaveTitle = async (chatId: string) => {
+    if (newTitle.trim()) {
+      await updateChatTitle(chatId, newTitle.trim());
+    }
+    setEditingChatId(null);
+    setNewTitle('');
+  };
+
+  const handleDeleteChat = async (chatId: string) => {
+    if (window.confirm('Are you sure you want to delete this chat?')) {
+      await deleteChat(chatId);
+    }
+  };
+
+  if (isCollapsed) {
+    return (
+      <div className="w-16 h-screen bg-[#0A0A0A] border-r border-[#00F3FF]/20 flex flex-col items-center py-4">
+        <button
+          onClick={onToggleCollapse}
+          className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors mb-4"
         >
-          <Plus className="w-5 h-5" />
-          {!isCollapsed && <span>New Chat</span>}
-        </motion.button>
+          <PanelLeft className="w-6 h-6 text-[#00F3FF]" />
+        </button>
+        <button
+          onClick={handleCreateNewChat}
+          disabled={isCreatingChat}
+          className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors mb-4"
+        >
+          {isCreatingChat ? (
+            <Loader2 className="w-6 h-6 text-[#00F3FF] animate-spin" />
+          ) : (
+            <Plus className="w-6 h-6 text-[#00F3FF]" />
+          )}
+        </button>
+        <button
+          onClick={onOpenSettings}
+          className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors mt-auto"
+        >
+          <SettingsIcon className="w-6 h-6 text-[#00F3FF]" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-80 h-screen bg-[#0A0A0A] border-r border-[#00F3FF]/20 flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-[#00F3FF]/20 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-white">Chats</h2>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleCreateNewChat}
+            disabled={isCreatingChat}
+            className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors"
+          >
+            {isCreatingChat ? (
+              <Loader2 className="w-5 h-5 text-[#00F3FF] animate-spin" />
+            ) : (
+              <Plus className="w-5 h-5 text-[#00F3FF]" />
+            )}
+          </button>
+          <button
+            onClick={onToggleCollapse}
+            className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors"
+          >
+            <PanelLeftOpen className="w-5 h-5 text-[#00F3FF]" />
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2">
-        {!isCollapsed && (
-          <div className="space-y-2">
-            {chats.map((chat) => (
-              <ConversationItem
-                key={chat.id}
-                chat={chat}
-                isActive={currentChat?.id === chat.id}
-                onSelect={() => setCurrentChat(chat)}
-                onDelete={() => deleteChat(chat.id)}
-                onEdit={() => handleEditTitle(chat.id)}
-              />
-            ))}
+      {/* Chat List */}
+      <div className="flex-1 overflow-y-auto py-4">
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="w-6 h-6 text-[#00F3FF] animate-spin" />
           </div>
+        ) : chats.length === 0 ? (
+          <div className="text-center p-4">
+            <p className="text-gray-400">No chats yet</p>
+            <button
+              onClick={handleCreateNewChat}
+              className="mt-2 text-[#00F3FF] hover:underline"
+            >
+              Start a new chat
+            </button>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {chats.map((chat) => (
+              <motion.div
+                key={chat.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className={`px-4 py-2 cursor-pointer group hover:bg-[#1A1A1A] transition-colors ${
+                  currentChat?.id === chat.id ? 'bg-[#1A1A1A]' : ''
+                }`}
+                onClick={() => setCurrentChat(chat)}
+              >
+                <div className="flex items-center justify-between">
+                  {editingChatId === chat.id ? (
+                    <div className="flex-1 flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        className="flex-1 bg-[#2A2A2A] text-white px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-[#00F3FF]"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleSaveTitle(chat.id)}
+                        className="p-1 hover:bg-[#2A2A2A] rounded"
+                      >
+                        <Check className="w-4 h-4 text-green-500" />
+                      </button>
+                      <button
+                        onClick={() => setEditingChatId(null)}
+                        className="p-1 hover:bg-[#2A2A2A] rounded"
+                      >
+                        <X className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex-1">
+                        <h3 className="text-white font-medium truncate">{chat.title}</h3>
+                        <p className="text-xs text-gray-400">
+                          {format(new Date(chat.updated_at), 'MMM d, h:mm a')}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditTitle(chat.id, chat.title);
+                          }}
+                          className="p-1 hover:bg-[#2A2A2A] rounded"
+                        >
+                          <Edit2 className="w-4 h-4 text-[#00F3FF]" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteChat(chat.id);
+                          }}
+                          className="p-1 hover:bg-[#2A2A2A] rounded"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         )}
       </div>
 
+      {/* Footer */}
       <div className="p-4 border-t border-[#00F3FF]/20">
         <button
           onClick={onOpenSettings}
-          className="w-full p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors flex items-center justify-center space-x-2"
+          className="w-full py-2 px-4 bg-[#1A1A1A] text-white rounded-lg hover:bg-[#2A2A2A] transition-colors flex items-center justify-center space-x-2"
         >
-          <Settings className="w-5 h-5 text-[#00F3FF]" />
-          {!isCollapsed && <span className="text-white">Settings</span>}
-        </button>
-        <button
-          onClick={onToggleCollapse}
-          className="w-full p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors flex items-center justify-center space-x-2 mt-2"
-        >
-          {isCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-[#00F3FF]" />
-          ) : (
-            <>
-              <ChevronLeft className="w-5 h-5 text-[#00F3FF]" />
-              <span className="text-white">Collapse</span>
-            </>
-          )}
+          <SettingsIcon className="w-5 h-5" />
+          <span>Settings</span>
         </button>
       </div>
     </div>

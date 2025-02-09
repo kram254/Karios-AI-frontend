@@ -3,17 +3,29 @@ import { MessageSquare, Send, X, Plus, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { FileUpload } from "./FileUpload";
 import { notify } from "../services/notifications";
+import { useChat } from "../context/ChatContext";
+import { motion } from "framer-motion";
+import toast from 'react-hot-toast';
 
 interface Message {
   id: string;
   content: string;
-  type: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system";
   timestamp: Date;
 }
 
+interface ChatContext {
+  currentChat: {
+    id: string;
+    title: string;
+    messages: Message[];
+  };
+  addMessage: (message: Message) => void;
+}
+
 const Chat: React.FC = () => {
+  const { currentChat, addMessage } = useChat() as ChatContext;
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
@@ -21,18 +33,19 @@ const Chat: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [currentChat?.messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSystemMessage = (message: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        content: message,
-        type: "system",
-        timestamp: new Date(),
-      },
-    ]);
+    addMessage({
+      id: Date.now().toString(),
+      content: message,
+      role: "system",
+      timestamp: new Date(),
+    });
   };
 
   const handleFileUploadComplete = (documentId: string) => {
@@ -41,166 +54,146 @@ const Chat: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !currentChat) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       content: input,
-      type: "user",
+      role: "user",
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    addMessage(userMessage);
     setInput("");
     setLoading(true);
 
     try {
-      const response = await fetch("https://agentando-ai-backend.onrender.com/api/retrieve", {
+      const response = await fetch("/api/chat/message", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: input,
+          message: input,
+          chat_id: currentChat.id,
           document_id: currentDocumentId
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get response from AI");
+        throw new Error("Failed to send message");
       }
 
       const data = await response.json();
       
-      const aiMessage: Message = {
-        id: Date.now().toString() + "-ai",
-        content: data.response || "I apologize, but I couldn't process that request.",
-        type: "assistant",
+      addMessage({
+        id: Date.now().toString(),
+        content: data.response,
+        role: "assistant",
         timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
+      });
     } catch (error) {
-      console.error("Error in chat:", error);
-      notify.error("Failed to get response from AI");
-      
-      const errorMessage: Message = {
-        id: Date.now().toString() + "-error",
-        content: "I apologize, but I encountered an error processing your request. Please try again.",
-        type: "system",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message");
     } finally {
       setLoading(false);
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  if (!currentChat) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[#0A0A0A]">
+        <div className="text-center">
+          <MessageCircle className="w-12 h-12 text-[#00F3FF] mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Welcome to Agentando AI</h2>
+          <p className="text-gray-400">Select a chat from the sidebar or start a new conversation</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col h-full">
-        {/* Message List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message) => (
+    <div className="flex-1 flex flex-col bg-[#0A0A0A]">
+      {/* Chat Header */}
+      <div className="border-b border-[#00F3FF]/20 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <MessageSquare className="w-6 h-6 text-[#00F3FF]" />
+          <h2 className="text-lg font-semibold text-white">{currentChat.title}</h2>
+        </div>
+        <button
+          onClick={() => setShowFileUpload(true)}
+          className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors"
+        >
+          <Plus className="w-5 h-5 text-[#00F3FF]" />
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {currentChat.messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${
+              message.role === "assistant" ? "justify-start" : "justify-end"
+            }`}
+          >
             <div
-              key={message.id}
-              className={`flex ${
-                message.type === "user" ? "justify-end" : "justify-start"
+              className={`max-w-[80%] p-3 rounded-lg ${
+                message.role === "assistant"
+                  ? "bg-[#1A1A1A] text-white"
+                  : "bg-[#00F3FF] text-black"
               }`}
             >
-              <div
-                className={`max-w-[80%] p-3 rounded-lg ${
-                  message.type === "user"
-                    ? "bg-[#00F3FF]/10 text-white"
-                    : message.type === "system"
-                    ? "bg-[#2A2A2A] text-[#00F3FF]"
-                    : "bg-[#1A1A1A] text-white"
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                <div className="text-xs mt-1 text-gray-500">
-                  {format(message.timestamp, "HH:mm")}
-                </div>
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] p-3 rounded-lg bg-[#1A1A1A] text-white">
-                <div className="typing-indicator">
-                  <div className="dot"></div>
-                  <div className="dot"></div>
-                  <div className="dot"></div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* File Upload Modal */}
-        {showFileUpload && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center p-6">
-            <div className="bg-[#1A1A1A] rounded-lg p-6 max-w-2xl w-full">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-white">Upload Files</h2>
-                <button
-                  onClick={() => setShowFileUpload(false)}
-                  className="p-1 hover:bg-[#2A2A2A] rounded-full transition-colors"
-                >
-                  <X className="w-6 h-6 text-[#00F3FF]" />
-                </button>
-              </div>
-              <FileUpload
-                onUploadComplete={handleFileUploadComplete}
-                onSystemMessage={handleSystemMessage}
-              />
+              <p className="whitespace-pre-wrap">{message.content}</p>
+              <span className="text-xs opacity-50 mt-1 block">
+                {format(new Date(message.timestamp), "HH:mm")}
+              </span>
             </div>
           </div>
-        )}
-
-        {/* Input Area */}
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (input.trim()) {
-              handleSendMessage();
-            }
-          }}
-          className="p-4 border-t border-[#00F3FF]/20"
-        >
-          <div className="flex space-x-4">
-            <button
-              type="button"
-              onClick={() => setShowFileUpload(true)}
-              className="px-4 py-2 bg-[#1A1A1A] text-white rounded-lg hover:bg-[#2A2A2A] transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 bg-[#1A1A1A] text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#00F3FF]/50"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="px-6 py-2 bg-[#00F3FF] text-black rounded-lg hover:bg-[#00F3FF]/90 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span>Send</span>
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-        </form>
+        ))}
+        <div ref={messagesEndRef} />
       </div>
+
+      {/* Input */}
+      <div className="border-t border-[#00F3FF]/20 p-4">
+        <div className="flex space-x-4">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+            placeholder="Type your message..."
+            className="flex-1 bg-[#1A1A1A] text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#00F3FF]"
+            disabled={loading}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={loading || !input.trim()}
+            className="p-2 bg-[#00F3FF] text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* File Upload Modal */}
+      {showFileUpload && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+          <div className="bg-[#1A1A1A] p-6 rounded-lg w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Upload Document</h3>
+              <button
+                onClick={() => setShowFileUpload(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <FileUpload 
+              onUploadComplete={handleFileUploadComplete} 
+              onSystemMessage={handleSystemMessage}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

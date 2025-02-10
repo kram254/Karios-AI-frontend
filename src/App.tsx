@@ -8,13 +8,6 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Check if we're on a valid route
-  const isValidRoute = window.location.pathname === '/chat' || window.location.pathname === '/';
-
-  if (!isValidRoute) {
-    return null; // Don't render anything on non-valid routes
-  }
-
   return (
     <div className="h-screen bg-[#0A0A0A] text-white flex overflow-hidden">
       <Sidebar

@@ -9,20 +9,19 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
-    <div className="h-screen bg-[#0A0A0A] text-white flex overflow-hidden">
+    <main className="h-screen w-screen flex bg-[#0A0A0A]">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Chat />
       </div>
       <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <Toaster 
         position="top-right"
         toastOptions={{
-          className: 'bg-[#1A1A1A] text-white border border-[#00F3FF]/20',
           style: {
             background: '#1A1A1A',
             color: '#fff',
@@ -30,7 +29,7 @@ function App() {
           },
         }}
       />
-    </div>
+    </main>
   );
 }
 

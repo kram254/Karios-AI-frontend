@@ -3,8 +3,16 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    @apply h-full w-full m-0 p-0;
+  }
+
   body {
     @apply bg-[#0A0A0A] text-white;
+  }
+
+  #root {
+    @apply h-full w-full;
   }
 }
 
@@ -40,17 +48,6 @@
 
   .typing-indicator span:nth-child(3) {
     animation-delay: 0.4s;
-  }
-
-  @keyframes typing {
-    0%, 100% {
-      transform: translateY(0);
-      opacity: 0.4;
-    }
-    50% {
-      transform: translateY(-4px);
-      opacity: 1;
-    }
   }
 
   /* Custom Range Input Styling */
@@ -135,14 +132,22 @@
   }
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 12px rgba(0, 243, 255, 0.333), inset 0 0 8px rgba(0, 243, 255, 0.2);
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
   }
   50% {
-    box-shadow: 0 0 16px rgba(0, 243, 255, 0.5), inset 0 0 12px rgba(0, 243, 255, 0.3);
+    transform: translateY(-4px);
+    opacity: 1;
   }
-  100% {
-    box-shadow: 0 0 12px rgba(0, 243, 255, 0.333), inset 0 0 8px rgba(0, 243, 255, 0.2);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }

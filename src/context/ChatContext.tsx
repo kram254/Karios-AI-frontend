@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import { API_ENDPOINTS, getApiUrl, handleApiError } from '../config/api';
 
 interface Message {
   id: string;
@@ -44,7 +43,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadChats = async () => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl(API_ENDPOINTS.CHATS));
+      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/chat/chats');
       if (!response.ok) throw new Error('Failed to load chats');
       const data = await response.json();
       setChats(data);
@@ -55,7 +54,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error loading chats:', error);
-      toast.error(handleApiError(error));
+      toast.error('Failed to load chats');
     } finally {
       setLoading(false);
     }
@@ -63,19 +62,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createNewChat = async () => {
     try {
-      const response = await fetch(getApiUrl(API_ENDPOINTS.CHATS), {
+      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/chat/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'New Chat' })
       });
+      
       if (!response.ok) throw new Error('Failed to create chat');
+      
       const newChat = await response.json();
       setChats(prev => [newChat, ...prev]);
       setCurrentChat(newChat);
       toast.success('New chat created');
     } catch (error) {
       console.error('Error creating chat:', error);
-      toast.error(handleApiError(error));
+      toast.error('Failed to create chat');
     }
   };
 
@@ -96,7 +97,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     try {
-      const response = await fetch(getApiUrl(`${API_ENDPOINTS.CHATS}/${currentChat.id}/messages`), {
+      const response = await fetch(import.meta.env.VITE_BACKEND_URL + `/chat/chats/${currentChat.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(message)
@@ -120,15 +121,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     } catch (error) {
       console.error('Error saving message:', error);
-      toast.error(handleApiError(error));
+      toast.error('Failed to save message');
     }
   };
 
   const deleteChat = async (chatId: string) => {
     try {
-      const response = await fetch(getApiUrl(`${API_ENDPOINTS.CHATS}/${chatId}`), { 
-        method: 'DELETE' 
+      const response = await fetch(import.meta.env.VITE_BACKEND_URL + `/chat/chats/${chatId}`, {
+        method: 'DELETE'
       });
+      
       if (!response.ok) throw new Error('Failed to delete chat');
       
       setChats(prev => prev.filter(chat => chat.id !== chatId));
@@ -138,13 +140,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Chat deleted successfully');
     } catch (error) {
       console.error('Error deleting chat:', error);
-      toast.error(handleApiError(error));
+      toast.error('Failed to delete chat');
     }
   };
 
   const updateChatTitle = async (chatId: string, title: string) => {
     try {
-      const response = await fetch(getApiUrl(`${API_ENDPOINTS.CHATS}/${chatId}/title`), {
+      const response = await fetch(import.meta.env.VITE_BACKEND_URL + `/chat/chats/${chatId}/title`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title })
@@ -165,7 +167,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Chat title updated');
     } catch (error) {
       console.error('Error updating chat title:', error);
-      toast.error(handleApiError(error));
+      toast.error('Failed to update chat title');
     }
   };
 

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, X, Plus, MessageCircle, Loader2 } from "lucide-react";
+import { MessageSquare, Send, X, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { FileUpload } from "./FileUpload";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
-import { API_ENDPOINTS, getApiUrl, handleApiError } from '../config/api';
 
 interface Message {
   id: string;
@@ -14,19 +13,8 @@ interface Message {
   timestamp: Date;
 }
 
-interface ChatContext {
-  currentChat: {
-    id: string;
-    title: string;
-    messages: Message[];
-  };
-  addMessage: (message: Message) => void;
-  loading: boolean;
-  createNewChat: () => void;
-}
-
 const Chat: React.FC = () => {
-  const { currentChat, addMessage, loading, createNewChat } = useChat() as ChatContext;
+  const { currentChat, addMessage, loading, createNewChat } = useChat();
   const [input, setInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
@@ -53,7 +41,6 @@ const Chat: React.FC = () => {
   const handleFileUploadComplete = (documentId: string) => {
     setCurrentDocumentId(documentId);
     setShowFileUpload(false);
-    toast.success('Document uploaded successfully');
   };
 
   const handleSendMessage = async () => {
@@ -66,12 +53,12 @@ const Chat: React.FC = () => {
       timestamp: new Date()
     };
 
-    addMessage(userMessage);
-    setInput("");
-    setSendingMessage(true);
-
     try {
-      const response = await fetch(getApiUrl(API_ENDPOINTS.MESSAGES), {
+      setSendingMessage(true);
+      addMessage(userMessage);
+      setInput("");
+
+      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/chat/message', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -95,7 +82,7 @@ const Chat: React.FC = () => {
       });
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error(handleApiError(error));
+      toast.error("Failed to send message");
     } finally {
       setSendingMessage(false);
     }
@@ -103,9 +90,9 @@ const Chat: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0A0A0A]">
+      <div className="flex-1 flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#00F3FF] mx-auto mb-4 animate-spin" />
+          <Loader2 className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-spin" />
           <p className="text-gray-400">Loading chats...</p>
         </div>
       </div>
@@ -114,14 +101,13 @@ const Chat: React.FC = () => {
 
   if (!currentChat) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#0A0A0A]">
+      <div className="flex-1 flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <MessageCircle className="w-12 h-12 text-[#00F3FF] mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Welcome to Agentando AI</h2>
           <p className="text-gray-400 mb-6">Start a new conversation or select a chat from the sidebar</p>
           <button
             onClick={() => createNewChat()}
-            className="px-4 py-2 bg-[#00F3FF] text-black rounded-lg hover:opacity-90 transition-opacity"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
             Start New Chat
           </button>
@@ -131,18 +117,18 @@ const Chat: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-[#0A0A0A]">
+    <div className="flex-1 flex flex-col bg-gray-900">
       {/* Chat Header */}
-      <div className="border-b border-[#00F3FF]/20 p-4 flex items-center justify-between">
+      <div className="border-b border-gray-700 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <MessageSquare className="w-6 h-6 text-[#00F3FF]" />
+          <MessageSquare className="w-6 h-6 text-blue-500" />
           <h2 className="text-lg font-semibold text-white">{currentChat.title}</h2>
         </div>
         <button
           onClick={() => setShowFileUpload(true)}
-          className="p-2 hover:bg-[#1A1A1A] rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
         >
-          <Plus className="w-5 h-5 text-[#00F3FF]" />
+          <Plus className="w-5 h-5 text-blue-500" />
         </button>
       </div>
 
@@ -160,8 +146,8 @@ const Chat: React.FC = () => {
             <div
               className={`max-w-[80%] p-3 rounded-lg ${
                 message.role === "assistant"
-                  ? "bg-[#1A1A1A] text-white"
-                  : "bg-[#00F3FF] text-black"
+                  ? "bg-gray-800 text-white"
+                  : "bg-blue-500 text-white"
               }`}
             >
               <p className="whitespace-pre-wrap">{message.content}</p>
@@ -175,7 +161,7 @@ const Chat: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="border-t border-[#00F3FF]/20 p-4">
+      <div className="border-t border-gray-700 p-4">
         <div className="flex space-x-4">
           <input
             type="text"
@@ -183,19 +169,15 @@ const Chat: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
             placeholder="Type your message..."
-            className="flex-1 bg-[#1A1A1A] text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#00F3FF]"
+            className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={sendingMessage}
           />
           <button
             onClick={handleSendMessage}
             disabled={sendingMessage || !input.trim()}
-            className="p-2 bg-[#00F3FF] text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative"
+            className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
           >
-            {sendingMessage ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
+            <Send className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -203,7 +185,7 @@ const Chat: React.FC = () => {
       {/* File Upload Modal */}
       {showFileUpload && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-[#1A1A1A] p-6 rounded-lg w-full max-w-md">
+          <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">Upload Document</h3>
               <button

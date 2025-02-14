@@ -6,7 +6,8 @@ interface Message {
   id: string;
   content: string;
   role: "user" | "assistant" | "system";
-  timestamp: Date;
+  created_at: string;
+  chat_id?: string;
 }
 
 interface Chat {
@@ -22,8 +23,8 @@ interface ChatContextType {
   chats: Chat[];
   loading: boolean;
   setCurrentChat: (chat: Chat | null) => void;
-  createNewChat: () => Promise<void>;
-  addMessage: (message: Message) => void;
+  createNewChat: () => Promise<Chat>;
+  addMessage: (message: { role: "user" | "assistant" | "system"; content: string }) => Promise<void>;
   loadChats: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
@@ -43,18 +44,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadChats = async () => {
     try {
       setLoading(true);
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/chat/chats');
-      if (!response.ok) throw new Error('Failed to load chats');
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/chats`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to load chats');
+      }
       const data = await response.json();
-      setChats(data);
       
-      // If there are chats but no current chat selected, select the first one
-      if (data.length > 0 && !currentChat) {
-        setCurrentChat(data[0]);
+      // Sort chats by updated_at in descending order
+      const sortedChats = data.sort((a: Chat, b: Chat) => 
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+      
+      setChats(sortedChats);
+      
+      if (sortedChats.length > 0 && !currentChat) {
+        setCurrentChat(sortedChats[0]);
       }
     } catch (error) {
       console.error('Error loading chats:', error);
-      toast.error('Failed to load chats');
+      toast.error(error instanceof Error ? error.message : 'Failed to load chats. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -62,104 +71,135 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createNewChat = async () => {
     try {
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/chat/chats', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'New Chat' })
       });
       
-      if (!response.ok) throw new Error('Failed to create chat');
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to create chat');
+      }
       
-      const newChat = await response.json();
+      const newChat: Chat = await response.json();
       setChats(prev => [newChat, ...prev]);
       setCurrentChat(newChat);
       toast.success('New chat created');
+      return newChat;
     } catch (error) {
       console.error('Error creating chat:', error);
-      toast.error('Failed to create chat');
+      toast.error(error instanceof Error ? error.message : 'Failed to create chat. Please try again.');
+      throw error;
     }
   };
 
-  const addMessage = async (message: Message) => {
-    if (!currentChat) return;
+  const addMessage = async (message: { role: "user" | "assistant" | "system"; content: string }) => {
+    if (!currentChat) {
+      try {
+        const newChat = await createNewChat();
+        setCurrentChat(newChat);
+      } catch (error) {
+        console.error('Error creating new chat for message:', error);
+        return;
+      }
+    }
 
-    const updatedChat = {
-      ...currentChat,
-      messages: [...currentChat.messages, message],
+    const chatToUpdate = currentChat!;
+    const optimisticMessage: Message = {
+      id: Date.now().toString(),
+      content: message.content,
+      role: message.role,
+      created_at: new Date().toISOString(),
+      chat_id: chatToUpdate.id
+    };
+
+    const updatedChat: Chat = {
+      ...chatToUpdate,
+      messages: [...chatToUpdate.messages, optimisticMessage],
       updated_at: new Date().toISOString()
     };
 
+    // Optimistic update
     setCurrentChat(updatedChat);
-    setChats(prev => 
-      prev.map(chat => 
-        chat.id === updatedChat.id ? updatedChat : chat
-      )
-    );
+    setChats(prev => prev.map(chat => 
+      chat.id === updatedChat.id ? updatedChat : chat
+    ));
 
     try {
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + `/chat/chats/${currentChat.id}/messages`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/chats/${chatToUpdate.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(message)
       });
       
-      if (!response.ok) throw new Error('Failed to save message');
-      const data = await response.json();
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to save message');
+      }
       
-      // Update chat with server response
-      const serverUpdatedChat = {
-        ...currentChat,
-        messages: data.messages,
-        updated_at: data.updated_at
-      };
-      
-      setCurrentChat(serverUpdatedChat);
-      setChats(prev => 
-        prev.map(chat => 
-          chat.id === serverUpdatedChat.id ? serverUpdatedChat : chat
-        )
-      );
+      const data: Chat = await response.json();
+      setCurrentChat(data);
+      setChats(prev => prev.map(chat => 
+        chat.id === data.id ? data : chat
+      ));
     } catch (error) {
       console.error('Error saving message:', error);
-      toast.error('Failed to save message');
+      toast.error(error instanceof Error ? error.message : 'Failed to save message. Please try again.');
+      
+      // Revert optimistic update on error
+      setCurrentChat(chatToUpdate);
+      setChats(prev => prev.map(chat => 
+        chat.id === chatToUpdate.id ? chatToUpdate : chat
+      ));
     }
   };
 
   const deleteChat = async (chatId: string) => {
     try {
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + `/chat/chats/${chatId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/chats/${chatId}`, {
         method: 'DELETE'
       });
       
-      if (!response.ok) throw new Error('Failed to delete chat');
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to delete chat');
+      }
       
       setChats(prev => prev.filter(chat => chat.id !== chatId));
       if (currentChat?.id === chatId) {
-        setCurrentChat(null);
+        const remainingChats = chats.filter(chat => chat.id !== chatId);
+        setCurrentChat(remainingChats.length > 0 ? remainingChats[0] : null);
       }
       toast.success('Chat deleted successfully');
     } catch (error) {
       console.error('Error deleting chat:', error);
-      toast.error('Failed to delete chat');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete chat. Please try again.');
     }
   };
 
   const updateChatTitle = async (chatId: string, title: string) => {
+    if (!title.trim()) {
+      toast.error('Chat title cannot be empty');
+      return;
+    }
+
     try {
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + `/chat/chats/${chatId}/title`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/chats/${chatId}/title`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title })
+        body: JSON.stringify({ title: title.trim() })
       });
       
-      if (!response.ok) throw new Error('Failed to update chat title');
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to update chat title');
+      }
       
-      const updatedChat = await response.json();
-      setChats(prev => 
-        prev.map(chat => 
-          chat.id === chatId ? updatedChat : chat
-        )
-      );
+      const updatedChat: Chat = await response.json();
+      setChats(prev => prev.map(chat => 
+        chat.id === chatId ? updatedChat : chat
+      ));
       
       if (currentChat?.id === chatId) {
         setCurrentChat(updatedChat);
@@ -167,7 +207,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Chat title updated');
     } catch (error) {
       console.error('Error updating chat title:', error);
-      toast.error('Failed to update chat title');
+      toast.error(error instanceof Error ? error.message : 'Failed to update chat title. Please try again.');
     }
   };
 

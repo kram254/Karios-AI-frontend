@@ -73,8 +73,10 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, onSyst
   return (
     <div className="w-full space-y-4">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-8 transition-colors ${
-          isDragging ? 'border-[#00F3FF] bg-[#00F3FF]/5' : 'border-[#00F3FF]/20'
+        className={`relative border-2 border-dashed rounded-lg p-8 transition-all duration-300 ${
+          isDragging 
+            ? 'border-[#00F3FF] bg-[#00F3FF]/5 shadow-[0_0_15px_rgba(0,243,255,0.3)]' 
+            : 'border-[#00F3FF]/20 hover:border-[#00F3FF]/40 hover:shadow-[0_0_10px_rgba(0,243,255,0.2)]'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -90,16 +92,16 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, onSyst
         />
         <label
           htmlFor="file-upload"
-          className="flex flex-col items-center justify-center cursor-pointer"
+          className="flex flex-col items-center justify-center cursor-pointer group"
         >
-          <Upload className="w-12 h-12 text-[#00F3FF] mb-4" />
-          <p className="text-white text-center mb-2">
+          <Upload className="w-12 h-12 text-[#00F3FF] mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]" />
+          <p className="text-white text-center mb-2 font-medium">
             Drag and drop files here or click to browse
           </p>
-          <p className="text-sm text-[#00F3FF]/60">
+          <p className="text-sm text-[#00F3FF]/60 transition-colors duration-300 group-hover:text-[#00F3FF]/80">
             Supported formats: PDF, DOCX, TXT, JPG, JPEG, PNG
           </p>
-          <p className="text-xs text-[#00F3FF]/60 mt-1">
+          <p className="text-xs text-[#00F3FF]/60 mt-1 transition-colors duration-300 group-hover:text-[#00F3FF]/80">
             Maximum file size: 20MB
           </p>
         </label>
@@ -115,12 +117,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, onSyst
                 key={`${file.name}-${index}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between p-2 rounded-lg bg-[#1A1A1A] border border-[#00F3FF]/20"
+                className="flex items-center justify-between p-3 rounded-lg bg-[#1A1A1A] border border-[#00F3FF]/20 backdrop-blur-sm transition-all duration-300 hover:border-[#00F3FF]/40 hover:shadow-[0_0_10px_rgba(0,243,255,0.2)]"
               >
                 <span className="text-sm text-white truncate">{file.name}</span>
                 <button
                   onClick={() => removeFile(index)}
-                  className="p-1 hover:bg-[#2A2A2A] rounded-full transition-colors"
+                  className="p-1.5 hover:bg-[#2A2A2A] rounded-full transition-all duration-300 hover:shadow-[0_0_8px_rgba(0,243,255,0.3)]"
                 >
                   <X className="w-4 h-4 text-[#00F3FF]" />
                 </button>
@@ -131,8 +133,8 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, onSyst
       )}
 
       {isUploading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00F3FF]"></div>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#00F3FF] border-t-transparent shadow-[0_0_15px_rgba(0,243,255,0.3)]"></div>
         </div>
       )}
     </div>

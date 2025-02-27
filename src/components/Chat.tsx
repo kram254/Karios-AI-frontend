@@ -10,13 +10,17 @@ interface Message {
   id: string;
   content: string;
   role: "user" | "assistant" | "system";
-  timestamp: Date;
+  timestamp?: Date | string;
+  created_at?: string;
+  chat_id?: string;
 }
 
 interface Chat {
   id: string;
   title: string;
   messages: Message[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 const Chat: React.FC = () => {
@@ -95,7 +99,24 @@ const Chat: React.FC = () => {
             >
               <p className="whitespace-pre-wrap">{msg.content}</p>
               <div className="mt-2 text-xs opacity-70">
-                {format(new Date(msg.timestamp), "MMM d, yyyy HH:mm")}
+                {(() => {
+                  try {
+                    // Check if timestamp is a string (from API) or a Date object
+                    const date = msg.timestamp instanceof Date 
+                      ? msg.timestamp 
+                      : new Date(msg.timestamp || msg.created_at || Date.now());
+                    
+                    // Verify if the date is valid before formatting
+                    if (isNaN(date.getTime())) {
+                      return 'Invalid date';
+                    }
+                    
+                    return format(date, "MMM d, yyyy HH:mm");
+                  } catch (error) {
+                    console.error('Error formatting date:', error);
+                    return 'Unknown time';
+                  }
+                })()}
               </div>
             </div>
           </motion.div>

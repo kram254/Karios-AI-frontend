@@ -12,7 +12,7 @@ export class ApiService {
             headers: {
                 'Content-Type': 'application/json',
             },
-            withCredentials: true, // Handle CORS
+            withCredentials: false, // Disable credentials to avoid CORS preflight
         });
 
         this.api.interceptors.request.use(

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { format } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -18,13 +19,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { chats, currentChat, createNewChat, setCurrentChat } = useChat();
   const navigate = useNavigate();
   const location = useLocation();
+  const [creatingChat, setCreatingChat] = useState(false);
 
   const handleCreateNewChat = async () => {
+    if (creatingChat) return;
+    
     try {
+      setCreatingChat(true);
       await createNewChat();
       navigate('/chat');
+      toast.success('New chat created successfully');
     } catch (error) {
       console.error('Error creating new chat:', error);
+      toast.error('Failed to create new chat. Please try again.');
+    } finally {
+      setCreatingChat(false);
     }
   };
 
@@ -57,47 +66,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* New Chat Button */}
       <button
         onClick={handleCreateNewChat}
-        className="m-4 p-3 bg-cyan-500 text-black rounded-lg hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+        disabled={creatingChat}
+        className={`flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+          creatingChat ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        <Plus className="w-5 h-5" />
-        {!isCollapsed && <span>New Chat</span>}
+        <Plus className="w-5 h-5 text-cyan-500" />
+        {!isCollapsed && <span className="ml-3">New Chat</span>}
       </button>
 
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
-        {chats.map((chat) => (
-          <button
-            key={chat.id}
-            onClick={() => handleChatSelect(chat)}
-            className={`w-full p-4 flex items-center gap-3 hover:bg-[#2A2A2A] transition-colors ${
-              currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : ''
-            }`}
-          >
-            <MessageSquare className="w-5 h-5 shrink-0" />
-            {!isCollapsed && (
-              <div className="flex-1 text-left truncate">
-                <p className="truncate">{chat.title || 'New Chat'}</p>
-                <p className="text-xs text-gray-400 truncate">
-                  {chat.messages.length > 0
-                    ? chat.messages[chat.messages.length - 1].content
-                    : 'No messages'}
-                </p>
-              </div>
-            )}
-          </button>
-        ))}
+        {chats && chats.length > 0 ? (
+          chats.map((chat) => (
+            <button
+              key={chat.id}
+              onClick={() => handleChatSelect(chat)}
+              className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+                currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : ''
+              }`}
+            >
+              <MessageSquare className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+              {!isCollapsed && (
+                <div className="ml-3 text-left overflow-hidden">
+                  <div className="font-medium truncate">{chat.title}</div>
+                  <div className="text-sm text-gray-400 truncate">
+                    {chat.messages && chat.messages.length > 0
+                      ? chat.messages[chat.messages.length - 1]?.content.substring(0, 30) + '...'
+                      : 'No messages yet'}
+                  </div>
+                </div>
+              )}
+            </button>
+          ))
+        ) : (
+          !isCollapsed && (
+            <div className="p-4 text-gray-400 text-center">No chats yet</div>
+          )
+        )}
       </div>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-[#2A2A2A]">
-        <button
-          onClick={onSettingsClick}
-          className="w-full p-3 flex items-center gap-3 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-          {!isCollapsed && <span>Settings</span>}
-        </button>
-      </div>
+      {/* Settings Button */}
+      <button
+        onClick={onSettingsClick}
+        className="flex items-center p-4 hover:bg-[#2A2A2A] transition-colors border-t border-[#2A2A2A]"
+      >
+        <Settings className="w-5 h-5 text-cyan-500" />
+        {!isCollapsed && <span className="ml-3">Settings</span>}
+      </button>
     </aside>
   );
 };

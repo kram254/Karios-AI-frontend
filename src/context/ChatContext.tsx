@@ -6,9 +6,9 @@ interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant' | 'system';
-  timestamp: Date;
+  timestamp?: Date | string;
+  created_at?: string;
   chat_id?: string;
-  created_at?: string; // For backend compatibility
 }
 
 interface Chat {
@@ -57,8 +57,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading chats:', err);
+      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
       setError('Failed to load chats');
       toast.error('Failed to load chats');
     } finally {
@@ -69,8 +70,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createNewChat = async () => {
     try {
       setLoading(true);
+      console.log('Attempting to create a new chat...');
       const response = await api.createChat('New Chat');
-      console.log('Chat created:', response.data);
+      console.log('Chat created response:', response);
       
       const newChat = response.data;
       setChats(prev => [newChat, ...prev]);
@@ -78,8 +80,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast.success('New chat created');
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error creating chat:', err);
+      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
       setError('Failed to create chat');
       toast.error('Failed to create chat');
       throw err;
@@ -92,8 +95,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!currentChat) {
       try {
         await createNewChat();
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error creating new chat for message:', err);
+        console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
         return;
       }
     }
@@ -104,7 +108,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: tempId,
       content,
       role,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       chat_id: currentChat?.id
     };
 
@@ -132,8 +137,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
       
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error sending message:', err);
+      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
       setError('Failed to send message');
       toast.error('Failed to send message');
       
@@ -162,8 +168,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       toast.success('Chat deleted');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error deleting chat:', err);
+      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
       toast.error('Failed to delete chat');
     }
   };
@@ -182,8 +189,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       toast.success('Chat title updated');
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error updating chat title:', err);
+      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
       toast.error('Failed to update chat title');
     }
   };

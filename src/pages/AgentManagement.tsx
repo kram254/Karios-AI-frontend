@@ -2,26 +2,31 @@ import React, { useState, useEffect } from 'react';
 import {
     Box,
     Container,
-    Grid,
     Typography,
     Button,
     Tab,
     Tabs,
     Paper,
     Alert,
-    Snackbar
+    Snackbar,
+    CircularProgress
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { AgentCreationWizard } from '../components/agent/AgentCreationWizard';
 import { AgentStatusMonitor } from '../components/agent/AgentStatusMonitor';
 import { TestInterface } from '../components/agent/TestInterface';
 import { KnowledgeSelector } from '../components/knowledge/KnowledgeSelector';
-import { Agent, AgentStatus, AgentTestResult } from '../types/agent';
+import { Agent, AgentStatus, AgentTestResult, AgentMetrics } from '../types/agent';
+import { agentService } from '../services/api/agent.service';
 
 interface TabPanelProps {
     children?: React.ReactNode;
     index: number;
     value: number;
+}
+
+interface ExtendedAgent extends Agent {
+    metrics?: AgentMetrics;
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
@@ -33,90 +38,80 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 export const AgentManagement: React.FC = () => {
     const [currentTab, setCurrentTab] = useState(0);
     const [showWizard, setShowWizard] = useState(false);
-    const [agents, setAgents] = useState<Agent[]>([]);
-    const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+    const [agents, setAgents] = useState<ExtendedAgent[]>([]);
+    const [selectedAgent, setSelectedAgent] = useState<ExtendedAgent | null>(null);
     const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<number[]>([]);
+    const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState<{
         message: string;
         type: 'success' | 'error';
         open: boolean;
     }>({ message: '', type: 'success', open: false });
 
-    // Mock functions - replace with actual API calls
     const fetchAgents = async () => {
-        // Simulated API response
-        const mockAgents: Agent[] = [
-            {
-                id: 1,
-                name: "Sales Assistant",
-                status: AgentStatus.ACTIVE,
-                config: {
-                    model: "gpt-4",
-                    temperature: 0.7,
-                    language: "en",
-                    response_style: "professional"
-                },
-                created_at: new Date().toISOString(),
-                last_active: new Date().toISOString(),
-                metrics: {
-                    success_rate: 95.5,
-                    total_requests: 1000,
-                    avg_response_time: 1.2,
-                    total_tokens: 50000
-                }
+        setLoading(true);
+        try {
+            const response = await agentService.getAgents();
+            setAgents(response.data);
+            if (!selectedAgent && response.data.length > 0) {
+                setSelectedAgent(response.data[0]);
             }
-        ];
-        setAgents(mockAgents);
-        if (!selectedAgent && mockAgents.length > 0) {
-            setSelectedAgent(mockAgents[0]);
+        } catch (error) {
+            showNotification('Failed to fetch agents', 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleCreateAgent = async (agentData: Partial<Agent>) => {
         try {
-            // Simulate API call
-            const newAgent: Agent = {
-                id: agents.length + 1,
-                name: agentData.name || "New Agent",
-                status: AgentStatus.ACTIVE,
-                config: agentData.config || {
-                    model: "gpt-4",
-                    temperature: 0.7,
-                    language: "en",
-                    response_style: "professional"
-                },
-                created_at: new Date().toISOString(),
-                last_active: new Date().toISOString(),
-                metrics: {
-                    success_rate: 0,
-                    total_requests: 0,
-                    avg_response_time: 0,
-                    total_tokens: 0
-                }
-            };
-            
-            setAgents([...agents, newAgent]);
-            setSelectedAgent(newAgent);
+            const response = await agentService.createAgent(agentData.config!);
+            setAgents([...agents, response.data]);
+            setSelectedAgent(response.data);
             setShowWizard(false);
             showNotification('Agent created successfully!', 'success');
+
+            if (selectedKnowledgeIds.length > 0) {
+                await agentService.assignKnowledge(response.data.id, selectedKnowledgeIds);
+            }
         } catch (error) {
             showNotification('Failed to create agent', 'error');
         }
     };
 
     const handleTest = async (input: string): Promise<AgentTestResult> => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        return {
-            success: true,
-            response: "This is a simulated response from the AI agent. I understand you're interested in our products. How can I help you today?",
-            tokens_used: 150,
-            response_time: 1200
-        };
+        if (!selectedAgent) {
+            throw new Error('No agent selected');
+        }
+        
+        try {
+            const response = await agentService.testAgent(selectedAgent.id, input);
+            return response.data;
+        } catch (error) {
+            throw new Error('Failed to test agent');
+        }
     };
 
     const handleRefresh = async () => {
-        await fetchAgents();
+        if (selectedAgent) {
+            try {
+                const [agentResponse, statsResponse] = await Promise.all([
+                    agentService.getAgents(),
+                    agentService.getAgentStats(selectedAgent.id)
+                ]);
+                
+                setAgents(agentResponse.data);
+                const updatedAgent = agentResponse.data.find(a => a.id === selectedAgent.id);
+                if (updatedAgent) {
+                    setSelectedAgent({
+                        ...updatedAgent,
+                        metrics: statsResponse.data
+                    });
+                }
+            } catch (error) {
+                showNotification('Failed to refresh agent data', 'error');
+            }
+        }
     };
 
     const showNotification = (message: string, type: 'success' | 'error') => {
@@ -126,6 +121,14 @@ export const AgentManagement: React.FC = () => {
     useEffect(() => {
         fetchAgents();
     }, []);
+
+    if (loading && agents.length === 0) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress sx={{ color: '#00F3FF' }} />
+            </Box>
+        );
+    }
 
     return (
         <Container maxWidth="xl">
@@ -216,13 +219,11 @@ export const AgentManagement: React.FC = () => {
                 )}
             </Box>
 
-            {showWizard && (
-                <AgentCreationWizard
-                    open={showWizard}
-                    onClose={() => setShowWizard(false)}
-                    onCreate={handleCreateAgent}
-                />
-            )}
+            <AgentCreationWizard
+                isOpen={showWizard}
+                onClose={() => setShowWizard(false)}
+                onCreate={handleCreateAgent}
+            />
 
             <Snackbar
                 open={notification.open}

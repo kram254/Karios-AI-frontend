@@ -1,98 +1,103 @@
-import React, { useState } from 'react';
-import { MessageSquare, Plus, Settings as SettingsIcon, Shield, ChevronLeft } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
+import React from 'react';
+import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
-import toast from 'react-hot-toast';
+import { format } from 'date-fns';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
-  onOpenSettings: () => void;
   isCollapsed: boolean;
-  onToggleCollapse: () => void;
+  onCollapse: () => void;
+  onSettingsClick: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, isCollapsed, onToggleCollapse }) => {
-  const { chats, currentChat, setCurrentChat, createNewChat, loading } = useChat();
-  const [isCreatingChat, setIsCreatingChat] = useState(false);
+export const Sidebar: React.FC<SidebarProps> = ({
+  isCollapsed,
+  onCollapse,
+  onSettingsClick,
+}) => {
+  const { chats, currentChat, createNewChat, setCurrentChat } = useChat();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleCreateNewChat = async () => {
-    setIsCreatingChat(true);
     try {
       await createNewChat();
+      navigate('/chat');
     } catch (error) {
-      toast.error('Failed to create new chat');
-    } finally {
-      setIsCreatingChat(false);
+      console.error('Error creating new chat:', error);
     }
   };
 
+  const handleChatSelect = (chat: any) => {
+    setCurrentChat(chat);
+    navigate('/chat');
+  };
+
   return (
-    <div className={`flex flex-col h-full bg-[#1A1A1A] border-r border-[#2A2A2A] transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
-      <div className="flex items-center justify-between p-4">
-        {!isCollapsed && <h2 className="text-lg font-semibold text-white">Chats</h2>}
+    <aside
+      className={`bg-[#0A0A0A] text-white border-r border-[#2A2A2A] transition-all duration-300 flex flex-col ${
+        isCollapsed ? 'w-20' : 'w-64'
+      }`}
+    >
+      {/* Header */}
+      <div className="p-4 border-b border-[#2A2A2A] flex items-center justify-between">
+        {!isCollapsed && <h1 className="text-xl font-bold">Chats</h1>}
         <button
-          onClick={onToggleCollapse}
+          onClick={onCollapse}
           className="p-2 hover:bg-[#2A2A2A] rounded-lg transition-colors"
         >
-          <ChevronLeft className={`h-5 w-5 text-gray-400 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+          {isCollapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <ChevronLeft className="w-5 h-5" />
+          )}
         </button>
       </div>
 
+      {/* New Chat Button */}
+      <button
+        onClick={handleCreateNewChat}
+        className="m-4 p-3 bg-cyan-500 text-black rounded-lg hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+      >
+        <Plus className="w-5 h-5" />
+        {!isCollapsed && <span>New Chat</span>}
+      </button>
+
+      {/* Chat List */}
       <div className="flex-1 overflow-y-auto">
-        <AnimatePresence>
-          {chats.map((chat) => (
-            <motion.div
-              key={chat.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className={`cursor-pointer p-3 ${
-                currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : 'hover:bg-[#2A2A2A]'
-              } transition-colors`}
-              onClick={() => setCurrentChat(chat)}
-            >
-              {!isCollapsed ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <MessageSquare className="h-5 w-5 text-gray-400" />
-                    <span className="text-sm text-gray-300 truncate">{chat.title || 'New Chat'}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-gray-500">
-                    {format(new Date(chat.created_at), 'MMM d, yyyy')}
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-center">
-                  <MessageSquare className="h-5 w-5 text-gray-400" />
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        {chats.map((chat) => (
+          <button
+            key={chat.id}
+            onClick={() => handleChatSelect(chat)}
+            className={`w-full p-4 flex items-center gap-3 hover:bg-[#2A2A2A] transition-colors ${
+              currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : ''
+            }`}
+          >
+            <MessageSquare className="w-5 h-5 shrink-0" />
+            {!isCollapsed && (
+              <div className="flex-1 text-left truncate">
+                <p className="truncate">{chat.title || 'New Chat'}</p>
+                <p className="text-xs text-gray-400 truncate">
+                  {chat.messages.length > 0
+                    ? chat.messages[chat.messages.length - 1].content
+                    : 'No messages'}
+                </p>
+              </div>
+            )}
+          </button>
+        ))}
       </div>
 
+      {/* Footer */}
       <div className="p-4 border-t border-[#2A2A2A]">
         <button
-          onClick={handleCreateNewChat}
-          disabled={loading || isCreatingChat}
-          className={`w-full flex items-center justify-center gap-2 p-2 ${
-            isCollapsed ? '' : 'px-4'
-          } bg-cyan-500 hover:bg-cyan-600 text-black rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+          onClick={onSettingsClick}
+          className="w-full p-3 flex items-center gap-3 hover:bg-[#2A2A2A] rounded-lg transition-colors"
         >
-          <Plus className="h-5 w-5" />
-          {!isCollapsed && <span>New Chat</span>}
-        </button>
-        
-        <button
-          onClick={onOpenSettings}
-          className={`mt-2 w-full flex items-center justify-center gap-2 p-2 ${
-            isCollapsed ? '' : 'px-4'
-          } text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors`}
-        >
-          <SettingsIcon className="h-5 w-5" />
+          <Settings className="w-5 h-5" />
           {!isCollapsed && <span>Settings</span>}
         </button>
       </div>
-    </div>
+    </aside>
   );
 };

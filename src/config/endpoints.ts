@@ -1,90 +1,116 @@
+// Configuration of endpoints for different environments
+interface ChatEndpoints {
+  GET_ALL_CHATS: string;
+  CREATE_CHAT: string;
+  GET_CHAT: (id: string) => string;
+  DELETE_CHAT: (id: string) => string;
+  UPDATE_CHAT_TITLE: (id: string) => string;
+  ADD_MESSAGE: (id: string) => string;
+}
+
+interface AdminEndpoints {
+  GET_ALL_AGENTS: string;
+  CREATE_AGENT: string;
+  GET_AGENT: (id: string) => string;
+  UPDATE_AGENT: (id: string) => string;
+  DELETE_AGENT: (id: string) => string;
+}
+
+interface RetrieveEndpoints {
+  SEARCH: string;
+}
+
+interface EndpointsConfig {
+  API_BASE_URL: string;
+  CHAT_ENDPOINTS: ChatEndpoints;
+  ADMIN_ENDPOINTS: AdminEndpoints;
+  RETRIEVE_ENDPOINTS: RetrieveEndpoints;
+}
+
+// Environment types
 export enum Environment {
-  PRODUCTION = 'PRODUCTION',
-  DEV = 'DEV',
-  TEST = 'TEST'
+  DEVELOPMENT = 'development',
+  PRODUCTION = 'production',
 }
 
 export class Endpoints {
-  static environment: Environment = Environment.DEV;
+  // Current environment
+  public static environment: Environment = Environment.DEVELOPMENT;
 
-  static get SOCKET_PATH() {
-    switch (this.environment) {
-      case Environment.PRODUCTION:
-        return '/socket.io';
-      case Environment.DEV:
-        return '/socket.io';
-      case Environment.TEST:
-        return '/socket.io';
-      default:
-        throw new Error('Unknown environment');
-    }
+  // Endpoint configurations for each environment
+  private static configs: Record<Environment, EndpointsConfig> = {
+    [Environment.DEVELOPMENT]: {
+      API_BASE_URL: 'http://127.0.0.1:8000',
+      CHAT_ENDPOINTS: {
+        GET_ALL_CHATS: '/api/chat/chats',
+        CREATE_CHAT: '/api/chat/chats',
+        GET_CHAT: (id: string) => `/api/chat/chats/${id}`,
+        DELETE_CHAT: (id: string) => `/api/chat/chats/${id}`,
+        UPDATE_CHAT_TITLE: (id: string) => `/api/chat/chats/${id}/title`,
+        ADD_MESSAGE: (id: string) => `/api/chat/chats/${id}/messages`,
+      },
+      ADMIN_ENDPOINTS: {
+        GET_ALL_AGENTS: '/api/admin/agents',
+        CREATE_AGENT: '/api/admin/agents',
+        GET_AGENT: (id: string) => `/api/admin/agents/${id}`,
+        UPDATE_AGENT: (id: string) => `/api/admin/agents/${id}`,
+        DELETE_AGENT: (id: string) => `/api/admin/agents/${id}`,
+      },
+      RETRIEVE_ENDPOINTS: {
+        SEARCH: '/api/retrieve/search',
+      },
+    },
+    [Environment.PRODUCTION]: {
+      API_BASE_URL: 'https://agentando-ai-backend-updated.onrender.com',
+      CHAT_ENDPOINTS: {
+        GET_ALL_CHATS: '/api/chat/chats',
+        CREATE_CHAT: '/api/chat/chats',
+        GET_CHAT: (id: string) => `/api/chat/chats/${id}`,
+        DELETE_CHAT: (id: string) => `/api/chat/chats/${id}`,
+        UPDATE_CHAT_TITLE: (id: string) => `/api/chat/chats/${id}/title`,
+        ADD_MESSAGE: (id: string) => `/api/chat/chats/${id}/messages`,
+      },
+      ADMIN_ENDPOINTS: {
+        GET_ALL_AGENTS: '/api/admin/agents',
+        CREATE_AGENT: '/api/admin/agents',
+        GET_AGENT: (id: string) => `/api/admin/agents/${id}`,
+        UPDATE_AGENT: (id: string) => `/api/admin/agents/${id}`,
+        DELETE_AGENT: (id: string) => `/api/admin/agents/${id}`,
+      },
+      RETRIEVE_ENDPOINTS: {
+        SEARCH: '/api/retrieve/search',
+      },
+    },
+  };
+
+  // Get current config
+  public static get currentConfig(): EndpointsConfig {
+    return this.configs[this.environment];
   }
 
-  static get BASE_URL() {
-    switch (this.environment) {
-      case Environment.PRODUCTION:
-        return 'https://agentando-ai-backend.onrender.com';
-      case Environment.DEV:
-        return 'https://agentando-ai-backend-updated.onrender.com';
-      case Environment.TEST:
-        return 'http://localhost:8000';
-      default:
-        throw new Error('Unknown environment');
-    }
-  }
-
-  static get SOCKET_URL() {
-    return this.BASE_URL;
-  }
-
-  // Log configuration for debugging
-  static logConfig() {
-    console.log('=== API Configuration ===');
-    console.log('Environment:', this.environment);
-    console.log('Base URL:', this.BASE_URL);
-    console.log('Socket URL:', this.SOCKET_URL);
-    console.log('Socket Path:', this.SOCKET_PATH);
-    console.log('=======================');
-  }
-
-  // Chat Endpoints
-  static get CHAT_ENDPOINTS() {
-    return {
-      CREATE_CHAT: `${this.BASE_URL}/api/chat/chats`,
-      GET_ALL_CHATS: `${this.BASE_URL}/api/chat/chats`,
-      GET_CHAT: (chatId: string) => `${this.BASE_URL}/api/chat/chats/${chatId}`,
-      DELETE_CHAT: (chatId: string) => `${this.BASE_URL}/api/chat/chats/${chatId}`,
-      UPDATE_CHAT_TITLE: (chatId: string) => `${this.BASE_URL}/api/chat/chats/${chatId}/title`,
-      ADD_MESSAGE: (chatId: string) => `${this.BASE_URL}/api/chat/chats/${chatId}/messages`,
-      GET_CHAT_STATUS: `${this.BASE_URL}/api/chat/status`,
-      GET_SYSTEM_MESSAGE: `${this.BASE_URL}/api/chat/system-message`,
-      UPDATE_SYSTEM_MESSAGE: `${this.BASE_URL}/api/chat/system-message`
-    };
-  }
-
-  // Admin Endpoints
-  static get ADMIN_ENDPOINTS() {
-    return {
-      CREATE_AGENT: `${this.BASE_URL}/api/admin/agents`,
-      GET_ALL_AGENTS: `${this.BASE_URL}/api/admin/agents`,
-      GET_AGENT: (agentId: string) => `${this.BASE_URL}/api/admin/agents/${agentId}`,
-      UPDATE_AGENT: (agentId: string) => `${this.BASE_URL}/api/admin/agents/${agentId}`,
-      DELETE_AGENT: (agentId: string) => `${this.BASE_URL}/api/admin/agents/${agentId}`
-    };
-  }
-
-  // Retrieve Endpoints
-  static get RETRIEVE_ENDPOINTS() {
-    return {
-      SEARCH_KNOWLEDGE: `${this.BASE_URL}/api/retrieve/search`,
-      UPDATE_KNOWLEDGE: `${this.BASE_URL}/api/retrieve/update`,
-      GET_KNOWLEDGE_STATUS: `${this.BASE_URL}/api/retrieve/status`
-    };
-  }
-
-  // Helper method to switch environments
-  static setEnvironment(env: Environment) {
+  // Set environment
+  public static setEnvironment(env: Environment): void {
     this.environment = env;
-    this.logConfig();
+    console.log(`Environment set to ${env}`);
+  }
+
+  // Get API base URL
+  public static get API_BASE_URL(): string {
+    return this.currentConfig.API_BASE_URL;
+  }
+
+  // Get chat endpoints
+  public static get CHAT_ENDPOINTS(): ChatEndpoints {
+    return this.currentConfig.CHAT_ENDPOINTS;
+  }
+
+  // Get admin endpoints
+  public static get ADMIN_ENDPOINTS(): AdminEndpoints {
+    return this.currentConfig.ADMIN_ENDPOINTS;
+  }
+
+  // Get retrieve endpoints
+  public static get RETRIEVE_ENDPOINTS(): RetrieveEndpoints {
+    return this.currentConfig.RETRIEVE_ENDPOINTS;
   }
 }

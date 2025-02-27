@@ -1,28 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Paper,
-    Typography,
-    Box,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemIcon,
-    Checkbox,
-    TextField,
-    InputAdornment,
-    CircularProgress,
-    Chip,
-    Collapse
-} from '@mui/material';
-import {
-    Search as SearchIcon,
-    ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon,
-    Description as DocumentIcon,
-    Link as LinkIcon,
-    TextSnippet as TextIcon
-} from '@mui/icons-material';
-import { KnowledgeItem, ContentType } from '../../types/knowledge';
+import { Search, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import './KnowledgeSelector.css';
+
+interface KnowledgeBase {
+    id: number;
+    name: string;
+    description: string;
+    documentCount: number;
+}
 
 interface KnowledgeSelectorProps {
     selectedIds: number[];
@@ -33,174 +18,120 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
     selectedIds,
     onSelectionChange
 }) => {
-    const [items, setItems] = useState<KnowledgeItem[]>([]);
-    const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedCategories, setExpandedCategories] = useState<number[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
+    const [expandedItems, setExpandedItems] = useState<number[]>([]);
 
-    const getContentTypeIcon = (type: ContentType) => {
-        switch (type) {
-            case ContentType.FILE:
-                return <DocumentIcon />;
-            case ContentType.URL:
-                return <LinkIcon />;
-            case ContentType.TEXT:
-                return <TextIcon />;
+    useEffect(() => {
+        fetchKnowledgeBases();
+    }, []);
+
+    const fetchKnowledgeBases = async () => {
+        setLoading(true);
+        try {
+            // Mock data for now
+            const mockData: KnowledgeBase[] = [
+                { id: 1, name: 'Sales Scripts', description: 'Common sales scripts and responses', documentCount: 15 },
+                { id: 2, name: 'Product Knowledge', description: 'Detailed product information', documentCount: 25 },
+                { id: 3, name: 'FAQ', description: 'Frequently asked questions', documentCount: 30 }
+            ];
+            setKnowledgeBases(mockData);
+        } catch (error) {
+            console.error('Error fetching knowledge bases:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const getContentTypeColor = (type: ContentType) => {
-        switch (type) {
-            case ContentType.FILE:
-                return '#4CAF50';
-            case ContentType.URL:
-                return '#2196F3';
-            case ContentType.TEXT:
-                return '#FF9800';
-        }
-    };
-
-    const toggleCategory = (categoryId: number) => {
-        setExpandedCategories(prev => 
-            prev.includes(categoryId)
-                ? prev.filter(id => id !== categoryId)
-                : [...prev, categoryId]
+    const handleToggleExpand = (id: number) => {
+        setExpandedItems(prev => 
+            prev.includes(id) 
+                ? prev.filter(item => item !== id)
+                : [...prev, id]
         );
     };
 
-    const handleToggleItem = (itemId: number) => {
+    const handleToggleSelect = (id: number) => {
         onSelectionChange(
-            selectedIds.includes(itemId)
-                ? selectedIds.filter(id => id !== itemId)
-                : [...selectedIds, itemId]
+            selectedIds.includes(id)
+                ? selectedIds.filter(item => item !== id)
+                : [...selectedIds, id]
         );
     };
 
-    const filteredItems = items.filter(item =>
-        item.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.metadata?.title?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredKnowledgeBases = knowledgeBases.filter(kb =>
+        kb.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        kb.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
-        <Paper 
-            sx={{ 
-                bgcolor: '#1A1A1A',
-                color: '#FFFFFF',
-                border: '1px solid rgba(0, 243, 255, 0.2)',
-                p: 3
-            }}
-        >
-            <Typography variant="h6" gutterBottom>
-                Knowledge Base Selection
-            </Typography>
-
-            <TextField
-                fullWidth
-                placeholder="Search knowledge items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                    startAdornment: (
-                        <InputAdornment position="start">
-                            <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.5)' }} />
-                        </InputAdornment>
-                    )
-                }}
-                sx={{
-                    mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                        color: '#FFFFFF',
-                        '& fieldset': {
-                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                        },
-                        '&:hover fieldset': {
-                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                        },
-                        '&.Mui-focused fieldset': {
-                            borderColor: '#00F3FF'
-                        }
-                    }
-                }}
-            />
+        <div className="knowledge-selector">
+            <div className="search-container">
+                <div className="search-input-wrapper">
+                    <Search className="search-icon" size={20} />
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder="Search knowledge bases..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
 
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                    <CircularProgress sx={{ color: '#00F3FF' }} />
-                </Box>
+                <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <span>Loading knowledge bases...</span>
+                </div>
             ) : (
-                <List sx={{ maxHeight: '400px', overflow: 'auto' }}>
-                    {filteredItems.map(item => (
-                        <ListItem
-                            key={item.id}
-                            component="div"
-                            onClick={() => handleToggleItem(item.id)}
-                            sx={{
-                                borderRadius: 1,
-                                mb: 1,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    bgcolor: 'rgba(0, 243, 255, 0.1)'
-                                }
-                            }}
-                        >
-                            <ListItemIcon>
-                                <Checkbox
-                                    checked={selectedIds.includes(item.id)}
-                                    sx={{
-                                        color: 'rgba(0, 243, 255, 0.5)',
-                                        '&.Mui-checked': {
-                                            color: '#00F3FF'
-                                        }
-                                    }}
-                                />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary={item.metadata?.title || 'Untitled'}
-                                secondary={
-                                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                        <Chip
-                                            size="small"
-                                            icon={getContentTypeIcon(item.content_type)}
-                                            label={item.content_type}
-                                            sx={{
-                                                bgcolor: `${getContentTypeColor(item.content_type)}20`,
-                                                color: getContentTypeColor(item.content_type),
-                                                '& .MuiChip-icon': {
-                                                    color: getContentTypeColor(item.content_type)
-                                                }
-                                            }}
-                                        />
-                                        <Typography 
-                                            variant="body2" 
-                                            color="text.secondary"
-                                            sx={{ 
-                                                display: 'inline',
-                                                ml: 1
-                                            }}
-                                        >
-                                            Updated: {new Date(item.updated_at).toLocaleDateString()}
-                                        </Typography>
-                                    </Box>
-                                }
-                            />
-                        </ListItem>
+                <div className="knowledge-list">
+                    {filteredKnowledgeBases.map((kb) => (
+                        <div key={kb.id} className="knowledge-item">
+                            <div className="knowledge-header">
+                                <label className="checkbox-container">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(kb.id)}
+                                        onChange={() => handleToggleSelect(kb.id)}
+                                    />
+                                    <span className="checkmark"></span>
+                                </label>
+                                <div className="knowledge-info" onClick={() => handleToggleExpand(kb.id)}>
+                                    <div className="knowledge-title">
+                                        <span>{kb.name}</span>
+                                        <div className="knowledge-badges">
+                                            <span className="document-count">
+                                                <FileText size={16} />
+                                                {kb.documentCount}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        className="expand-button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleExpand(kb.id);
+                                        }}
+                                    >
+                                        {expandedItems.includes(kb.id) ? (
+                                            <ChevronUp size={20} />
+                                        ) : (
+                                            <ChevronDown size={20} />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                            {expandedItems.includes(kb.id) && (
+                                <div className="knowledge-details">
+                                    <p>{kb.description}</p>
+                                </div>
+                            )}
+                        </div>
                     ))}
-                </List>
+                </div>
             )}
-
-            {!loading && filteredItems.length === 0 && (
-                <Box 
-                    sx={{ 
-                        p: 3, 
-                        textAlign: 'center',
-                        color: 'text.secondary'
-                    }}
-                >
-                    <Typography>
-                        No knowledge items found
-                    </Typography>
-                </Box>
-            )}
-        </Paper>
+        </div>
     );
 };

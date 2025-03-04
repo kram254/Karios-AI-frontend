@@ -15,6 +15,8 @@ import { Login } from './pages/Login';
 import { PrivateRoute } from './components/auth/PrivateRoute';
 import { useAuth } from './context/AuthContext';
 import { UserRole } from './types/user';
+import { AgentChatInterface } from './components/agent/AgentChatInterface';
+import { AgentKnowledgeManager } from './pages/AgentKnowledgeManager';
 import './styles/theme.css';
 
 function App() {
@@ -46,27 +48,27 @@ function App() {
     return requiredRoles.includes(user.role);
   };
 
-  // // Render login page if not authenticated
-  // if (!isAuthenticated && location.pathname !== '/login') {
-  //   return (
-  //     <div className="app-container h-screen bg-[#0A0A0A] text-white">
-  //       <Toaster 
-  //         position="top-right"
-  //         toastOptions={{
-  //           style: {
-  //             background: '#1A1A1A',
-  //             color: '#fff',
-  //             border: '1px solid rgba(0, 243, 255, 0.2)',
-  //           },
-  //         }}
-  //       />
-  //       <Routes>
-  //         <Route path="/login" element={<Login />} />
-  //         <Route path="*" element={<Navigate to="/login" replace />} />
-  //       </Routes>
-  //     </div>
-  //   );
-  // }
+  // Render login page if not authenticated
+  if (!isAuthenticated && location.pathname !== '/login') {
+    return (
+      <div className="app-container h-screen bg-[#0A0A0A] text-white">
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#1A1A1A',
+              color: '#fff',
+              border: '1px solid rgba(0, 243, 255, 0.2)',
+            },
+          }}
+        />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container flex h-screen bg-[#0A0A0A] text-white">
@@ -88,7 +90,7 @@ function App() {
       <main className="flex-1 overflow-hidden">
         <Routes>
           {/* Public Routes */}
-          {/* <Route path="/login" element={<Login />} /> */}
+          <Route path="/login" element={<Login />} />
           
           {/* Protected Routes */}
           <Route element={<PrivateRoute />}>
@@ -97,6 +99,14 @@ function App() {
             
             {/* Chat */}
             <Route path="/chat" element={<Chat />} />
+            
+            {/* Agent Chat Interface */}
+            <Route path="/agent-chat/:agentId" element={
+              <AgentChatInterface agentId={Number(window.location.pathname.split('/').pop())} />
+            } />
+            
+            {/* Agent Knowledge Manager */}
+            <Route path="/agent-knowledge/:agentId" element={<AgentKnowledgeManager />} />
             
             {/* Agent Management */}
             <Route path="/agents" element={<AgentManagement />} />

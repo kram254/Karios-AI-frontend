@@ -49,9 +49,9 @@ export const userService = {
         api.post<RegisterResponse>('/api/v1/users/register', data),
 
     // User Hierarchy
-    getUserHierarchy: () =>
+    getUserHierarchy: () => 
         api.get<User[]>('/api/v1/users/hierarchy'),
-
+    
     // User Management
     createReseller: (data: {
         email: string;
@@ -59,8 +59,8 @@ export const userService = {
         name: string;
         initialCredits: number;
     }) =>
-        api.post<User>('/users/reseller', data),
-
+        api.post<User>('/api/v1/users/reseller', data),
+    
     createCustomer: (data: {
         email: string;
         password: string;
@@ -68,28 +68,28 @@ export const userService = {
         resellerId: number;
         initialCredits: number;
     }) =>
-        api.post<User>('/users/customer', data),
-
+        api.post<User>('/api/v1/users/customer', data),
+    
     updateUserStatus: (userId: number, status: UserStatus) =>
-        api.put(`/users/${userId}/status`, { status }),
-
+        api.put(`/api/v1/users/${userId}/status`, { status }),
+    
     // Credits Management
     addCredits: (userId: number, amount: number) =>
-        api.post(`/users/${userId}/credits/add`, { amount }),
-
+        api.post(`/api/v1/users/${userId}/credits/add`, { amount }),
+    
     deductCredits: (userId: number, amount: number) =>
-        api.post(`/users/${userId}/credits/deduct`, { amount }),
-
+        api.post(`/api/v1/users/${userId}/credits/deduct`, { amount }),
+    
     getCreditsHistory: (userId: number) =>
-        api.get(`/users/${userId}/credits/history`),
-
+        api.get(`/api/v1/users/${userId}/credits/history`),
+    
     // Permissions
     getUserPermissions: (userId: number) =>
-        api.get(`/users/${userId}/permissions`),
-
+        api.get(`/api/v1/users/${userId}/permissions`),
+    
     updateUserPermissions: (userId: number, permissions: string[]) =>
-        api.put(`/users/${userId}/permissions`, { permissions }),
-
+        api.put(`/api/v1/users/${userId}/permissions`, { permissions }),
+    
     // Profile Management
     updateProfile: (userId: number, data: {
         name?: string;
@@ -97,12 +97,14 @@ export const userService = {
         password?: string;
         settings?: Record<string, any>;
     }) =>
-        api.put(`/users/${userId}/profile`, data),
-
+        api.put(`/api/v1/users/${userId}/profile`, data),
+    
     // Session Management
     getCurrentUser: () =>
         api.get<User>('/api/v1/users/me'),
-
-    logout: () =>
-        api.post('/auth/logout', {}),
+    
+    logout: () => {
+        localStorage.removeItem('token');
+        return Promise.resolve();
+    }
 };

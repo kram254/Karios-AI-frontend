@@ -26,15 +26,15 @@ export interface ActionType {
 }
 
 export interface AgentConfig {
-    model: string;
-    temperature: number;
-    max_tokens: number;
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
     language: string;
     mode: AgentMode;
     response_style: number; // 0-1 scale, 0 = formal, 1 = casual
     response_length: number;
-    knowledge_base_ids: number[];
-    actions: string[];
+    knowledge_item_ids?: number[];
+    actions?: string[];
     system_prompt?: string;
     webhook_url?: string;
     additional_context?: string;

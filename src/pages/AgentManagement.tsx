@@ -65,7 +65,7 @@ export const AgentManagement: React.FC = () => {
 
     const handleCreateAgent = async (agentData: Partial<Agent>) => {
         try {
-            const response = await agentService.createAgent(agentData.config!);
+            const response = await agentService.createAgent(agentData as any);
             setAgents([...agents, response.data]);
             setSelectedAgent(response.data);
             setShowWizard(false);
@@ -75,6 +75,7 @@ export const AgentManagement: React.FC = () => {
                 await agentService.assignKnowledge(response.data.id, selectedKnowledgeIds);
             }
         } catch (error) {
+            console.error('Agent creation error:', error);
             showNotification('Failed to create agent', 'error');
         }
     };

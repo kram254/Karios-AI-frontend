@@ -6,37 +6,49 @@ const api = ApiService.getInstance().getApi();
 export const agentService = {
     // Agent List Management
     getAgents: () => 
-        api.get<Agent[]>('/agents/list'),
+        api.get<Agent[]>('/api/v1/agents/list'),
+
+    getAgentById: (id: string) => 
+        api.get<Agent>(`/api/v1/agents/${id}`),
 
     // Agent Creation and Configuration
-    createAgent: (config: AgentConfig) =>
-        api.post<Agent>('/agents/create', config),
+    createAgent: (agentData: AgentConfig) =>
+        api.post<Agent>('/api/v1/agents/create', agentData),
+
+    updateAgent: (id: string, data: Partial<Agent>) =>
+        api.put<Agent>(`/api/v1/agents/${id}`, data),
 
     updateAgentConfig: (id: number, config: Partial<AgentConfig>) =>
-        api.put<Agent>(`/agents/${id}/config`, config),
+        api.put<Agent>(`/api/v1/agents/${id}/config`, config),
 
     updateAgentStatus: (id: number, status: AgentStatus) =>
-        api.put<Agent>(`/agents/${id}/status`, { status }),
+        api.put<Agent>(`/api/v1/agents/${id}/status`, { status }),
+
+    deleteAgent: (id: string) =>
+        api.delete(`/api/v1/agents/${id}`),
 
     // Agent Testing and Monitoring
     getAgentStats: (id: number) =>
-        api.get<AgentMetrics>(`/agents/${id}/stats`),
+        api.get<AgentMetrics>(`/api/v1/agents/${id}/stats`),
 
-    testAgent: (id: number, input: string) =>
-        api.post<AgentTestResult>(`/agents/${id}/test`, { input }),
+    getAgentMetrics: (id: string) =>
+        api.get<AgentMetrics>(`/api/v1/agents/${id}/metrics`),
+
+    testAgent: (id: string, input: string) =>
+        api.post<AgentTestResult>(`/api/v1/agents/${id}/test`, { input }),
 
     // Knowledge Base Integration
-    assignKnowledge: (agentId: number, knowledgeIds: number[]) =>
-        api.post(`/agents/${agentId}/knowledge`, { knowledge_ids: knowledgeIds }),
+    assignKnowledge: (agentId: string, knowledgeItemIds: number[]) =>
+        api.post(`/api/v1/agents/${agentId}/knowledge`, { knowledge_item_ids: knowledgeItemIds }),
 
     removeKnowledge: (agentId: number, knowledgeIds: number[]) =>
-        api.delete(`/agents/${agentId}/knowledge`, { 
+        api.delete(`/api/v1/agents/${agentId}/knowledge`, { 
             data: { knowledge_ids: knowledgeIds }
         }),
 
     // Custom Actions
     executeAction: (agentId: number, actionType: string, actionData: any) =>
-        api.post(`/agents/${agentId}/actions/${actionType}`, actionData),
+        api.post(`/api/v1/agents/${agentId}/actions/${actionType}`, actionData),
 
     // HTML Agent Specific
     updateHtmlConfig: (agentId: number, htmlConfig: {
@@ -44,5 +56,5 @@ export const agentService = {
         styling: string;
         settings: Record<string, any>;
     }) =>
-        api.put(`/agents/${agentId}/html-config`, htmlConfig),
+        api.put(`/api/v1/agents/${agentId}/html-config`, htmlConfig),
 };

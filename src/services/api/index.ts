@@ -37,8 +37,9 @@ export class ApiService {
                     console.error('Authentication error:', error);
                     // Clear token if it's invalid or expired
                     localStorage.removeItem('token');
-                    // Redirect to login page
-                    window.location.href = '/login';
+                    // Don't redirect to login - this causes issues with the app flow
+                    // Just log the error and let the component handle it
+                    console.warn('401 Unauthorized - Token may be invalid or expired');
                 }
                 return Promise.reject(error);
             }
@@ -61,8 +62,8 @@ export class ApiService {
         return this.api.get('/api/chat/chats');
     }
 
-    public async createChat(title: string = "New Chat") {
-        return this.api.post('/api/chat/chats', { title });
+    public async createChat(title: string = "New Chat", chat_type: string = "default") {
+        return this.api.post('/api/chat/chats', { title, chat_type });
     }
 
     public async getChat(chatId: string) {

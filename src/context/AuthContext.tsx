@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { userService } from '../services/api/user.service';
-import { User } from '../types/user';
+import { User, UserRole } from '../types/user';
+import axios from 'axios'; // Import axios
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -9,6 +10,7 @@ interface AuthContextType {
     register: (username: string, email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
+    checkToken: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -18,26 +20,14 @@ const AuthContext = createContext<AuthContextType>({
     register: async () => {},
     logout: async () => {},
     refreshUser: async () => {},
+    checkToken: () => false,
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // Always authenticated for testing
-    const [isAuthenticated, setIsAuthenticated] = useState(true);
-    
-    // Mock user data
-    const [user, setUser] = useState<User | null>({ 
-        id: 1, 
-        username: 'tempuser', 
-        email: 'temp@example.com', 
-        role: 'Customer' as UserRole, 
-        status: 'active',
-        credits_balance: 100,
-        parent_id: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-    });
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
     
     const [loading, setLoading] = useState(false);
 
@@ -57,17 +47,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
-        // Bypass token checking
-        console.log('Token check bypassed, using mock user');
-        /*
-        // Check if user is logged in on mount
+        // Activate token checking
         const token = localStorage.getItem('token');
         if (token) {
             fetchCurrentUser();
         } else {
             setLoading(false);
         }
-        */
     }, []);
 
     const login = async (username: string, password: string) => {
@@ -90,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 throw new Error('Login succeeded but failed to fetch user profile');
             }
         } catch (error) {
-            console.error('Login failed in auth context:', error);
+            console.error('Login error:', error);
             throw error;
         }
     };
@@ -102,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email,
                 password
             });
+            
             // Store the token from the response
             localStorage.setItem('token', response.data.access_token);
             setIsAuthenticated(true);
@@ -109,26 +96,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Fetch user data after successful registration
             await fetchCurrentUser();
         } catch (error) {
-            console.error('Registration failed:', error);
+            console.error('Registration error:', error);
             throw error;
         }
     };
 
     const logout = async () => {
-        // Just clear token but don't redirect
-        localStorage.removeItem('token');
-        console.log('Logged out (disabled)');
-        // Normally this would set isAuthenticated to false, but we're bypassing login
-        // setIsAuthenticated(false);
-        // setUser(null);
+        try {
+            localStorage.removeItem('token');
+            setIsAuthenticated(false);
+            setUser(null);
+        } catch (error) {
+            console.error('Logout error:', error);
+            throw error;
+        }
     };
 
     const refreshUser = async () => {
-        try {
-            await fetchCurrentUser();
-        } catch (error) {
-            console.error('Failed to refresh user data:', error);
+        await fetchCurrentUser();
+    };
+
+    const checkToken = () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            // Update authentication state if token exists
+            setIsAuthenticated(true);
+            // Also set the token in the axios instance
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            return true;
         }
+        return false;
     };
 
     if (loading) {
@@ -137,7 +134,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout, refreshUser }}>
+        <AuthContext.Provider value={{ 
+            isAuthenticated, 
+            user, 
+            login, 
+            register,
+            logout,
+            refreshUser,
+            checkToken 
+        }}>
             {children}
         </AuthContext.Provider>
     );

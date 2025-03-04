@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -7,8 +7,15 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, checkToken } = useAuth();
 
+  // When mounting the private route, ensure we check the token
+  useEffect(() => {
+    // Try to check the token, which will refresh authentication state if valid
+    checkToken();
+  }, [checkToken]);
+
+  // Allow all routes without authorization for now (comment this to enable authorization)
   // if (!isAuthenticated) {
   //   return <Navigate to="/login" />;
   // }

@@ -56,6 +56,15 @@ const Chat: React.FC = () => {
     }
   };
 
+  // Handle key press in the textarea (Ctrl+Enter or Enter to send)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // On Enter key (but not with Shift key) send the message
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // Prevent default to avoid new line
+      handleSubmit(e as unknown as React.FormEvent);
+    }
+  };
+
   // *Modizx* Added welcome screen when no chat is selected
   if (!currentChat) {
     return (
@@ -131,6 +140,7 @@ const Chat: React.FC = () => {
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Type your message..."
               className="w-full p-4 pr-12 bg-[#2A2A2A] text-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
               rows={1}

@@ -19,23 +19,23 @@ const api = ApiService.getInstance().getApi();
 export const categoryService = {
     // Category Management
     getCategories: () => 
-        api.get<Category[]>('/categories'),
+        api.get<Category[]>('/api/v1/knowledge/categories'),
 
     getCategoryById: (id: number) => 
-        api.get<Category>(`/categories/${id}`),
+        api.get<Category>(`/api/v1/knowledge/categories/${id}`),
 
     createCategory: (data: CategoryCreate) => 
-        api.post<Category>('/categories', data),
+        api.post<Category>('/api/v1/knowledge/categories', data),
 
     updateCategory: (id: number, data: CategoryUpdate) => 
-        api.put<Category>(`/categories/${id}`, data),
+        api.put<Category>(`/api/v1/knowledge/categories/${id}`, data),
 
     deleteCategory: (id: number) => 
-        api.delete(`/categories/${id}`),
+        api.delete(`/api/v1/knowledge/categories/${id}`),
 
     // Category Items
     getCategoryItems: (categoryId: number) => 
-        api.get(`/categories/${categoryId}/items`),
+        api.get(`/api/v1/knowledge/categories/${categoryId}/items`),
 
     // File Upload
     uploadFile: (categoryId: number, file: File, formData?: any) => {
@@ -48,7 +48,7 @@ export const categoryService = {
             });
         }
         
-        return api.post(`/categories/${categoryId}/upload`, data, {
+        return api.post(`/api/v1/knowledge/categories/${categoryId}/upload`, data, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -57,11 +57,11 @@ export const categoryService = {
 
     // URL Management
     addUrl: (categoryId: number, url: string, description?: string) => 
-        api.post(`/categories/${categoryId}/url`, { url, description }),
+        api.post(`/api/v1/knowledge/categories/${categoryId}/url`, { url, description }),
 
     // Text Content
     addTextContent: (categoryId: number, content: string, title: string) => 
-        api.post(`/categories/${categoryId}/text`, { content, title }),
+        api.post(`/api/v1/knowledge/categories/${categoryId}/text`, { content, title }),
 
-    deleteKnowledgeItem: (id: number) => api.delete(`/knowledge/${id}`),
+    deleteKnowledgeItem: (id: number) => api.delete(`/api/v1/knowledge/items/${id}`),
 };

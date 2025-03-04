@@ -140,17 +140,13 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
             // Prepare final agent data
             const finalAgentData = {
                 name: agentData.name,
-                description: agentData.description,
                 ai_role: agentData.ai_role,
-                config: {
-                    ...agentData.config,
-                    language: agentData.config.language,
-                    mode: agentData.config.mode,
-                    response_style: agentData.config.response_style,
-                    response_length: agentData.config.response_length,
-                    knowledge_base_ids: agentData.selected_knowledge_ids,
-                    actions: agentData.selected_action_types
-                }
+                language: agentData.config.language,
+                mode: agentData.config.mode,
+                response_style: agentData.config.response_style,
+                response_length: agentData.config.response_length,
+                owner_id: 1, // This will be ignored and replaced by the backend
+                knowledge_item_ids: agentData.selected_knowledge_ids,
             };
 
             await onCreate(finalAgentData);

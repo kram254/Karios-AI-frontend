@@ -71,7 +71,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       console.log('Attempting to create a new chat...');
-      const response = await api.createChat('New Chat');
+      const response = await api.createChat('New Chat', 'default');
       console.log('Chat created response:', response);
       
       const newChat = response.data;

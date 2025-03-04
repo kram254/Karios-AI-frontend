@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle } from 'lucide-react';
+import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { format } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -43,6 +43,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleChatSelect = (chat: any) => {
     setCurrentChat(chat);
     navigate('/chat');
+  };
+
+  const handleNavigateToAgents = async () => {
+    try {
+      console.log('Navigating to Agents page');
+      navigate('/agents', { replace: true });
+    } catch (error) {
+      console.error('Error navigating to agents:', error);
+      toast.error('Failed to navigate to agents page');
+    }
   };
 
   const isActive = (path: string) => {
@@ -97,13 +107,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Agent Management */}
         <button
-          onClick={() => navigate('/agents')}
+          onClick={handleNavigateToAgents}
           className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
             isActive('/agents') ? 'bg-[#2A2A2A]' : ''
           }`}
         >
           <Users className="w-5 h-5 text-cyan-500" />
           {!isCollapsed && <span className="ml-3">Agents</span>}
+        </button>
+
+        {/* Agent Chat */}
+        <button
+          onClick={() => navigate('/agent-chat')}
+          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+            location.pathname.includes('/agent-chat') ? 'bg-[#2A2A2A]' : ''
+          }`}
+        >
+          <Bot className="w-5 h-5 text-cyan-500" />
+          {!isCollapsed && <span className="ml-3">Agent Chat</span>}
         </button>
 
         {/* Knowledge Management */}
@@ -116,6 +137,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Database className="w-5 h-5 text-cyan-500" />
           {!isCollapsed && <span className="ml-3">Knowledge</span>}
         </button>
+
+        {/* Divider */}
+        <div className="py-2 border-b border-[#2A2A2A]" />
 
         {/* Dashboard - Only for SUPER_ADMIN, RESELLER or CUSTOMER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER, UserRole.CUSTOMER].includes(user.role) && (
@@ -188,10 +212,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && <span className="ml-3">Profile</span>}
         </button>
 
-        {/* Settings Button */}
+        {/* Settings */}
         <button
           onClick={onSettingsClick}
-          className="flex items-center p-4 hover:bg-[#2A2A2A] transition-colors border-t border-[#2A2A2A]"
+          className="w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors"
         >
           <Settings className="w-5 h-5 text-cyan-500" />
           {!isCollapsed && <span className="ml-3">Settings</span>}

@@ -23,9 +23,23 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Always authenticated for testing
+    const [isAuthenticated, setIsAuthenticated] = useState(true);
+    
+    // Mock user data
+    const [user, setUser] = useState<User | null>({ 
+        id: 1, 
+        username: 'tempuser', 
+        email: 'temp@example.com', 
+        role: 'Customer' as UserRole, 
+        status: 'active',
+        credits_balance: 100,
+        parent_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    });
+    
+    const [loading, setLoading] = useState(false);
 
     const fetchCurrentUser = async () => {
         try {
@@ -43,6 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
+        // Bypass token checking
+        console.log('Token check bypassed, using mock user');
+        /*
         // Check if user is logged in on mount
         const token = localStorage.getItem('token');
         if (token) {
@@ -50,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
             setLoading(false);
         }
+        */
     }, []);
 
     const login = async (username: string, password: string) => {
@@ -97,18 +115,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const logout = async () => {
-        try {
-            // No need for API call since we don't have a logout endpoint
-            localStorage.removeItem('token');
-            setIsAuthenticated(false);
-            setUser(null);
-        } catch (error) {
-            console.error('Logout failed:', error);
-            // Still remove token and user data on logout failure
-            localStorage.removeItem('token');
-            setIsAuthenticated(false);
-            setUser(null);
-        }
+        // Just clear token but don't redirect
+        localStorage.removeItem('token');
+        console.log('Logged out (disabled)');
+        // Normally this would set isAuthenticated to false, but we're bypassing login
+        // setIsAuthenticated(false);
+        // setUser(null);
     };
 
     const refreshUser = async () => {

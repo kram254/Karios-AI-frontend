@@ -9,9 +9,9 @@ interface PrivateRouteProps {
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
   const { isAuthenticated, user } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
+  // if (!isAuthenticated) {
+  //   return <Navigate to="/login" />;
+  // }
 
   // If there are allowed roles specified, check if the user has any of those roles
   if (allowedRoles && allowedRoles.length > 0 && user) {

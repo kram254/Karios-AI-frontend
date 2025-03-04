@@ -3,14 +3,69 @@ import Chat from "./components/Chat";
 import { Sidebar } from './components/Sidebar';
 import { Settings } from './components/Settings';
 import { Toaster } from 'react-hot-toast';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AgentManagement } from './pages/AgentManagement';
+import { SuperAdminDashboard } from './components/dashboard/SuperAdminDashboard';
+import { ResellerDashboard } from './components/dashboard/ResellerDashboard';
+import { CustomerDashboard } from './components/dashboard/CustomerDashboard';
+import { KnowledgeManagement } from './pages/KnowledgeManagement';
+import { UserManagement } from './pages/UserManagement';
+import { UserProfile } from './pages/UserProfile';
+import { Login } from './pages/Login';
+import { PrivateRoute } from './components/auth/PrivateRoute';
+import { useAuth } from './context/AuthContext';
+import { UserRole } from './types/user';
 import './styles/theme.css';
 
-// *Modizx* Removed ThemeProvider and added proper routing
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  // Determine which dashboard to show based on user role
+  const DashboardComponent = () => {
+    if (!user) return <Navigate to="/login" replace />;
+    
+    switch (user.role) {
+      case UserRole.SUPER_ADMIN:
+        return <SuperAdminDashboard />;
+      case UserRole.RESELLER:
+        return <ResellerDashboard />;
+      case UserRole.CUSTOMER:
+        return <CustomerDashboard />;
+      default:
+        return <Navigate to="/chat" replace />;
+    }
+  };
+
+  // Check if user has permission to access route
+  const canAccessRoute = (requiredRoles: UserRole[]) => {
+    if (!user) return false;
+    return requiredRoles.includes(user.role);
+  };
+
+  // Render login page if not authenticated
+  if (!isAuthenticated && location.pathname !== '/login') {
+    return (
+      <div className="app-container h-screen bg-[#0A0A0A] text-white">
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#1A1A1A',
+              color: '#fff',
+              border: '1px solid rgba(0, 243, 255, 0.2)',
+            },
+          }}
+        />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container flex h-screen bg-[#0A0A0A] text-white">
@@ -31,9 +86,38 @@ function App() {
       />
       <main className="flex-1 overflow-hidden">
         <Routes>
-          <Route path="/" element={<Navigate to="/chat" replace />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/agents" element={<AgentManagement />} />
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Protected Routes */}
+          <Route element={<PrivateRoute />}>
+            {/* Default route */}
+            <Route path="/" element={<Navigate to="/chat" replace />} />
+            
+            {/* Chat */}
+            <Route path="/chat" element={<Chat />} />
+            
+            {/* Agent Management */}
+            <Route path="/agents" element={<AgentManagement />} />
+            
+            {/* Knowledge Management */}
+            <Route path="/knowledge" element={<KnowledgeManagement />} />
+            
+            {/* Dashboard - Access based on role */}
+            <Route path="/dashboard" element={<DashboardComponent />} />
+            
+            {/* User Profile */}
+            <Route path="/profile" element={<UserProfile />} />
+          </Route>
+          
+          {/* Role-restricted Routes */}
+          <Route element={<PrivateRoute allowedRoles={[UserRole.SUPER_ADMIN, UserRole.RESELLER]} />}>
+            {/* User Management - Only for SUPER_ADMIN and RESELLER */}
+            <Route path="/users" element={<UserManagement />} />
+          </Route>
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
       </main>
       {isSettingsOpen && (

@@ -4,18 +4,53 @@ import { User, UserRole, UserStatus } from '../../types/user';
 const api = ApiService.getInstance().getApi();
 
 interface LoginResponse {
-    token: string;
-    user: User;
+    access_token: string;
+    token_type: string;
+}
+
+interface RegisterResponse {
+    access_token: string;
+    token_type: string;
 }
 
 export const userService = {
     // Authentication
-    login: (email: string, password: string) =>
-        api.post<LoginResponse>('/auth/login', { email, password }),
+    login: (username: string, password: string) => {
+        console.log('Login attempt for:', username);
+        
+        // Format the data as x-www-form-urlencoded for OAuth2 compatibility
+        const formData = new URLSearchParams();
+        formData.append('username', username.trim());
+        formData.append('password', password);
+        
+        return api.post<LoginResponse>('/api/v1/users/login', formData.toString(), {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        }).catch(error => {
+            console.error('Login error details:', error);
+            if (error.response) {
+                console.log('Error response:', error.response.data);
+                console.log('Error status:', error.response.status);
+            } else if (error.request) {
+                console.log('No response received:', error.request);
+            } else {
+                console.log('Error message:', error.message);
+            }
+            throw error;
+        });
+    },
+        
+    register: (data: {
+        email: string;
+        password: string;
+        username: string;
+    }) =>
+        api.post<RegisterResponse>('/api/v1/users/register', data),
 
     // User Hierarchy
     getUserHierarchy: () =>
-        api.get<User[]>('/users/hierarchy'),
+        api.get<User[]>('/api/v1/users/hierarchy'),
 
     // User Management
     createReseller: (data: {
@@ -66,7 +101,7 @@ export const userService = {
 
     // Session Management
     getCurrentUser: () =>
-        api.get<User>('/users/me'),
+        api.get<User>('/api/v1/users/me'),
 
     logout: () =>
         api.post('/auth/logout', {}),

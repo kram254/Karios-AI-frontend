@@ -1,0 +1,702 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    Box,
+    Paper,
+    Typography,
+    Button,
+    TextField,
+    Tabs,
+    Tab,
+    IconButton,
+    Grid,
+    Chip,
+    Tooltip,
+    Alert,
+    CircularProgress,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemIcon,
+    ListItemSecondaryAction,
+    Divider
+} from '@mui/material';
+import {
+    Add as AddIcon,
+    Delete as DeleteIcon,
+    Edit as EditIcon,
+    Upload as UploadIcon,
+    Link as LinkIcon,
+    Description as DescriptionIcon,
+    InsertDriveFile as FileIcon,
+    Refresh as RefreshIcon,
+    MoreVert as MoreVertIcon
+} from '@mui/icons-material';
+import { categoryService } from '../../services/api/category.service';
+import { Category, KnowledgeItem, ContentType } from '../../types/knowledge';
+import './KnowledgeItemManager.css';
+
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
+    <div hidden={value !== index} style={{ padding: '16px 0' }}>
+        {value === index && children}
+    </div>
+);
+
+interface KnowledgeItemManagerProps {
+    categoryId: number;
+}
+
+export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ categoryId }) => {
+    const [tabValue, setTabValue] = useState(0);
+    const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    
+    // Form states
+    const [textContent, setTextContent] = useState({ title: '', content: '' });
+    const [urlContent, setUrlContent] = useState({ url: '', description: '' });
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [fileDescription, setFileDescription] = useState('');
+    
+    // Dialog states
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<KnowledgeItem | null>(null);
+    
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (categoryId) {
+            fetchKnowledgeItems();
+        }
+    }, [categoryId]);
+
+    const fetchKnowledgeItems = async () => {
+        if (!categoryId) return;
+        
+        setLoading(true);
+        try {
+            const response = await categoryService.getCategoryItems(categoryId);
+            setKnowledgeItems(response.data);
+        } catch (error) {
+            console.error('Failed to fetch knowledge items:', error);
+            setError('Failed to load knowledge items. Please try again later.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+        setTabValue(newValue);
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files.length > 0) {
+            setSelectedFile(event.target.files[0]);
+        }
+    };
+
+    const triggerFileInput = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const clearMessages = () => {
+        setError(null);
+        setSuccess(null);
+    };
+
+    const resetForms = () => {
+        setTextContent({ title: '', content: '' });
+        setUrlContent({ url: '', description: '' });
+        setSelectedFile(null);
+        setFileDescription('');
+    };
+
+    const handleAddTextContent = async () => {
+        if (!textContent.title.trim() || !textContent.content.trim()) {
+            setError('Title and content are required');
+            return;
+        }
+
+        setLoading(true);
+        clearMessages();
+        
+        try {
+            await categoryService.addTextContent(
+                categoryId, 
+                textContent.content,
+                textContent.title
+            );
+            setSuccess('Text content added successfully');
+            fetchKnowledgeItems();
+            resetForms();
+        } catch (error) {
+            console.error('Failed to add text content:', error);
+            setError('Failed to add text content. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAddUrl = async () => {
+        if (!urlContent.url.trim()) {
+            setError('URL is required');
+            return;
+        }
+
+        // Basic URL validation
+        try {
+            new URL(urlContent.url);
+        } catch (e) {
+            setError('Please enter a valid URL');
+            return;
+        }
+
+        setLoading(true);
+        clearMessages();
+        
+        try {
+            await categoryService.addUrl(
+                categoryId, 
+                urlContent.url,
+                urlContent.description
+            );
+            setSuccess('URL added successfully');
+            fetchKnowledgeItems();
+            resetForms();
+        } catch (error) {
+            console.error('Failed to add URL:', error);
+            setError('Failed to add URL. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUploadFile = async () => {
+        if (!selectedFile) {
+            setError('Please select a file');
+            return;
+        }
+
+        setLoading(true);
+        clearMessages();
+        
+        try {
+            const formData = fileDescription ? { description: fileDescription } : undefined;
+            await categoryService.uploadFile(categoryId, selectedFile, formData);
+            setSuccess('File uploaded successfully');
+            fetchKnowledgeItems();
+            resetForms();
+        } catch (error) {
+            console.error('Failed to upload file:', error);
+            setError('Failed to upload file. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const openDeleteDialog = (item: KnowledgeItem) => {
+        setItemToDelete(item);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteItem = async () => {
+        if (!itemToDelete) return;
+        
+        setLoading(true);
+        try {
+            await categoryService.deleteKnowledgeItem(itemToDelete.id);
+            setSuccess('Knowledge item deleted successfully');
+            setDeleteDialogOpen(false);
+            fetchKnowledgeItems();
+        } catch (error) {
+            console.error('Failed to delete knowledge item:', error);
+            setError('Failed to delete knowledge item. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getItemIcon = (type: ContentType) => {
+        switch (type) {
+            case ContentType.FILE:
+                return <FileIcon />;
+            case ContentType.URL:
+                return <LinkIcon />;
+            case ContentType.TEXT:
+                return <DescriptionIcon />;
+            default:
+                return <DescriptionIcon />;
+        }
+    };
+
+    const getItemTitle = (item: KnowledgeItem) => {
+        switch (item.content_type) {
+            case ContentType.FILE:
+                // Extract filename from path
+                const filePath = item.file_path || item.content as string;
+                return filePath.split('/').pop() || 'File';
+            case ContentType.URL:
+                try {
+                    const url = new URL(item.url || '');
+                    return url.hostname;
+                } catch (e) {
+                    return item.url || 'URL';
+                }
+            case ContentType.TEXT:
+                // Use metadata.title if it exists
+                return item.metadata?.title || 'Text Content';
+            default:
+                return 'Knowledge Item';
+        }
+    };
+
+    const getItemDescription = (item: KnowledgeItem) => {
+        switch (item.content_type) {
+            case ContentType.FILE:
+                // Use metadata.description if it exists
+                return item.metadata?.description || 'Uploaded file';
+            case ContentType.URL:
+                // Use metadata.description or fallback to url
+                return item.metadata?.description || item.url || 'External link';
+            case ContentType.TEXT:
+                // For text content, you might want to show a preview of the content
+                return item.content ? `${item.content.substring(0, 100)}${item.content.length > 100 ? '...' : ''}` : '';
+            default:
+                return item.metadata?.description || '';
+        }
+    };
+
+    return (
+        <Box sx={{ py: 3 }}>
+            {error && (
+                <Alert 
+                    severity="error" 
+                    onClose={clearMessages}
+                    sx={{ mb: 3, bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#f44336' }}
+                >
+                    {error}
+                </Alert>
+            )}
+            
+            {success && (
+                <Alert 
+                    severity="success" 
+                    onClose={clearMessages}
+                    sx={{ mb: 3, bgcolor: 'rgba(46, 125, 50, 0.1)', color: '#4caf50' }}
+                >
+                    {success}
+                </Alert>
+            )}
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" component="h2">
+                    Knowledge Items
+                </Typography>
+                <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchKnowledgeItems}
+                    disabled={loading}
+                    sx={{
+                        borderColor: '#00F3FF',
+                        color: '#00F3FF',
+                        '&:hover': {
+                            borderColor: '#00D4E0',
+                            bgcolor: 'rgba(0, 243, 255, 0.1)'
+                        }
+                    }}
+                >
+                    Refresh
+                </Button>
+            </Box>
+            
+            <Paper 
+                sx={{ 
+                    bgcolor: '#1A1A1A',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(0, 243, 255, 0.2)',
+                    mb: 4
+                }}
+            >
+                <Tabs 
+                    value={tabValue} 
+                    onChange={handleTabChange}
+                    sx={{
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        '& .MuiTab-root': {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&.Mui-selected': {
+                                color: '#00F3FF'
+                            }
+                        },
+                        '& .MuiTabs-indicator': {
+                            bgcolor: '#00F3FF'
+                        }
+                    }}
+                >
+                    <Tab label="All Items" />
+                    <Tab label="Add Text" />
+                    <Tab label="Add URL" />
+                    <Tab label="Upload File" />
+                </Tabs>
+                
+                <Box sx={{ p: 3 }}>
+                    <TabPanel value={tabValue} index={0}>
+                        {loading && knowledgeItems.length === 0 ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                <CircularProgress sx={{ color: '#00F3FF' }} />
+                            </Box>
+                        ) : knowledgeItems.length === 0 ? (
+                            <Box sx={{ textAlign: 'center', py: 4 }}>
+                                <DescriptionIcon sx={{ fontSize: 60, color: 'rgba(255, 255, 255, 0.2)', mb: 2 }} />
+                                <Typography variant="h6" gutterBottom>
+                                    No Knowledge Items
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    Add text, URLs, or upload files to build your knowledge base
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <List sx={{ width: '100%' }}>
+                                {knowledgeItems.map((item, index) => (
+                                    <React.Fragment key={item.id}>
+                                        {index > 0 && <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />}
+                                        <ListItem 
+                                            sx={{ 
+                                                py: 2,
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.05)'
+                                                }
+                                            }}
+                                        >
+                                            <ListItemIcon sx={{ color: '#00F3FF' }}>
+                                                {getItemIcon(item.content_type)}
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={
+                                                    <Typography variant="subtitle1" sx={{ color: '#FFFFFF' }}>
+                                                        {getItemTitle(item)}
+                                                    </Typography>
+                                                }
+                                                secondary={
+                                                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                        {getItemDescription(item)}
+                                                    </Typography>
+                                                }
+                                            />
+                                            <ListItemSecondaryAction>
+                                                <Tooltip title="Delete Item">
+                                                    <IconButton 
+                                                        edge="end" 
+                                                        onClick={() => openDeleteDialog(item)}
+                                                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </ListItemSecondaryAction>
+                                        </ListItem>
+                                    </React.Fragment>
+                                ))}
+                            </List>
+                        )}
+                    </TabPanel>
+                    
+                    <TabPanel value={tabValue} index={1}>
+                        <Typography variant="h6" gutterBottom>
+                            Add Text Content
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            label="Title"
+                            margin="normal"
+                            value={textContent.title}
+                            onChange={(e) => setTextContent({ ...textContent, title: e.target.value })}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 2,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Content"
+                            multiline
+                            rows={8}
+                            margin="normal"
+                            value={textContent.content}
+                            onChange={(e) => setTextContent({ ...textContent, content: e.target.value })}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 3,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        />
+                        <Button
+                            variant="contained"
+                            onClick={handleAddTextContent}
+                            disabled={loading}
+                            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
+                            sx={{
+                                bgcolor: '#00F3FF',
+                                color: '#000000',
+                                '&:hover': {
+                                    bgcolor: '#00D4E0'
+                                }
+                            }}
+                        >
+                            Add Text
+                        </Button>
+                    </TabPanel>
+                    
+                    <TabPanel value={tabValue} index={2}>
+                        <Typography variant="h6" gutterBottom>
+                            Add URL
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            label="URL"
+                            placeholder="https://example.com"
+                            margin="normal"
+                            value={urlContent.url}
+                            onChange={(e) => setUrlContent({ ...urlContent, url: e.target.value })}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 2,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Description (Optional)"
+                            margin="normal"
+                            value={urlContent.description}
+                            onChange={(e) => setUrlContent({ ...urlContent, description: e.target.value })}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 3,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        />
+                        <Button
+                            variant="contained"
+                            onClick={handleAddUrl}
+                            disabled={loading}
+                            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
+                            sx={{
+                                bgcolor: '#00F3FF',
+                                color: '#000000',
+                                '&:hover': {
+                                    bgcolor: '#00D4E0'
+                                }
+                            }}
+                        >
+                            Add URL
+                        </Button>
+                    </TabPanel>
+                    
+                    <TabPanel value={tabValue} index={3}>
+                        <Typography variant="h6" gutterBottom>
+                            Upload File
+                        </Typography>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            style={{ display: 'none' }}
+                            onChange={handleFileSelect}
+                        />
+                        <Box 
+                            sx={{ 
+                                border: '2px dashed rgba(255, 255, 255, 0.2)',
+                                borderRadius: 2,
+                                p: 3,
+                                textAlign: 'center',
+                                mb: 3,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    borderColor: '#00F3FF',
+                                    bgcolor: 'rgba(0, 243, 255, 0.05)'
+                                }
+                            }}
+                            onClick={triggerFileInput}
+                        >
+                            {selectedFile ? (
+                                <>
+                                    <FileIcon sx={{ fontSize: 40, color: '#00F3FF', mb: 1 }} />
+                                    <Typography variant="body1" gutterBottom>
+                                        {selectedFile.name}
+                                    </Typography>
+                                    <Typography variant="body2" color="textSecondary">
+                                        {(selectedFile.size / 1024).toFixed(2)} KB
+                                    </Typography>
+                                </>
+                            ) : (
+                                <>
+                                    <UploadIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.5)', mb: 1 }} />
+                                    <Typography variant="body1" gutterBottom>
+                                        Click to select a file
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                                        Supports PDF, DOCX, TXT, and more
+                                    </Typography>
+                                </>
+                            )}
+                        </Box>
+                        
+                        <TextField
+                            fullWidth
+                            label="Description (Optional)"
+                            margin="normal"
+                            value={fileDescription}
+                            onChange={(e) => setFileDescription(e.target.value)}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 3,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        />
+                        
+                        <Button
+                            variant="contained"
+                            onClick={handleUploadFile}
+                            disabled={loading || !selectedFile}
+                            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
+                            sx={{
+                                bgcolor: '#00F3FF',
+                                color: '#000000',
+                                '&:hover': {
+                                    bgcolor: '#00D4E0'
+                                }
+                            }}
+                        >
+                            Upload File
+                        </Button>
+                    </TabPanel>
+                </Box>
+            </Paper>
+            
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                PaperProps={{
+                    sx: {
+                        bgcolor: '#1A1A1A',
+                        color: '#FFFFFF',
+                        borderRadius: '8px'
+                    }
+                }}
+            >
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete this knowledge item?
+                        This action cannot be undone.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button 
+                        onClick={() => setDeleteDialogOpen(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleDeleteItem}
+                        variant="contained"
+                        disabled={loading}
+                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                        sx={{
+                            bgcolor: '#f44336',
+                            '&:hover': {
+                                bgcolor: '#d32f2f'
+                            }
+                        }}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
+};
+
+export default KnowledgeItemManager;    

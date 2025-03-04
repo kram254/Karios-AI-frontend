@@ -1,0 +1,67 @@
+.category-card {
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.category-card.selected {
+    box-shadow: 0 0 0 2px #00F3FF, 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.category-card:hover .MuiIconButton-root {
+    opacity: 1;
+}
+
+.category-card .MuiIconButton-root {
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+.category-card .MuiIconButton-root:hover {
+    background-color: rgba(0, 243, 255, 0.1);
+    color: #00F3FF;
+}
+
+.category-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom scrollbar for dialog */
+.MuiDialog-paper::-webkit-scrollbar {
+    width: 8px;
+}
+
+.MuiDialog-paper::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.MuiDialog-paper::-webkit-scrollbar-thumb {
+    background: rgba(0, 243, 255, 0.3);
+    border-radius: 10px;
+}
+
+.MuiDialog-paper::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 243, 255, 0.5);
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 243, 255, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(0, 243, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 243, 255, 0);
+    }
+}
+
+.category-card.selected {
+    animation: pulse 2s infinite;
+}

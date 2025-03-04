@@ -17,6 +17,11 @@ export class ApiService {
 
         this.api.interceptors.request.use(
             (config) => {
+                // Add authorization token to all requests if available
+                const token = localStorage.getItem('token');
+                if (token && config.headers) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
                 return config;
             },
             (error) => {
@@ -27,7 +32,14 @@ export class ApiService {
         this.api.interceptors.response.use(
             (response) => response,
             async (error) => {
-                console.error('API Error:', error);
+                // Handle authentication errors
+                if (error.response && error.response.status === 401) {
+                    console.error('Authentication error:', error);
+                    // Clear token if it's invalid or expired
+                    localStorage.removeItem('token');
+                    // Redirect to login page
+                    window.location.href = '/login';
+                }
                 return Promise.reject(error);
             }
         );

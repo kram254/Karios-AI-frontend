@@ -25,7 +25,8 @@ function App() {
 
   // Determine which dashboard to show based on user role
   const DashboardComponent = () => {
-    if (!user) return <Navigate to="/login" replace />;
+    // if (!user) return <Navigate to="/login" replace />;
+    if (!user) return <Navigate to="/chat" replace />;
     
     switch (user.role) {
       case UserRole.SUPER_ADMIN:
@@ -87,7 +88,7 @@ function App() {
       <main className="flex-1 overflow-hidden">
         <Routes>
           {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
+          {/* <Route path="/login" element={<Login />} /> */}
           
           {/* Protected Routes */}
           <Route element={<PrivateRoute />}>

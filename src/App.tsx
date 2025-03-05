@@ -48,27 +48,27 @@ function App() {
     return requiredRoles.includes(user.role);
   };
 
-  // Render login page if not authenticated
-  if (!isAuthenticated && location.pathname !== '/login') {
-    return (
-      <div className="app-container h-screen bg-[#0A0A0A] text-white">
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#1A1A1A',
-              color: '#fff',
-              border: '1px solid rgba(0, 243, 255, 0.2)',
-            },
-          }}
-        />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    );
-  }
+  // Commented out login requirement to allow direct access to all features
+  // if (!isAuthenticated && location.pathname !== '/login') {
+  //   return (
+  //     <div className="app-container h-screen bg-[#0A0A0A] text-white">
+  //       <Toaster 
+  //         position="top-right"
+  //         toastOptions={{
+  //           style: {
+  //             background: '#1A1A1A',
+  //             color: '#fff',
+  //             border: '1px solid rgba(0, 243, 255, 0.2)',
+  //           },
+  //         }}
+  //       />
+  //       <Routes>
+  //         <Route path="/login" element={<Login />} />
+  //         <Route path="*" element={<Navigate to="/login" replace />} />
+  //       </Routes>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="app-container flex h-screen bg-[#0A0A0A] text-white">
@@ -89,8 +89,8 @@ function App() {
       />
       <main className="flex-1 overflow-hidden">
         <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
+          {/* Public Routes (commented out login route) */}
+          {/* <Route path="/login" element={<Login />} /> */}
           
           {/* Protected Routes */}
           <Route element={<PrivateRoute />}>

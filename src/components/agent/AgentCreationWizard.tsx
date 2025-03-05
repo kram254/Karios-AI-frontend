@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Agent, AgentConfig, AgentRole, AgentMode } from '../../types/agent';
-import { CategoryItem } from '../../types/knowledge';
+import { Category } from '../../types/knowledge';
 import { categoryService } from '../../services/api/category.service';
 import './AgentCreationWizard.css';
 
@@ -20,7 +20,7 @@ const defaultConfig: AgentConfig = {
     language: 'en',
     response_style: 0.5, // Middle of formal to casual scale (0-1)
     response_length: 150, // Default token limit
-    knowledge_base_ids: [],
+    knowledge_item_ids: [],
     mode: AgentMode.TEXT,
     actions: []
 };
@@ -62,7 +62,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
     onCreate
 }) => {
     const [activeStep, setActiveStep] = useState(0);
-    const [categories, setCategories] = useState<CategoryItem[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [knowledgeItems, setKnowledgeItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     

@@ -72,7 +72,7 @@ export const AgentManagement: React.FC = () => {
             showNotification('Agent created successfully!', 'success');
 
             if (selectedKnowledgeIds.length > 0) {
-                await agentService.assignKnowledge(response.data.id, selectedKnowledgeIds);
+                await agentService.assignKnowledge(String(response.data.id), selectedKnowledgeIds);
             }
         } catch (error) {
             console.error('Agent creation error:', error);
@@ -86,7 +86,7 @@ export const AgentManagement: React.FC = () => {
         }
         
         try {
-            const response = await agentService.testAgent(selectedAgent.id, input);
+            const response = await agentService.testAgent(String(selectedAgent.id), input);
             return response.data;
         } catch (error) {
             throw new Error('Failed to test agent');
@@ -98,7 +98,7 @@ export const AgentManagement: React.FC = () => {
             try {
                 const [agentResponse, statsResponse] = await Promise.all([
                     agentService.getAgents(),
-                    agentService.getAgentStats(selectedAgent.id)
+                    agentService.getAgentStats(String(selectedAgent.id))
                 ]);
                 
                 setAgents(agentResponse.data);

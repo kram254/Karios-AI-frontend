@@ -48,7 +48,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadChats = async () => {
     try {
       setLoading(true);
-      const response = await api.getAllChats();
+      const response = await api.getChats();
       console.log('Chats loaded:', response.data);
       setChats(response.data);
       

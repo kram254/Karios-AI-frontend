@@ -15,27 +15,33 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
     checkToken();
   }, [checkToken]);
 
-  // Allow all routes without authorization for now (comment this to enable authorization)
+  // IMPORTANT: We're bypassing authentication checks to allow direct access 
+  // to all routes without requiring login
+  
   // if (!isAuthenticated) {
   //   return <Navigate to="/login" />;
   // }
 
   // If there are allowed roles specified, check if the user has any of those roles
+  // This is still important for role-based access, but we'll make it soft check
   if (allowedRoles && allowedRoles.length > 0 && user) {
     const hasAllowedRole = allowedRoles.includes(user.role);
     if (!hasAllowedRole) {
-      // User doesn't have permission, redirect to a default route based on their role
-      if (user.role === 'Super Admin') {
-        return <Navigate to="/admin/dashboard" />;
-      } else if (user.role === 'Reseller') {
-        return <Navigate to="/reseller/dashboard" />;
-      } else {
-        return <Navigate to="/chat" />;
-      }
+      // User doesn't have permission, but we'll just let them through for now
+      console.warn('User does not have the required role, but access is being granted');
+      
+      // Original redirect logic (commented out)
+      // if (user.role === 'Super Admin') {
+      //   return <Navigate to="/admin/dashboard" />;
+      // } else if (user.role === 'Reseller') {
+      //   return <Navigate to="/reseller/dashboard" />;
+      // } else {
+      //   return <Navigate to="/chat" />;
+      // }
     }
   }
 
-  // If the user is authenticated and has permission, render the outlet (child routes)
+  // Allow access to all routes regardless of authentication status
   return <Outlet />;
 };
 

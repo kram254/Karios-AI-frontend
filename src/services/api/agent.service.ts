@@ -18,17 +18,17 @@ export const agentService = {
     updateAgent: (id: string, data: Partial<Agent>) =>
         api.put<Agent>(`/api/v1/agents/${id}`, data),
 
-    updateAgentConfig: (id: number, config: Partial<AgentConfig>) =>
+    updateAgentConfig: (id: string, config: Partial<AgentConfig>) =>
         api.put<Agent>(`/api/v1/agents/${id}/config`, config),
 
-    updateAgentStatus: (id: number, status: AgentStatus) =>
+    updateAgentStatus: (id: string, status: AgentStatus) =>
         api.put<Agent>(`/api/v1/agents/${id}/status`, { status }),
 
     deleteAgent: (id: string) =>
         api.delete(`/api/v1/agents/${id}`),
 
     // Agent Testing and Monitoring
-    getAgentStats: (id: number) =>
+    getAgentStats: (id: string) =>
         api.get<AgentMetrics>(`/api/v1/agents/${id}/stats`),
 
     getAgentMetrics: (id: string) =>
@@ -41,17 +41,17 @@ export const agentService = {
     assignKnowledge: (agentId: string, knowledgeItemIds: number[]) =>
         api.post(`/api/v1/agents/${agentId}/knowledge`, { knowledge_item_ids: knowledgeItemIds }),
 
-    removeKnowledge: (agentId: number, knowledgeIds: number[]) =>
+    removeKnowledge: (agentId: string, knowledgeIds: number[]) =>
         api.delete(`/api/v1/agents/${agentId}/knowledge`, { 
             data: { knowledge_ids: knowledgeIds }
         }),
 
     // Custom Actions
-    executeAction: (agentId: number, actionType: string, actionData: any) =>
+    executeAction: (agentId: string, actionType: string, actionData: any) =>
         api.post(`/api/v1/agents/${agentId}/actions/${actionType}`, actionData),
 
     // HTML Agent Specific
-    updateHtmlConfig: (agentId: number, htmlConfig: {
+    updateHtmlConfig: (agentId: string, htmlConfig: {
         embedCode: string;
         styling: string;
         settings: Record<string, any>;

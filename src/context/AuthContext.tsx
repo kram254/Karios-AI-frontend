@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { userService } from '../services/api/user.service';
-import { User, UserRole } from '../types/user';
+import { User, UserRole, UserStatus } from '../types/user';
 import axios from 'axios'; // Import axios
 
 interface AuthContextType {
@@ -26,10 +26,19 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
-    
-    const [loading, setLoading] = useState(false);
+    // Initial values with mock authentication enabled
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);  // Default to true
+    const [user, setUser] = useState<User | null>({
+        id: 1,
+        username: 'demo_user',
+        email: 'demo@example.com',
+        role: UserRole.CUSTOMER,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: UserStatus.ACTIVE,
+        credits_balance: 100
+    });
+    const [loading, setLoading] = useState<boolean>(false);
 
     const fetchCurrentUser = async () => {
         try {
@@ -47,12 +56,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
-        // Activate token checking
-        const token = localStorage.getItem('token');
-        if (token) {
-            fetchCurrentUser();
-        } else {
-            setLoading(false);
+        // Still check for token to set auth headers properly if token exists
+        checkToken();
+        
+        // But we're setting authenticated to true regardless
+        setIsAuthenticated(true);
+        
+        // If no user is set, create a demo user
+        if (!user) {
+            setUser({
+                id: 1,
+                username: 'demo_user',
+                email: 'demo@example.com',
+                role: UserRole.CUSTOMER,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                status: UserStatus.ACTIVE,
+                credits_balance: 100
+            });
         }
     }, []);
 

@@ -33,6 +33,7 @@ import { categoryService } from '../services/api/category.service';
 import { agentService } from '../services/api/agent.service';
 import { Agent } from '../types/agent';
 import { Category } from '../types/knowledge';
+import { KnowledgeItem } from '../types/knowledge';
 
 export const AgentKnowledgeManager: React.FC = () => {
   const { agentId } = useParams<{ agentId: string }>();
@@ -55,7 +56,7 @@ export const AgentKnowledgeManager: React.FC = () => {
       try {
         // Fetch agent details
         const agentResponse = await agentService.getAgents();
-        const foundAgent = agentResponse.data.find(a => a.id === Number(agentId));
+        const foundAgent = agentResponse.data.find(a => a.id === parseInt(agentId));
         
         if (!foundAgent) {
           setError('Agent not found');
@@ -97,7 +98,7 @@ export const AgentKnowledgeManager: React.FC = () => {
     if (!agent || !agentId) return;
     
     try {
-      await agentService.assignKnowledge(Number(agentId), knowledgeIds);
+      await agentService.assignKnowledge(agentId, knowledgeIds);
       setSuccessMessage('Knowledge items successfully assigned to agent');
       
       // Refresh agent data to show updated knowledge items
@@ -127,7 +128,7 @@ export const AgentKnowledgeManager: React.FC = () => {
     if (!agent || !agentId) return;
     
     try {
-      await agentService.removeKnowledge(Number(agentId), [knowledgeId]);
+      await agentService.removeKnowledge(agentId, [knowledgeId]);
       setSuccessMessage('Knowledge item successfully removed from agent');
       
       // Refresh agent data to show updated knowledge items
@@ -255,8 +256,8 @@ export const AgentKnowledgeManager: React.FC = () => {
                   {/* Knowledge Item Manager */}
                   {selectedCategory && (
                     <KnowledgeItemManager 
-                      categoryId={selectedCategory.id}
-                      onKnowledgeAdded={(knowledgeItem) => {
+                      categoryId={selectedCategory.id.toString()}
+                      onKnowledgeAdded={(knowledgeItem: KnowledgeItem) => {
                         if (knowledgeItem && knowledgeItem.id) {
                           handleAssignKnowledge([knowledgeItem.id]);
                         }
@@ -274,7 +275,7 @@ export const AgentKnowledgeManager: React.FC = () => {
                   
                   {agent?.knowledge_items && agent.knowledge_items.length > 0 ? (
                     <List>
-                      {agent.knowledge_items.map((item) => (
+                      {agent.knowledge_items.map((item: KnowledgeItem) => (
                         <ListItem 
                           key={item.id}
                           sx={{ 

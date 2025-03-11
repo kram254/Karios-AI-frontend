@@ -81,8 +81,6 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
         return '#f44336'; // Red
       case AgentStatus.TEST:
         return '#ff9800'; // Orange
-      case AgentStatus.MAINTENANCE:
-        return '#9e9e9e'; // Gray
       default:
         return '#9e9e9e';
     }
@@ -176,7 +174,7 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
                 label={agent.status}
                 sx={{ 
                   bgcolor: 'rgba(0, 0, 0, 0.3)',
-                  color: getAgentStatusColor(agent.status),
+                  color: getAgentStatusColor(agent.status as AgentStatus),
                   borderRadius: '4px',
                   '& .MuiChip-label': {
                     position: 'relative',
@@ -191,7 +189,7 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
                     width: '8px',
                     height: '8px',
                     borderRadius: '50%',
-                    backgroundColor: getAgentStatusColor(agent.status)
+                    backgroundColor: getAgentStatusColor(agent.status as AgentStatus)
                   }
                 }}
               />

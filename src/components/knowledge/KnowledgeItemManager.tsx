@@ -52,10 +52,11 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 );
 
 interface KnowledgeItemManagerProps {
-    categoryId: number;
+    categoryId: string;
+    onKnowledgeAdded?: (knowledgeItem: KnowledgeItem) => void;
 }
 
-export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ categoryId }) => {
+export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ categoryId, onKnowledgeAdded }) => {
     const [tabValue, setTabValue] = useState(0);
     const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -81,15 +82,15 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     }, [categoryId]);
 
     const fetchKnowledgeItems = async () => {
-        if (!categoryId) return;
-        
         setLoading(true);
+        clearMessages();
+        
         try {
-            const response = await categoryService.getCategoryItems(categoryId);
+            const response = await categoryService.getCategoryItems(parseInt(categoryId));
             setKnowledgeItems(response.data);
         } catch (error) {
             console.error('Failed to fetch knowledge items:', error);
-            setError('Failed to load knowledge items. Please try again later.');
+            setError('Failed to load knowledge items. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -123,24 +124,23 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         setFileDescription('');
     };
 
-    const handleAddTextContent = async () => {
-        if (!textContent.title.trim() || !textContent.content.trim()) {
-            setError('Title and content are required');
-            return;
-        }
-
+    const handleAddTextContent = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
         clearMessages();
         
         try {
-            await categoryService.addTextContent(
-                categoryId, 
+            const response = await categoryService.addTextContent(
+                parseInt(categoryId), 
                 textContent.content,
                 textContent.title
             );
             setSuccess('Text content added successfully');
             fetchKnowledgeItems();
             resetForms();
+            if (onKnowledgeAdded && response.data) {
+                onKnowledgeAdded(response.data);
+            }
         } catch (error) {
             console.error('Failed to add text content:', error);
             setError('Failed to add text content. Please try again.');
@@ -149,32 +149,23 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         }
     };
 
-    const handleAddUrl = async () => {
-        if (!urlContent.url.trim()) {
-            setError('URL is required');
-            return;
-        }
-
-        // Basic URL validation
-        try {
-            new URL(urlContent.url);
-        } catch (e) {
-            setError('Please enter a valid URL');
-            return;
-        }
-
+    const handleAddUrl = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
         clearMessages();
         
         try {
-            await categoryService.addUrl(
-                categoryId, 
+            const response = await categoryService.addUrl(
+                parseInt(categoryId), 
                 urlContent.url,
                 urlContent.description
             );
             setSuccess('URL added successfully');
             fetchKnowledgeItems();
             resetForms();
+            if (onKnowledgeAdded && response.data) {
+                onKnowledgeAdded(response.data);
+            }
         } catch (error) {
             console.error('Failed to add URL:', error);
             setError('Failed to add URL. Please try again.');
@@ -183,21 +174,22 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         }
     };
 
-    const handleUploadFile = async () => {
-        if (!selectedFile) {
-            setError('Please select a file');
-            return;
-        }
-
+    const handleUploadFile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedFile) return;
+        
         setLoading(true);
         clearMessages();
         
         try {
             const formData = fileDescription ? { description: fileDescription } : undefined;
-            await categoryService.uploadFile(categoryId, selectedFile, formData);
+            const response = await categoryService.uploadFile(parseInt(categoryId), selectedFile, formData);
             setSuccess('File uploaded successfully');
             fetchKnowledgeItems();
             resetForms();
+            if (onKnowledgeAdded && response.data) {
+                onKnowledgeAdded(response.data);
+            }
         } catch (error) {
             console.error('Failed to upload file:', error);
             setError('Failed to upload file. Please try again.');

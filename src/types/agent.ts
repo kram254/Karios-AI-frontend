@@ -1,8 +1,13 @@
+import { KnowledgeItem } from './knowledge';
+
 export enum AgentStatus {
     ACTIVE = 'ACTIVE',
     INACTIVE = 'INACTIVE',
     MAINTENANCE = 'MAINTENANCE',
-    ERROR = 'ERROR'
+    ERROR = 'ERROR',
+    ONLINE = 'ONLINE',
+    OFFLINE = 'OFFLINE',
+    TEST = 'TEST'
 }
 
 export enum AgentRole {
@@ -50,9 +55,12 @@ export interface Agent {
     category_id?: number;
     created_at: string;
     updated_at: string;
-    last_active: string;
+    owner_id: number;
+    knowledge_items?: KnowledgeItem[];
+    language?: string;
     created_by: number;
     updated_by: number;
+    last_active: string;
     usage_statistics?: AgentMetrics;
 }
 

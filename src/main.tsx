@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import { ChatProvider } from './context/ChatContext'
+import { AuthProvider } from './context/AuthContext'
 import { BrowserRouter } from 'react-router-dom'
 
 // Initialize endpoints
@@ -12,9 +13,11 @@ Endpoints.setEnvironment(Endpoints.environment)
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ChatProvider>
-        <App />
-      </ChatProvider>
+      <AuthProvider>
+        <ChatProvider>
+          <App />
+        </ChatProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 )

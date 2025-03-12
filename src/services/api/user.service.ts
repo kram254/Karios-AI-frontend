@@ -1,7 +1,5 @@
-import { ApiService } from './index';
-import { User, UserRole, UserStatus } from '../../types/user';
-
-const api = ApiService.getInstance().getApi();
+import { api } from './index';
+import { User, UserStatus } from '../../types/user';
 
 interface LoginResponse {
     access_token: string;
@@ -49,7 +47,7 @@ export const userService = {
         api.post<RegisterResponse>('/api/v1/users/register', data),
 
     // User Hierarchy
-    getUserHierarchy: () => 
+    getUserHierarchy: () =>
         api.get<User[]>('/api/v1/users/hierarchy'),
     
     // User Management
@@ -105,6 +103,6 @@ export const userService = {
     
     logout: () => {
         localStorage.removeItem('token');
-        return Promise.resolve();
+        return api.post('/api/v1/users/logout');
     }
 };

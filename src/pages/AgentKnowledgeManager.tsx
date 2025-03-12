@@ -31,7 +31,7 @@ import {
 import { KnowledgeItemManager } from '../components/knowledge/KnowledgeItemManager';
 import { categoryService } from '../services/api/category.service';
 import { agentService } from '../services/api/agent.service';
-import { Agent } from '../types/agent';
+import { Agent, AgentStatus } from '../types/agent';
 import { Category } from '../types/knowledge';
 import { KnowledgeItem } from '../types/knowledge';
 
@@ -384,10 +384,10 @@ export const AgentKnowledgeManager: React.FC = () => {
               <Chip 
                 label={agent?.status || 'Unknown'} 
                 sx={{
-                  bgcolor: agent?.status === 'ACTIVE' 
+                  bgcolor: agent?.status === AgentStatus.ACTIVE 
                     ? 'rgba(76, 175, 80, 0.1)' 
                     : 'rgba(244, 67, 54, 0.1)',
-                  color: agent?.status === 'ACTIVE' ? '#4caf50' : '#f44336'
+                  color: agent?.status === AgentStatus.ACTIVE ? '#4caf50' : '#f44336'
                 }}
               />
             </Box>

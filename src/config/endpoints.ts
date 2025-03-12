@@ -50,11 +50,11 @@ export class Endpoints {
         ADD_MESSAGE: (id: string) => `/api/chat/chats/${id}/messages`,
       },
       ADMIN_ENDPOINTS: {
-        GET_ALL_AGENTS: '/api/admin/agents',
-        CREATE_AGENT: '/api/admin/agents',
-        GET_AGENT: (id: string) => `/api/admin/agents/${id}`,
-        UPDATE_AGENT: (id: string) => `/api/admin/agents/${id}`,
-        DELETE_AGENT: (id: string) => `/api/admin/agents/${id}`,
+        GET_ALL_AGENTS: '/api/v1/agents',
+        CREATE_AGENT: '/api/v1/agents',
+        GET_AGENT: (id: string) => `/api/v1/agents/${id}`,
+        UPDATE_AGENT: (id: string) => `/api/v1/agents/${id}`,
+        DELETE_AGENT: (id: string) => `/api/v1/agents/${id}`,
       },
       RETRIEVE_ENDPOINTS: {
         SEARCH: '/api/retrieve/search',
@@ -71,11 +71,11 @@ export class Endpoints {
         ADD_MESSAGE: (id: string) => `/api/chat/chats/${id}/messages`,
       },
       ADMIN_ENDPOINTS: {
-        GET_ALL_AGENTS: '/api/admin/agents',
-        CREATE_AGENT: '/api/admin/agents',
-        GET_AGENT: (id: string) => `/api/admin/agents/${id}`,
-        UPDATE_AGENT: (id: string) => `/api/admin/agents/${id}`,
-        DELETE_AGENT: (id: string) => `/api/admin/agents/${id}`,
+        GET_ALL_AGENTS: '/api/v1/agents',
+        CREATE_AGENT: '/api/v1/agents',
+        GET_AGENT: (id: string) => `/api/v1/agents/${id}`,
+        UPDATE_AGENT: (id: string) => `/api/v1/agents/${id}`,
+        DELETE_AGENT: (id: string) => `/api/v1/agents/${id}`,
       },
       RETRIEVE_ENDPOINTS: {
         SEARCH: '/api/retrieve/search',

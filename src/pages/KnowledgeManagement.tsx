@@ -152,7 +152,7 @@ export const KnowledgeManagement: React.FC = () => {
           <TabPanel value={selectedTab} index={1}>
             {selectedCategory ? (
               <KnowledgeItemManager 
-                categoryId={selectedCategory.id} 
+                categoryId={String(selectedCategory.id)} 
               />
             ) : (
               <Box sx={{ p: 4, textAlign: 'center' }}>

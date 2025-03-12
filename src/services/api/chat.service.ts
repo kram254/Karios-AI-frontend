@@ -1,12 +1,11 @@
-import { ApiService } from './index';
-import { AxiosResponse } from 'axios';
+import { api } from './index';
 
 // Define interfaces for chat-related data
 export interface ChatMessage {
-  id?: string;
-  role: 'system' | 'user' | 'assistant';
+  id: string;
+  role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp?: string;
+  created_at: string;
 }
 
 export interface Chat {
@@ -15,72 +14,112 @@ export interface Chat {
   messages: ChatMessage[];
   created_at: string;
   updated_at: string;
+  agent_id?: string;
 }
 
 export interface ChatCreate {
   title?: string;
+  chat_type?: string;
 }
 
 export interface ChatTitleUpdate {
   title: string;
 }
 
-export interface SystemMessageUpdate {
-  message: string;
+export interface MessageCreate {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
 }
-
-const api = ApiService.getInstance().getApi();
 
 export const chatService = {
   // Chat Management
+  getChats: () => 
+    api.get<Chat[]>('/api/chat/chats'),
+  
   createChat: (chatData: ChatCreate = {}) => 
-    api.post<Chat>('/chats', chatData),
-
-  getAllChats: () => 
-    api.get<Chat[]>('/chats'),
-
+    api.post<Chat>('/api/chat/chats', chatData),
+  
   getChat: (chatId: string) => 
-    api.get<Chat>(`/chats/${chatId}`),
-
-  updateChatTitle: (chatId: string, titleData: ChatTitleUpdate) => 
-    api.put<Chat>(`/chats/${chatId}/title`, titleData),
-
+    api.get<Chat>(`/api/chat/chats/${chatId}`),
+  
+  updateChat: (chatId: string, data: Partial<Chat>) => 
+    api.put<Chat>(`/api/chat/chats/${chatId}`, data),
+  
   deleteChat: (chatId: string) => 
-    api.delete(`/chats/${chatId}`),
-
+    api.delete(`/api/chat/chats/${chatId}`),
+  
   // Message Management
-  addMessage: (chatId: string, message: ChatMessage) => 
-    api.post<Chat>(`/chats/${chatId}/messages`, message),
+  getMessages: (chatId: string) => 
+    api.get<ChatMessage[]>(`/api/chat/chats/${chatId}/messages`),
+  
+  createMessage: (chatId: string, messageData: MessageCreate) => 
+    api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, messageData),
+  
+  updateMessage: (chatId: string, messageId: string, data: Partial<ChatMessage>) => 
+    api.put<ChatMessage>(`/api/chat/chats/${chatId}/messages/${messageId}`, data),
+  
+  deleteMessage: (chatId: string, messageId: string) => 
+    api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`),
+  
+  // Chat Actions
+  clearChatHistory: (chatId: string) => 
+    api.post(`/api/chat/chats/${chatId}/clear`),
+  
+  regenerateResponse: (chatId: string, messageId: string) => 
+    api.post(`/api/chat/chats/${chatId}/messages/${messageId}/regenerate`),
+  
+  // Agent Integration
+  assignAgent: (chatId: string, agentId: string) => 
+    api.post(`/api/chat/chats/${chatId}/agent`, { agent_id: agentId }),
+  
+  removeAgent: (chatId: string) => 
+    api.delete(`/api/chat/chats/${chatId}/agent`),
+  
+  // Chat Settings
+  updateChatSettings: (chatId: string, settings: Record<string, any>) => 
+    api.put(`/api/chat/chats/${chatId}/settings`, settings),
+  
+  // Export/Import
+  exportChat: (chatId: string) => 
+    api.get(`/api/chat/chats/${chatId}/export`),
+  
+  importChat: (data: any) => 
+    api.post('/api/chat/chats/import', data),
 
   // WebSocket connection helpers
   getWebSocketUrl: () => {
-    const baseUrl = api.defaults.baseURL || '';
-    // Replace http/https with ws/wss
-    const wsBaseUrl = baseUrl.replace(/^http/, 'ws');
-    return `${wsBaseUrl}/ws/chat`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    return `${protocol}//${host}/api/chat/ws`;
   },
 
   // System message management
-  getSystemMessage: () => 
-    api.get<SystemMessageUpdate>('/chats/system-message'),
+  getSystemMessage: (chatId: string) => 
+    api.get<ChatMessage>(`/api/chat/chats/${chatId}/system-message`),
 
-  updateSystemMessage: (message: SystemMessageUpdate) => 
-    api.put<void>('/chats/system-message', message),
+  updateSystemMessage: (chatId: string, message: { message: string }) => 
+    api.put<ChatMessage>(`/api/chat/chats/${chatId}/system-message`, message),
 
   // Knowledge-enhanced chat
-  queryWithKnowledge: (query: string, categoryIds?: number[]) => 
-    api.post<{response: string}>('/retrieve', { 
-      query,
-      category_ids: categoryIds 
-    }),
+  queryWithKnowledge: (chatId: string, query: string, categoryIds?: number[]) => {
+    const payload = categoryIds ? { query, category_ids: categoryIds } : { query };
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/query`, payload);
+  },
 
   // Agent-specific chat
   chatWithAgent: (agentId: number, message: string) => 
-    api.post<{response: string}>(`/agents/${agentId}/chat`, { message }),
+    api.post<ChatMessage>(`/api/chat/agents/${agentId}/chat`, { message }),
 
   // Chat Status
-  getChatStatus: () => 
-    api.get<{status: string}>('/chats/status')
+  getChatStatus: (chatId: string) => 
+    api.get<{ status: string }>(`/api/chat/chats/${chatId}/status`),
+    
+  // Add the missing methods
+  addMessage: (chatId: string, messageData: MessageCreate) => 
+    api.post<Chat>(`/api/chat/chats/${chatId}/messages`, messageData),
+    
+  updateChatTitle: (chatId: string, title: string) => 
+    api.put<Chat>(`/api/chat/chats/${chatId}/title`, { title })
 };
 
 export default chatService;

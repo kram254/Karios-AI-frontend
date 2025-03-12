@@ -35,7 +35,10 @@ export const categoryService = {
 
     // Category Items
     getCategoryItems: (categoryId: number) => 
-        api.get(`/api/v1/knowledge/categories/${categoryId}/items`),
+        api.get(`/api/v1/knowledge/items/${categoryId}`),
+
+    getKnowledgeItemsByCategory: (categoryId: number) => 
+        api.get(`/api/v1/knowledge/items/${categoryId}`),
 
     // File Upload
     uploadFile: (categoryId: number, file: File, formData?: any) => {

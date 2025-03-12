@@ -36,6 +36,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 );
 
 export const AgentManagement: React.FC = () => {
+    console.log('AgentManagement component rendering');
+    
     const [currentTab, setCurrentTab] = useState(0);
     const [showWizard, setShowWizard] = useState(false);
     const [agents, setAgents] = useState<ExtendedAgent[]>([]);
@@ -47,16 +49,33 @@ export const AgentManagement: React.FC = () => {
         type: 'success' | 'error';
         open: boolean;
     }>({ message: '', type: 'success', open: false });
+    const [wizardStep, setWizardStep] = useState(0);
+    const [newAgentData, setNewAgentData] = useState<Partial<Agent>>({});
+    const [knowledgeIds, setKnowledgeIds] = useState<number[]>([]);
 
     const fetchAgents = async () => {
         setLoading(true);
         try {
+            console.log('Fetching agents...');
             const response = await agentService.getAgents();
+            console.log('Agents response:', response);
+            console.log('Agents data:', response.data);
+            
+            // Check if response.data is an array
+            if (Array.isArray(response.data)) {
+                console.log('Response data is an array with length:', response.data.length);
+            } else {
+                console.log('Response data is not an array, type:', typeof response.data);
+                console.log('Response data content:', JSON.stringify(response.data));
+            }
+            
             setAgents(response.data);
             if (!selectedAgent && response.data.length > 0) {
+                console.log('Setting selected agent to first agent in the list');
                 setSelectedAgent(response.data[0]);
             }
         } catch (error) {
+            console.error('Failed to fetch agents:', error);
             showNotification('Failed to fetch agents', 'error');
         } finally {
             setLoading(false);
@@ -119,15 +138,82 @@ export const AgentManagement: React.FC = () => {
         setNotification({ message, type, open: true });
     };
 
+    const handleAgentDataChange = (data: Partial<Agent>) => {
+        setNewAgentData(data);
+    };
+
+    const handleKnowledgeSelect = (ids: number[]) => {
+        setKnowledgeIds(ids);
+    };
+
     useEffect(() => {
+        console.log('AgentManagement useEffect running');
         fetchAgents();
     }, []);
 
-    if (loading && agents.length === 0) {
+    useEffect(() => {
+        console.log('Current agents state:', agents);
+        console.log('Selected agent:', selectedAgent);
+        console.log('Loading state:', loading);
+    }, [agents, selectedAgent, loading]);
+
+    if (loading) {
+        console.log('Rendering loading state');
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <CircularProgress sx={{ color: '#00F3FF' }} />
             </Box>
+        );
+    }
+
+    console.log('Rendering main component UI');
+    console.log('Agents length:', agents.length);
+
+    // If no agents and not loading, show empty state
+    if (agents.length === 0) {
+        console.log('No agents found, showing empty state');
+        return (
+            <Container maxWidth="xl">
+                <Box sx={{ py: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                        <Typography variant="h4" component="h1">
+                            AI Sales Agents
+                        </Typography>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => setShowWizard(true)}
+                            sx={{
+                                bgcolor: '#00F3FF',
+                                color: '#000000',
+                                '&:hover': {
+                                    bgcolor: '#00D1DD',
+                                }
+                            }}
+                        >
+                            Create Agent
+                        </Button>
+                    </Box>
+                    <Paper sx={{ p: 4, textAlign: 'center' }}>
+                        <Typography variant="h6">No agents found</Typography>
+                        <Typography variant="body1" sx={{ mt: 2 }}>
+                            Create your first AI sales agent to get started.
+                        </Typography>
+                    </Paper>
+                </Box>
+                {showWizard && (
+                    <AgentCreationWizard
+                        open={showWizard}
+                        onClose={() => setShowWizard(false)}
+                        onCreateAgent={handleCreateAgent}
+                        currentStep={wizardStep}
+                        onStepChange={setWizardStep}
+                        agentData={newAgentData}
+                        onAgentDataChange={handleAgentDataChange}
+                        onKnowledgeSelect={handleKnowledgeSelect}
+                    />
+                )}
+            </Container>
         );
     }
 
@@ -221,9 +307,14 @@ export const AgentManagement: React.FC = () => {
             </Box>
 
             <AgentCreationWizard
-                isOpen={showWizard}
+                open={showWizard}
                 onClose={() => setShowWizard(false)}
-                onCreate={handleCreateAgent}
+                onCreateAgent={handleCreateAgent}
+                currentStep={wizardStep}
+                onStepChange={setWizardStep}
+                agentData={newAgentData}
+                onAgentDataChange={handleAgentDataChange}
+                onKnowledgeSelect={handleKnowledgeSelect}
             />
 
             <Snackbar

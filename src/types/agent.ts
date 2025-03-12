@@ -1,20 +1,20 @@
 import { KnowledgeItem } from './knowledge';
 
 export enum AgentStatus {
-    ACTIVE = 'ACTIVE',
-    INACTIVE = 'INACTIVE',
-    MAINTENANCE = 'MAINTENANCE',
-    ERROR = 'ERROR',
-    ONLINE = 'ONLINE',
-    OFFLINE = 'OFFLINE',
-    TEST = 'TEST'
+    ACTIVE = 'active',
+    INACTIVE = 'inactive',
+    MAINTENANCE = 'maintenance',
+    ERROR = 'error',
+    ONLINE = 'online',
+    OFFLINE = 'offline',
+    TEST = 'test'
 }
 
 export enum AgentRole {
-    CUSTOMER_SUPPORT = 'Customer Support',
-    TECHNICAL_SUPPORT = 'Technical Support',
-    SALES_SERVICES = 'Sales Services',
-    CONSULTING = 'Consulting Services'
+    CUSTOMER_SUPPORT = 'customer_support',
+    TECHNICAL_SUPPORT = 'technical_support',
+    SALES_SERVICES = 'sales_services',
+    CONSULTING = 'consulting'
 }
 
 export enum AgentMode {
@@ -48,20 +48,19 @@ export interface AgentConfig {
 export interface Agent {
     id: number;
     name: string;
-    description: string;
-    status: AgentStatus;
+    description?: string;
     ai_role: AgentRole;
-    config: AgentConfig;
-    category_id?: number;
+    owner_id: number;
+    status: AgentStatus;
+    language: string;
+    mode: AgentMode;
+    response_style: number;
+    response_length: number;
     created_at: string;
     updated_at: string;
-    owner_id: number;
+    is_deleted: boolean;
+    config?: AgentConfig;
     knowledge_items?: KnowledgeItem[];
-    language?: string;
-    created_by: number;
-    updated_by: number;
-    last_active: string;
-    usage_statistics?: AgentMetrics;
 }
 
 export interface AgentMetrics {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ApiService } from '../services/api';
+import { chatService } from '../services/api/chat.service';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -24,7 +24,7 @@ interface ChatContextType {
   chats: Chat[];
   loading: boolean;
   error: string | null;
-  createNewChat: () => Promise<void>;
+  createNewChat: () => Promise<Chat | null>;
   setCurrentChat: (chat: Chat) => void;
   addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string }) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
@@ -39,8 +39,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const api = ApiService.getInstance();
-
   useEffect(() => {
     loadChats();
   }, []);
@@ -48,7 +46,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadChats = async () => {
     try {
       setLoading(true);
-      const response = await api.getChats();
+      const response = await chatService.getChats();
       console.log('Chats loaded:', response.data);
       setChats(response.data);
       
@@ -71,7 +69,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       console.log('Attempting to create a new chat...');
-      const response = await api.createChat('New Chat', 'default');
+      const response = await chatService.createChat({
+        title: 'New Chat',
+        chat_type: 'default'
+      });
       console.log('Chat created response:', response);
       
       const newChat = response.data;
@@ -80,6 +81,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast.success('New chat created');
       setError(null);
+      return newChat;
     } catch (err: unknown) {
       console.error('Error creating chat:', err);
       console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
@@ -124,11 +126,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!currentChat) return;
       
-      const response = await api.sendMessage(currentChat.id, content);
+      const response = await chatService.addMessage(currentChat.id, {
+        role,
+        content
+      });
       console.log('Message sent:', response.data);
       
       // Replace optimistic message with real one from server
-      const updatedChat = response.data;
+      const updatedChat = response.data as Chat;
       setCurrentChat(updatedChat);
       
       // Update chat in chats list
@@ -158,7 +163,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteChat = async (chatId: string) => {
     try {
-      await api.deleteChat(chatId);
+      await chatService.deleteChat(chatId);
       
       setChats(prev => prev.filter(chat => chat.id !== chatId));
       
@@ -177,8 +182,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateChatTitle = async (chatId: string, title: string) => {
     try {
-      const response = await api.updateChatTitle(chatId, title);
-      const updatedChat = response.data;
+      const response = await chatService.updateChatTitle(chatId, title);
+      const updatedChat = response.data as Chat;
       
       setChats(prev => 
         prev.map(chat => chat.id === chatId ? updatedChat : chat)

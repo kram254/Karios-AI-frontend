@@ -167,20 +167,15 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
 
     const handleSubmit = async () => {
         try {
-            // Prepare final agent data
+            // Prepare final agent data to match backend expectations
             const finalAgentData = {
                 name: formData.name,
                 description: formData.description,
-                ai_role: formData.ai_role,
-                language: formData.config.language,
-                mode: formData.config.mode,
                 response_style: formData.config.response_style,
-                response_length: formData.config.response_length,
-                owner_id: 1, // This will be ignored and replaced by the backend
-                knowledge_item_ids: formData.selected_knowledge_ids,
-                status: AgentStatus.INACTIVE
+                knowledge_item_ids: formData.selected_knowledge_ids
             };
 
+            console.log('Submitting agent data:', JSON.stringify(finalAgentData, null, 2));
             await onCreateAgent(finalAgentData);
             onStepChange(0);
             resetForm();

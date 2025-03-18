@@ -72,19 +72,20 @@ export class ApiService {
 
     // Agent Methods
     public async getAllAgents(): Promise<AxiosResponse> {
-        return this.api.get('/api/admin/agents');
+        return this.api.get('/api/v1/agents/list');
     }
 
     public async createAgent(data: any): Promise<AxiosResponse> {
-        return this.api.post('/api/admin/agents', data);
+        console.log('API Service - Creating agent with data:', JSON.stringify(data, null, 2));
+        return this.api.post('/api/v1/agents/create', data);
     }
 
     public async updateAgent(agentId: string, data: any): Promise<AxiosResponse> {
-        return this.api.put(`/api/admin/agents/${agentId}`, data);
+        return this.api.put(`/api/v1/agents/${agentId}/config`, data);
     }
 
     public async deleteAgent(agentId: string): Promise<AxiosResponse> {
-        return this.api.delete(`/api/admin/agents/${agentId}`);
+        return this.api.delete(`/api/v1/agents/${agentId}`);
     }
 }
 

@@ -1,11 +1,23 @@
 import { api } from './index';
-import { Agent, AgentConfig, AgentStatus, AgentTestResult, AgentMetrics } from '../../types/agent';
+import { Agent, AgentConfig, AgentStatus, AgentTestResult, AgentMetrics, AgentRole, AgentMode } from '../../types/agent';
+
+// Define a type for agent creation that matches what the backend expects
+interface AgentCreatePayload {
+    name: string;
+    description?: string;
+    ai_role: AgentRole;
+    language: string;
+    mode: AgentMode;
+    response_style: number;
+    response_length: number;
+    knowledge_item_ids: number[];
+}
 
 export const agentService = {
     // Agent List Management
     getAgents: () => {
-        console.log('Calling getAgents API endpoint: /api/v1/agents');
-        return api.get<Agent[]>('/api/v1/agents');
+        console.log('Calling getAgents API endpoint: /api/v1/agents/list');
+        return api.get<Agent[]>('/api/v1/agents/list');
     },
 
     getAgentById: (id: string) => {
@@ -14,14 +26,28 @@ export const agentService = {
     },
 
     // Agent Creation and Configuration
-    createAgent: (agentData: AgentConfig) => {
-        console.log('Calling createAgent API endpoint: /api/v1/agents');
-        return api.post<Agent>('/api/v1/agents', agentData);
+    createAgent: (agentData: Partial<AgentCreatePayload>) => {
+        console.log('Calling createAgent API endpoint: /api/v1/agents/create');
+        console.log('Agent data being sent:', JSON.stringify(agentData, null, 2));
+        
+        // Ensure we have the required fields for the backend
+        const payload = {
+            name: agentData.name || 'New Agent',
+            description: agentData.description || '',
+            ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT,
+            language: agentData.language || 'en',
+            mode: agentData.mode || AgentMode.TEXT,
+            response_style: agentData.response_style !== undefined ? agentData.response_style : 0.5,
+            response_length: agentData.response_length || 150,
+            knowledge_item_ids: agentData.knowledge_item_ids || []
+        };
+        
+        return api.post<Agent>('/api/v1/agents/create', payload);
     },
 
     updateAgent: (id: string, data: Partial<Agent>) => {
-        console.log(`Calling updateAgent API endpoint: /api/v1/agents/${id}`);
-        return api.put<Agent>(`/api/v1/agents/${id}`, data);
+        console.log(`Calling updateAgent API endpoint: /api/v1/agents/${id}/config`);
+        return api.put<Agent>(`/api/v1/agents/${id}/config`, data);
     },
 
     updateAgentConfig: (id: string, config: Partial<AgentConfig>) => {
@@ -63,9 +89,9 @@ export const agentService = {
 
     removeKnowledge: (agentId: string, knowledgeIds: number[]) => {
         console.log(`Calling removeKnowledge API endpoint: /api/v1/agents/${agentId}/knowledge`);
-        return api.delete(`/api/v1/agents/${agentId}/knowledge`, { 
-            data: { knowledge_ids: knowledgeIds }
-        });
+        const params = new URLSearchParams();
+        knowledgeIds.forEach(id => params.append('knowledge_id', id.toString()));
+        return api.delete(`/api/v1/agents/${agentId}/knowledge?${params.toString()}`);
     },
 
     // Custom Actions
@@ -82,5 +108,5 @@ export const agentService = {
     }) => {
         console.log(`Calling updateHtmlConfig API endpoint: /api/v1/agents/${agentId}/html-config`);
         return api.put(`/api/v1/agents/${agentId}/html-config`, htmlConfig);
-    },
+    }
 };

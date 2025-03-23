@@ -16,7 +16,7 @@ import { AgentCreationWizard } from '../components/agent/AgentCreationWizard';
 import { AgentStatusMonitor } from '../components/agent/AgentStatusMonitor';
 import { TestInterface } from '../components/agent/TestInterface';
 import { KnowledgeSelector } from '../components/knowledge/KnowledgeSelector';
-import { Agent, AgentStatus, AgentTestResult, AgentMetrics } from '../types/agent';
+import { Agent, AgentStatus, AgentTestResult, AgentMetrics, AgentRole, AgentMode } from '../types/agent';
 import { agentService } from '../services/api/agent.service';
 import { toast } from 'react-hot-toast';
 
@@ -85,24 +85,44 @@ export const AgentManagement: React.FC = () => {
 
     const handleCreateAgent = async (agentData: Partial<Agent>) => {
         try {
-            console.log('Creating agent with data:', JSON.stringify(agentData, null, 2));
-            const response = await agentService.createAgent({
-                name: agentData.name || '',
-                description: agentData.description || '',
-                response_style: agentData.response_style || 0.5,
-                knowledge_item_ids: selectedKnowledgeIds
+            console.log('Creating agent with data:', agentData);
+            
+            // Make sure we pass all required fields to the agent service
+            const response = await agentService.createAgent({ 
+                name: agentData.name || '', 
+                description: agentData.description || '', 
+                ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT, 
+                language: agentData.language || 'en', 
+                mode: agentData.mode || AgentMode.TEXT, 
+                response_style: agentData.response_style || 0.5, 
+                response_length: agentData.response_length || 150, 
+                knowledge_item_ids: selectedKnowledgeIds 
             });
-            setAgents([...agents, response.data]);
-            setSelectedAgent({...response.data, metrics: undefined});
+            
+            console.log('Agent created successfully:', response);
+            
+            // Show success notification
+            setNotification({
+                message: 'Agent created successfully!',
+                type: 'success',
+                open: true
+            });
+            
+            // Fetch updated list of agents
+            fetchAgents();
+            
+            // Close wizard
             setShowWizard(false);
-            toast.success('Agent created successfully!');
-
-            if (selectedKnowledgeIds.length > 0) {
-                await agentService.assignKnowledge(String(response.data.id), selectedKnowledgeIds);
-            }
+            resetWizard();
         } catch (error) {
-            console.error('Agent creation error:', error);
-            toast.error('Failed to create agent');
+            console.error('Failed to create agent:', error);
+            
+            // Show error notification
+            setNotification({
+                message: 'Failed to create agent. Please try again.',
+                type: 'error',
+                open: true
+            });
         }
     };
 
@@ -151,6 +171,12 @@ export const AgentManagement: React.FC = () => {
 
     const handleKnowledgeSelect = (ids: number[]) => {
         setKnowledgeIds(ids);
+    };
+
+    const resetWizard = () => {
+        setWizardStep(0);
+        setNewAgentData({});
+        setSelectedKnowledgeIds([]);
     };
 
     useEffect(() => {

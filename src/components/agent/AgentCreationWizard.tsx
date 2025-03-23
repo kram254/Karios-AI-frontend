@@ -171,7 +171,11 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
             const finalAgentData = {
                 name: formData.name,
                 description: formData.description,
-                response_style: formData.config.response_style,
+                ai_role: formData.ai_role || AgentRole.CUSTOMER_SUPPORT,
+                language: formData.config.language || 'en',
+                mode: formData.config.mode || AgentMode.TEXT,
+                response_style: formData.config.response_style || 0.5,
+                response_length: formData.config.response_length || 150,
                 knowledge_item_ids: formData.selected_knowledge_ids
             };
 

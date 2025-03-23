@@ -32,6 +32,7 @@ import { chatService, ChatMessage } from '../../services/api/chat.service';
 import { categoryService } from '../../services/api/category.service';
 import { Category } from '../../types/knowledge';
 import { format } from 'date-fns';
+import { api } from '../../services/api/index'; // Import the api instance
 
 interface KnowledgeEnabledChatProps {
   chatId?: string;
@@ -56,13 +57,8 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
     // If chatId is provided, load chat history
     if (chatId) {
       fetchChatHistory(chatId);
-    } else {
-      // Initialize with system message
-      setMessages([{
-        role: 'system',
-        content: 'I am an AI assistant powered by your knowledge base. How can I help you today?'
-      }]);
     }
+    // No initial system message as requested
   }, [chatId]);
 
   // Scroll to bottom when messages change
@@ -105,8 +101,10 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
     if (!input.trim()) return;
     
     const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
       role: 'user',
-      content: input
+      content: input,
+      created_at: new Date().toISOString()
     };
     
     // Update UI immediately
@@ -123,16 +121,44 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
         response = await chatService.chatWithAgent(agentId, input);
       } 
       // Otherwise use knowledge-based query
-      else {
+      else if (chatId) {
+        // If we have a chat ID, query with knowledge
         response = await chatService.queryWithKnowledge(
+          chatId,
           input, 
           selectedCategories.length > 0 ? selectedCategories : undefined
         );
+      } else {
+        // Handle the case where we don't have a chatId yet
+        // We'll create a chat after getting the response
+        // For now, let's just use a direct API call since the interface doesn't match our need
+        response = await api.post('/api/chat/query', {
+          query: input,
+          category_ids: selectedCategories.length > 0 ? selectedCategories : undefined
+        });
+      }
+      
+      // Extract the response content safely
+      let responseContent = '';
+      if (response.data) {
+        if (typeof response.data === 'string') {
+          responseContent = response.data;
+        } else if (typeof response.data === 'object') {
+          if ('content' in response.data && typeof response.data.content === 'string') {
+            responseContent = response.data.content;
+          } else if ('response' in response.data && typeof response.data.response === 'string') {
+            responseContent = response.data.response;
+          } else {
+            responseContent = JSON.stringify(response.data);
+          }
+        }
       }
       
       const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: response.data.response
+        content: responseContent,
+        created_at: new Date().toISOString()
       };
       
       // Add assistant message to chat
@@ -351,12 +377,12 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
                       {message.role === 'user' ? 'You' : 'AI Assistant'}
                     </Typography>
                     
-                    {message.timestamp && (
+                    {message.created_at && (
                       <Typography 
                         variant="caption" 
                         sx={{ ml: 1, color: 'rgba(255, 255, 255, 0.5)' }}
                       >
-                        {formatTimestamp(message.timestamp)}
+                        {formatTimestamp(message.created_at)}
                       </Typography>
                     )}
                   </Box>

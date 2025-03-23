@@ -8,8 +8,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 2000;
     backdrop-filter: blur(3px);
+    opacity: 1;
 }
 
 .agent-wizard-container {
@@ -22,6 +23,8 @@
     color: #FFFFFF;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(0, 243, 255, 0.2);
+    opacity: 1;
+    visibility: visible;
 }
 
 .wizard-header {
@@ -101,19 +104,17 @@
     background-color: #00F3FF;
     color: #000000;
     border-color: #00F3FF;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
 }
 
 .progress-step.completed .step-number {
-    background-color: #4CAF50;
-    border-color: #4CAF50;
-    color: #FFFFFF;
+    background-color: rgba(0, 243, 255, 0.3);
+    border-color: #00F3FF;
 }
 
 .step-label {
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     color: rgba(255, 255, 255, 0.7);
-    white-space: nowrap;
     transition: color 0.3s ease;
 }
 
@@ -122,47 +123,214 @@
     font-weight: 600;
 }
 
-.progress-step.completed .step-label {
-    color: #4CAF50;
-}
-
 .wizard-content {
     padding: 2rem;
+    min-height: 300px;
 }
 
 .step-content {
-    min-height: 300px;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
 }
 
+.input-field, .textarea-field, .select-container select {
+    background-color: #2A2A2A;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: #FFFFFF;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    width: 100%;
+}
+
+.input-field:focus, .textarea-field:focus, .select-container select:focus {
+    border-color: #00F3FF;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.2);
+}
+
+.textarea-field {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.select-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.select-container label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.select-container select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.slider-container label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.slider-container input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00F3FF;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+.knowledge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.knowledge-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background-color 0.3s ease;
+}
+
+.knowledge-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.knowledge-item input[type="checkbox"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    background-color: transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+.knowledge-item input[type="checkbox"]:checked {
+    background-color: #00F3FF;
+    border-color: #00F3FF;
+}
+
+.knowledge-item input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #000;
+    font-size: 0.75rem;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.action-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.action-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.action-item.selected {
+    background-color: rgba(0, 243, 255, 0.2);
+    border: 1px solid #00F3FF;
+}
+
+.action-icon {
+    font-size: 2rem;
+    color: #00F3FF;
+}
+
 .wizard-actions {
     display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
+    justify-content: space-between;
     padding: 1.5rem 2rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .button {
     padding: 0.75rem 1.5rem;
-    border-radius: 6px;
+    border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    border: none;
     font-size: 1rem;
 }
 
 .button.primary {
     background-color: #00F3FF;
     color: #000000;
-    border: none;
 }
 
 .button.primary:hover {
-    background-color: #00D8E0;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    background-color: #00D1DD;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
 }
 
 .button.secondary {
@@ -176,155 +344,18 @@
     color: #00F3FF;
 }
 
-.button.secondary:disabled {
+.button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.input-field, .textarea-field, .select-container select {
-    width: 100%;
-    padding: 1rem;
-    background-color: #2A2A2A;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    color: #FFFFFF;
-    font-size: 1rem;
-    transition: border-color 0.2s ease;
-}
-
-.input-field:focus, .textarea-field:focus, .select-container select:focus {
-    border-color: #00F3FF;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.2);
-}
-
-.select-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.select-container label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.select-container select {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1.25rem;
-    cursor: pointer;
-}
-
-.slider-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.slider-container label {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.slider-container input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
-    outline: none;
-}
-
-.slider-container input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #00F3FF;
-    cursor: pointer;
-    border: 2px solid #1A1A1A;
-}
-
-.checkbox-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 1rem;
-}
-
-.checkbox-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.checkbox-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: #00F3FF;
-}
-
-.checkbox-item label {
-    font-size: 0.95rem;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.section-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin: 1rem 0 0.5rem 0;
-    color: #00F3FF;
-}
-
-.description {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 1rem;
-}
-
-.loading, .empty-state {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 150px;
-    color: rgba(255, 255, 255, 0.6);
-    font-style: italic;
-}
-
-.review-title {
-    font-size: 1.3rem;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    color: #00F3FF;
-}
-
 .review-section {
-    background-color: rgba(0, 243, 255, 0.05);
-    border-radius: 6px;
-    padding: 1rem;
     margin-bottom: 1.5rem;
-    border: 1px solid rgba(0, 243, 255, 0.1);
 }
 
 .review-section h4 {
-    margin-top: 0;
-    margin-bottom: 0.75rem;
-    font-size: 1.1rem;
     color: #00F3FF;
+    margin-bottom: 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
 }
@@ -332,29 +363,21 @@
 .review-item {
     display: flex;
     margin-bottom: 0.5rem;
-    font-size: 0.95rem;
 }
 
 .review-item strong {
-    min-width: 140px;
-    color: rgba(255, 255, 255, 0.8);
+    min-width: 150px;
+    color: rgba(255, 255, 255, 0.7);
 }
 
-/* Custom scrollbar for wizard container */
-.agent-wizard-container::-webkit-scrollbar {
-    width: 8px;
+/* Make sure the wizard is visible */
+.agent-wizard-overlay, .agent-wizard-container {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
-.agent-wizard-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 0 12px 12px 0;
-}
-
-.agent-wizard-container::-webkit-scrollbar-thumb {
-    background: rgba(0, 243, 255, 0.3);
-    border-radius: 10px;
-}
-
-.agent-wizard-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 243, 255, 0.5);
+/* Fix for z-index issues */
+.agent-wizard-overlay {
+    z-index: 2000 !important;
 }

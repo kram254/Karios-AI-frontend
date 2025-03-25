@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, X, Plus, Loader2 } from "lucide-react";
+import { MessageSquare, Send, Plus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { FileUpload } from "./FileUpload";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
+import { formatMessageContent } from "../utils/formatMessage";
 
 interface Message {
   id: string;
@@ -24,7 +24,7 @@ interface Chat {
 }
 
 const Chat: React.FC = () => {
-  const { currentChat, addMessage, loading, createNewChat } = useChat();
+  const { currentChat, addMessage, createNewChat } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -106,7 +106,7 @@ const Chat: React.FC = () => {
                   : "bg-[#2A2A2A] text-white"
               }`}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              <p className="whitespace-pre-wrap">{formatMessageContent(msg.content, msg.role)}</p>
               <div className="mt-2 text-xs opacity-70">
                 {(() => {
                   try {

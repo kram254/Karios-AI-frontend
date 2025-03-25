@@ -13,8 +13,10 @@ export enum AgentStatus {
 export enum AgentRole {
     CUSTOMER_SUPPORT = 'customer_support',
     TECHNICAL_SUPPORT = 'technical_support',
+    SALES_ASSISTANT = 'sales_assistant',
     SALES_SERVICES = 'sales_services',
-    CONSULTING = 'consulting'
+    CONSULTING = 'consulting',
+    CUSTOM = 'custom'
 }
 
 export enum AgentMode {
@@ -61,6 +63,7 @@ export interface Agent {
     is_deleted: boolean;
     config?: AgentConfig;
     knowledge_items?: KnowledgeItem[];
+    actions?: string[];
 }
 
 export interface AgentMetrics {

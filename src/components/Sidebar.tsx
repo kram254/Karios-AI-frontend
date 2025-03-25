@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
-import { format } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -109,10 +108,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleNavigateToAgents}
           className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-            isActive('/agents') ? 'bg-[#2A2A2A]' : ''
+            isActive('/agents') ? 'bg-[#2A2A2A] text-cyan-500' : ''
           }`}
+          style={{ color: isActive('/agents') ? '#00F3FF' : 'white' }}
         >
-          <Users className="w-5 h-5 text-cyan-500" />
+          <Bot className={`w-5 h-5 ${isActive('/agents') ? 'text-cyan-500' : ''}`} />
           {!isCollapsed && <span className="ml-3">Agents</span>}
         </button>
 
@@ -154,6 +154,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
+        {/* Divider */}
+        <div className="py-2 border-b border-[#2A2A2A]" />
+
         {/* User Management - Only for SUPER_ADMIN and RESELLER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER].includes(user.role) && (
           <button
@@ -165,6 +168,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Users className="w-5 h-5 text-cyan-500" />
             {!isCollapsed && <span className="ml-3">Users</span>}
           </button>
+        )}
+      </div>
+
+      {/* Conversations Heading */}
+      <div className="py-2 border-b border-[#2A2A2A]">
+        {!isCollapsed && (
+          <div className="px-4 py-2 text-sm font-medium text-gray-400">
+            Conversations
+          </div>
         )}
       </div>
 

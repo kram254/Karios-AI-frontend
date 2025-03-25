@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import './KnowledgeSelector.css';
+import { categoryService } from '../../services/api/category.service';
+import { Category } from '../../types/knowledge';
 
 interface KnowledgeBase {
     id: number;
@@ -12,33 +14,52 @@ interface KnowledgeBase {
 interface KnowledgeSelectorProps {
     selectedIds: number[];
     onSelectionChange: (ids: number[]) => void;
+    agentId?: number;
 }
 
 export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
     selectedIds,
-    onSelectionChange
+    onSelectionChange,
+    agentId
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
     const [expandedItems, setExpandedItems] = useState<number[]>([]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchKnowledgeBases();
-    }, []);
+        // If we have an agentId, we can use it to fetch agent-specific knowledge bases
+        if (agentId) {
+            console.log(`Fetching knowledge bases for agent ${agentId}`);
+        }
+    }, [agentId]);
 
     const fetchKnowledgeBases = async () => {
         setLoading(true);
+        setError(null);
         try {
-            // Mock data for now
-            const mockData: KnowledgeBase[] = [
-                { id: 1, name: 'Sales Scripts', description: 'Common sales scripts and responses', documentCount: 15 },
-                { id: 2, name: 'Product Knowledge', description: 'Detailed product information', documentCount: 25 },
-                { id: 3, name: 'FAQ', description: 'Frequently asked questions', documentCount: 30 }
-            ];
-            setKnowledgeBases(mockData);
+            // Fetch real data from the backend
+            const response = await categoryService.getCategories();
+            
+            if (response && response.data && response.data.length > 0) {
+                const categories = response.data.map((category: Category) => ({
+                    id: category.id,
+                    name: category.name,
+                    description: category.description || 'No description available',
+                    documentCount: category.knowledge_items?.length || 0
+                }));
+                setKnowledgeBases(categories);
+                console.log('Fetched knowledge categories:', categories);
+            } else {
+                setKnowledgeBases([]);
+                setError('No categories found. Please create some knowledge categories first.');
+            }
         } catch (error) {
             console.error('Error fetching knowledge bases:', error);
+            setError('Failed to load knowledge categories. Please try again.');
+            setKnowledgeBases([]);
         } finally {
             setLoading(false);
         }
@@ -83,7 +104,15 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
             {loading ? (
                 <div className="loading-container">
                     <div className="loading-spinner"></div>
-                    <span>Loading knowledge bases...</span>
+                    <span>Loading knowledge categories...</span>
+                </div>
+            ) : error ? (
+                <div className="error-container">
+                    <p>{error}</p>
+                </div>
+            ) : filteredKnowledgeBases.length === 0 ? (
+                <div className="empty-container">
+                    <p>No knowledge categories found. Please create some in the Knowledge Management section first.</p>
                 </div>
             ) : (
                 <div className="knowledge-list">

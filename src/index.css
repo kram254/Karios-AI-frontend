@@ -9,10 +9,22 @@
 
   body {
     @apply bg-[#0A0A0A] text-white;
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #080808;
+    color: #FFFFFF;
   }
 
   #root {
     @apply h-full w-full;
+  }
+
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
   }
 }
 
@@ -119,16 +131,53 @@
     animation: neon-border-flow 3s linear infinite;
   }
 
-  @keyframes neon-border-flow {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+  /* Override MUI defaults for dark theme */
+  .MuiPaper-root {
+    background-color: #1A1A1A !important;
+    color: #FFFFFF !important;
+  }
+
+  .MuiTypography-root {
+    color: #FFFFFF !important;
+  }
+
+  .MuiButton-contained {
+    background-color: #00F3FF !important;
+    color: #000000 !important;
+  }
+
+  .MuiButton-outlined {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #FFFFFF !important;
+  }
+
+  .MuiButton-text {
+    color: #00F3FF !important;
+  }
+
+  .MuiTab-root {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  .MuiTab-root.Mui-selected {
+    color: #00F3FF !important;
+  }
+
+  .MuiTabs-indicator {
+    background-color: #00F3FF !important;
+  }
+
+  .MuiInputBase-root {
+    color: #FFFFFF !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+  }
+
+  .MuiInputLabel-root {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  .MuiInputLabel-root.Mui-focused {
+    color: #00F3FF !important;
   }
 }
 
@@ -149,5 +198,17 @@
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+@keyframes neon-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }

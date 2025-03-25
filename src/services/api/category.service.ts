@@ -45,13 +45,36 @@ export const categoryService = {
         const data = new FormData();
         data.append('file', file);
         
-        if (formData) {
-            Object.keys(formData).forEach(key => {
-                data.append(key, formData[key]);
-            });
+        // We need to ensure we're passing exactly what the backend expects
+        // Add title and description (backend requires these fields)
+        if (formData && formData.description) {
+            data.append('title', formData.description);
+            data.append('description', formData.description);
+        } else {
+            data.append('title', file.name);
+            data.append('description', `Uploaded file: ${file.name}`);
         }
         
-        return api.post(`/api/v1/knowledge/categories/${categoryId}/upload`, data, {
+        // Include content type and update frequency (required by backend)
+        data.append('content_type', 'file');
+        data.append('update_frequency', 'never');
+        
+        // Add metadata if present
+        if (formData) {
+            data.append('metadata', JSON.stringify({
+                description: formData.description || file.name
+            }));
+        }
+        
+        console.log('Uploading file with data:', {
+            categoryId,
+            fileName: file.name,
+            fileSize: file.size,
+            formData: formData
+        });
+        
+        // Use the same endpoint pattern as text and url uploads
+        return api.post(`/api/v1/knowledge/categories/${categoryId}/file`, data, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }

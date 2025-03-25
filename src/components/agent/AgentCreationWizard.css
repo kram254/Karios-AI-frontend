@@ -1,28 +1,32 @@
-.agent-wizard-overlay {
+.wizard-overlay {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 2000;
-    backdrop-filter: blur(3px);
     opacity: 1;
+    visibility: visible;
 }
 
-.agent-wizard-container {
-    background-color: #1A1A1A;
-    border-radius: 12px;
+.wizard-container {
+    position: relative;
     width: 90%;
     max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
+    background-color: #121212;
+    border-radius: 8px;
+    padding: 24px;
     color: #FFFFFF;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(0, 243, 255, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
     opacity: 1;
     visibility: visible;
 }
@@ -31,296 +35,104 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 24px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 16px;
 }
 
 .wizard-header h2 {
+    font-size: 24px;
     margin: 0;
-    font-size: 1.75rem;
-    font-weight: 600;
-    background: linear-gradient(45deg, #00F3FF, #87CEFA);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #FFFFFF;
 }
 
 .close-button {
     background: none;
     border: none;
-    color: #FFFFFF;
-    font-size: 1.75rem;
+    font-size: 24px;
     cursor: pointer;
-    padding: 0.5rem;
-    transition: color 0.2s ease;
-}
-
-.close-button:hover {
-    color: #00F3FF;
+    color: #FFFFFF;
 }
 
 .wizard-progress {
     display: flex;
     justify-content: space-between;
-    padding: 2rem;
-    position: relative;
+    margin-bottom: 24px;
+    overflow-x: auto;
 }
 
-.wizard-progress::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 2.5rem;
-    right: 2.5rem;
-    height: 2px;
-    background-color: rgba(255, 255, 255, 0.2);
-    z-index: 0;
-}
-
-.progress-step {
+.step {
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
-    z-index: 1;
+    flex: 1;
+    cursor: pointer;
+    padding: 12px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    margin: 0 4px;
+    color: #FFFFFF;
+    min-width: 80px;
+}
+
+.step.active {
+    background-color: rgba(0, 243, 255, 0.1);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+}
+
+.step.completed {
+    background-color: rgba(0, 243, 255, 0.05);
 }
 
 .step-number {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background-color: #2A2A2A;
-    color: #FFFFFF;
+    width: 32px;
+    height: 32px;
     display: flex;
-    align-items: center;
     justify-content: center;
-    margin-bottom: 0.5rem;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    font-weight: 600;
-    transition: all 0.3s ease;
+    align-items: center;
+    border-radius: 50%;
+    background-color: #333;
+    margin-bottom: 8px;
+    color: #FFFFFF;
 }
 
-.progress-step.active .step-number {
+.step.active .step-number {
     background-color: #00F3FF;
     color: #000000;
-    border-color: #00F3FF;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
 }
 
-.progress-step.completed .step-number {
-    background-color: rgba(0, 243, 255, 0.3);
-    border-color: #00F3FF;
+.step.completed .step-number {
+    background-color: rgba(0, 243, 255, 0.5);
 }
 
 .step-label {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.7);
-    transition: color 0.3s ease;
-}
-
-.progress-step.active .step-label {
-    color: #00F3FF;
-    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    color: #FFFFFF;
 }
 
 .wizard-content {
-    padding: 2rem;
-    min-height: 300px;
-}
-
-.step-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.input-field, .textarea-field, .select-container select {
-    background-color: #2A2A2A;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    color: #FFFFFF;
-    font-size: 1rem;
-    transition: border-color 0.3s ease;
-    width: 100%;
-}
-
-.input-field:focus, .textarea-field:focus, .select-container select:focus {
-    border-color: #00F3FF;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.2);
-}
-
-.textarea-field {
-    resize: vertical;
-    min-height: 100px;
-}
-
-.select-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.select-container label {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.select-container select {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1rem;
-    padding-right: 2.5rem;
-    cursor: pointer;
-}
-
-.slider-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.slider-container label {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.7);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.slider-container input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-    outline: none;
-}
-
-.slider-container input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #00F3FF;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.slider-container input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
-}
-
-.knowledge-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-height: 300px;
+    margin-bottom: 24px;
+    flex: 1;
     overflow-y: auto;
-    margin-top: 1rem;
-    padding: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: #1e1e1e;
+    padding: 16px;
     border-radius: 8px;
-}
-
-.knowledge-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.05);
-    transition: background-color 0.3s ease;
-}
-
-.knowledge-item:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.knowledge-item input[type="checkbox"] {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-    background-color: transparent;
-    cursor: pointer;
-    position: relative;
-}
-
-.knowledge-item input[type="checkbox"]:checked {
-    background-color: #00F3FF;
-    border-color: #00F3FF;
-}
-
-.knowledge-item input[type="checkbox"]:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #000;
-    font-size: 0.75rem;
-}
-
-.action-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.action-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.action-item:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.action-item.selected {
-    background-color: rgba(0, 243, 255, 0.2);
-    border: 1px solid #00F3FF;
-}
-
-.action-icon {
-    font-size: 2rem;
-    color: #00F3FF;
+    color: #FFFFFF !important;
 }
 
 .wizard-actions {
     display: flex;
     justify-content: space-between;
-    padding: 1.5rem 2rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 24px;
 }
 
 .button {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    font-weight: bold;
     border: none;
-    font-size: 1rem;
 }
 
 .button.primary {
@@ -330,54 +142,176 @@
 
 .button.primary:hover {
     background-color: #00D1DD;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
 }
 
 .button.secondary {
-    background-color: transparent;
+    background-color: #333;
     color: #FFFFFF;
-    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .button.secondary:hover {
-    border-color: #00F3FF;
-    color: #00F3FF;
-}
-
-.button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    background-color: #444;
 }
 
 .review-section {
-    margin-bottom: 1.5rem;
+    background-color: #1e1e1e;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
 }
 
 .review-section h4 {
     color: #00F3FF;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 0.5rem;
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #333;
 }
 
 .review-item {
-    display: flex;
-    margin-bottom: 0.5rem;
+    margin-bottom: 8px;
+    color: #FFFFFF;
 }
 
 .review-item strong {
-    min-width: 150px;
-    color: rgba(255, 255, 255, 0.7);
+    color: #AAAAAA;
+    margin-right: 8px;
 }
 
-/* Make sure the wizard is visible */
-.agent-wizard-overlay, .agent-wizard-container {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+.knowledge-list {
+    max-height: 400px;
+    overflow-y: auto;
 }
 
-/* Fix for z-index issues */
-.agent-wizard-overlay {
-    z-index: 2000 !important;
+.knowledge-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px;
+    margin-bottom: 8px;
+    background-color: #333;
+    border-radius: 4px;
+}
+
+.knowledge-item div {
+    margin-left: 10px;
+}
+
+.knowledge-item p {
+    margin: 4px 0 0 0;
+    color: #AAAAAA;
+    font-size: 12px;
+}
+
+.loading, .error, .no-items {
+    text-align: center;
+    padding: 20px;
+    color: #AAAAAA;
+}
+
+.error {
+    color: #FF5555;
+}
+
+/* Fix for MUI integration */
+.MuiOutlinedInput-root {
+    color: #FFFFFF !important;
+}
+
+.MuiInputLabel-root {
+    color: #AAAAAA !important;
+}
+
+.MuiSelect-icon {
+    color: #FFFFFF !important;
+}
+
+/* Ensure forms are visible */
+input, select, textarea {
+    background-color: #333 !important;
+    color: #FFFFFF !important;
+    border-color: #555 !important;
+}
+
+/* Additional wizard styling to ensure visibility */
+.wizard-overlay * {
+    box-sizing: border-box;
+}
+
+.input-field, .textarea-field, .select-container select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 16px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #FFFFFF;
+}
+
+.textarea-field {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.select-container {
+    margin-bottom: 16px;
+}
+
+.select-container label {
+    display: block;
+    margin-bottom: 8px;
+    color: #CCCCCC;
+}
+
+.slider-container {
+    margin-bottom: 16px;
+}
+
+.slider-container label {
+    display: block;
+    margin-bottom: 8px;
+    color: #CCCCCC;
+}
+
+.knowledge-list, .action-list {
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.knowledge-list h4, .action-list h4 {
+    margin-top: 0;
+    color: #FFFFFF;
+}
+
+.knowledge-item, .action-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 8px;
+    margin-bottom: 8px;
+    background-color: #333;
+    border-radius: 6px;
+    color: #FFFFFF;
+}
+
+.knowledge-item input, .action-item input {
+    margin-right: 8px;
+    margin-top: 4px;
+}
+
+.knowledge-item label, .action-item label {
+    flex: 1;
+}
+
+.knowledge-item strong, .action-item strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #FFFFFF;
+}
+
+.knowledge-item p {
+    margin: 0;
+    font-size: 12px;
+    color: #AAAAAA;
 }

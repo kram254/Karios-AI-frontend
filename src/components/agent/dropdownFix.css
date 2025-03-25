@@ -1,0 +1,67 @@
+/* Dropdown Menu Fix */
+.MuiMenu-paper {
+  background-color: #333 !important;
+  color: #FFFFFF !important;
+  z-index: 9999 !important;
+  max-height: 300px !important;
+  overflow-y: auto !important; /* Enable vertical scrolling */
+}
+
+.MuiMenu-list {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  max-height: 290px !important;
+  overflow-y: auto !important;
+}
+
+.MuiMenuItem-root {
+  color: #FFFFFF !important;
+  padding: 8px 16px !important;
+}
+
+.MuiMenuItem-root:hover {
+  background-color: rgba(0, 243, 255, 0.08) !important;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background-color: rgba(0, 243, 255, 0.15) !important;
+}
+
+/* Force the dropdown menu to be visible and in front */
+.MuiPopover-root {
+  z-index: 9999 !important;
+}
+
+/* Make sure select dropdown works properly */
+.MuiSelect-select {
+  cursor: pointer !important;
+}
+
+/* Fix for modal dialogs to ensure dropdowns render on top */
+.MuiModal-root {
+  z-index: 1300 !important;
+}
+
+.MuiPopover-root.MuiModal-root {
+  z-index: 1400 !important;
+}
+
+/* Ensure scrollbars are visible and styled */
+.MuiMenu-paper::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.MuiMenu-paper::-webkit-scrollbar-track {
+  background: #444 !important;
+  border-radius: 3px !important;
+}
+
+.MuiMenu-paper::-webkit-scrollbar-thumb {
+  background: #666 !important;
+  border-radius: 3px !important;
+}
+
+.MuiMenu-paper::-webkit-scrollbar-thumb:hover {
+  background: #00F3FF !important;
+}

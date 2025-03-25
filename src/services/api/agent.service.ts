@@ -11,6 +11,7 @@ interface AgentCreatePayload {
     response_style: number;
     response_length: number;
     knowledge_item_ids: number[];
+    actions?: string[];
 }
 
 export const agentService = {
@@ -39,7 +40,8 @@ export const agentService = {
             mode: agentData.mode || AgentMode.TEXT,
             response_style: agentData.response_style !== undefined ? agentData.response_style : 0.5,
             response_length: agentData.response_length || 150,
-            knowledge_item_ids: agentData.knowledge_item_ids || []
+            knowledge_item_ids: agentData.knowledge_item_ids || [],
+            actions: agentData.actions || []
         };
         
         return api.post<Agent>('/api/v1/agents/create', payload);

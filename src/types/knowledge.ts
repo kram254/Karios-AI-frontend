@@ -28,6 +28,7 @@ export interface Category {
     created_at: string;
     updated_at: string;
     created_by?: number;
+    knowledge_items?: KnowledgeItem[];
 }
 
 export interface KnowledgeItem {

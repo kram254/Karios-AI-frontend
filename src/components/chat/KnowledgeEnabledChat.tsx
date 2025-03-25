@@ -33,6 +33,7 @@ import { categoryService } from '../../services/api/category.service';
 import { Category } from '../../types/knowledge';
 import { format } from 'date-fns';
 import { api } from '../../services/api/index'; // Import the api instance
+import { formatMessageContent } from '../../utils/formatMessage';
 
 interface KnowledgeEnabledChatProps {
   chatId?: string;
@@ -207,100 +208,118 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Knowledge Categories Selector */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2, 
-          bgcolor: '#1A1A1A', 
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
-        }}
-      >
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={8}>
-            <FormControl fullWidth sx={{ m: 1 }}>
-              <InputLabel 
-                id="category-select-label"
-                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-              >
-                Knowledge Categories
-              </InputLabel>
-              <Select
-                labelId="category-select-label"
-                multiple
-                value={selectedCategories}
-                onChange={handleCategoryChange}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => {
-                      const category = categories.find(cat => cat.id === value);
-                      return (
-                        <Chip 
-                          key={value} 
-                          label={category?.name || 'Unknown'} 
-                          sx={{ 
-                            bgcolor: 'rgba(0, 243, 255, 0.1)',
-                            color: '#00F3FF',
-                            borderRadius: '4px'
-                          }} 
-                        />
-                      );
-                    })}
-                  </Box>
-                )}
-                sx={{
-                  color: '#FFFFFF',
-                  '.MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)'
-                  },
-                  '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(0, 243, 255, 0.5)'
-                  },
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: '#00F3FF'
-                  }
-                }}
-              >
-                {loadingCategories ? (
-                  <MenuItem disabled>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    Loading...
-                  </MenuItem>
-                ) : categories.length === 0 ? (
-                  <MenuItem disabled>No categories available</MenuItem>
-                ) : (
-                  categories.map((category) => (
-                    <MenuItem 
-                      key={category.id} 
-                      value={category.id}
-                      sx={{
-                        color: '#FFFFFF',
-                        '&.Mui-selected': {
-                          bgcolor: 'rgba(0, 243, 255, 0.1)',
-                          color: '#00F3FF'
-                        },
-                        '&.Mui-selected:hover': {
-                          bgcolor: 'rgba(0, 243, 255, 0.2)'
-                        }
-                      }}
-                    >
-                      <TopicIcon sx={{ mr: 1, color: 'rgba(255, 255, 255, 0.5)' }} />
-                      {category.name}
+    <div
+      style={{
+        backgroundColor: '#2c2c2c',
+        color: '#FFFFFF',
+        minHeight: '100vh',
+        padding: '20px',
+        position: 'relative',
+        zIndex: 1,
+      }}
+    >
+      <Typography variant="h5" sx={{ color: '#FFFFFF', mb: 2 }}>
+        Agents
+      </Typography>
+      {loading ? (
+        <Typography variant="body1" sx={{ color: '#FFFFFF', textAlign: 'center' }}>
+          Loading agents...
+        </Typography>
+      ) : (
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            backgroundColor: '#424242', 
+            color: '#FFFFFF', 
+            padding: '20px', 
+            borderRadius: '8px' 
+          }}
+        >
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <FormControl fullWidth sx={{ m: 1 }}>
+                <InputLabel 
+                  id="category-select-label"
+                  sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                >
+                  Knowledge Categories
+                </InputLabel>
+                <Select
+                  labelId="category-select-label"
+                  multiple
+                  value={selectedCategories}
+                  onChange={handleCategoryChange}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const category = categories.find(cat => cat.id === value);
+                        return (
+                          <Chip 
+                            key={value} 
+                            label={category?.name || 'Unknown'} 
+                            sx={{ 
+                              bgcolor: 'rgba(0, 243, 255, 0.1)',
+                              color: '#00F3FF',
+                              borderRadius: '4px'
+                            }} 
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                  sx={{
+                    color: '#FFFFFF',
+                    '.MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255, 255, 255, 0.2)'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(0, 243, 255, 0.5)'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#00F3FF'
+                    }
+                  }}
+                >
+                  {loadingCategories ? (
+                    <MenuItem disabled>
+                      <CircularProgress size={20} sx={{ mr: 1 }} />
+                      Loading...
                     </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
+                  ) : categories.length === 0 ? (
+                    <MenuItem disabled>No categories available</MenuItem>
+                  ) : (
+                    categories.map((category) => (
+                      <MenuItem 
+                        key={category.id} 
+                        value={category.id}
+                        sx={{
+                          color: '#FFFFFF',
+                          '&.Mui-selected': {
+                            bgcolor: 'rgba(0, 243, 255, 0.1)',
+                            color: '#00F3FF'
+                          },
+                          '&.Mui-selected:hover': {
+                            bgcolor: 'rgba(0, 243, 255, 0.2)'
+                          }
+                        }}
+                      >
+                        <TopicIcon sx={{ mr: 1, color: 'rgba(255, 255, 255, 0.5)' }} />
+                        {category.name}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Select categories to enhance AI responses with your knowledge base.
+              </Typography>
+            </Grid>
           </Grid>
-          
-          <Grid item xs={12} md={4}>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-              Select categories to enhance AI responses with your knowledge base.
-            </Typography>
-          </Grid>
-        </Grid>
-      </Paper>
+        </Paper>
+      )}
       
       {/* Chat Messages */}
       <Box 
@@ -388,7 +407,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
                   </Box>
                   
                   <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {message.content}
+                    {formatMessageContent(message.content, message.role)}
                   </Typography>
                 </Paper>
               </Box>
@@ -476,7 +495,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
           </Grid>
         </Grid>
       </Paper>
-    </Box>
+    </div>
   );
 };
 

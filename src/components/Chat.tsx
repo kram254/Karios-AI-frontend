@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
-import { formatMessageContent } from "../utils/formatMessage";
+import { MessageFormatter } from "./MessageFormatter";
 
 interface Message {
   id: string;
@@ -106,7 +106,7 @@ const Chat: React.FC = () => {
                   : "bg-[#2A2A2A] text-white"
               }`}
             >
-              <p className="whitespace-pre-wrap">{formatMessageContent(msg.content, msg.role)}</p>
+              <MessageFormatter content={msg.content} role={msg.role} />
               <div className="mt-2 text-xs opacity-70">
                 {(() => {
                   try {

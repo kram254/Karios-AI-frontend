@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { chatService } from '../services/api/chat.service';
 import toast from 'react-hot-toast';
+import { generateTitleFromMessage } from '../utils/titleGenerator';
 
 interface Message {
   id: string;
@@ -140,6 +141,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setChats(prev => 
         prev.map(chat => chat.id === updatedChat.id ? updatedChat : chat)
       );
+
+      // Generate title for the chat if this is the first user message and title is still default
+      if (role === 'user' && 
+          updatedChat.title === 'New Chat' && 
+          updatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
+        const generatedTitle = generateTitleFromMessage(content);
+        await updateChatTitle(updatedChat.id, generatedTitle);
+      }
       
       setError(null);
     } catch (err: unknown) {

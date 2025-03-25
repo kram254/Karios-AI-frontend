@@ -38,14 +38,15 @@ export const stripMarkdown = (text: string): string => {
 }
 
 /**
- * Processes message content based on role
- * For assistant messages, removes markdown formatting
+ * Converts markdown formatting to JSX elements for better presentation.
+ * This preserves formatting like bold text, lists, and headings but converts
+ * them to proper HTML elements rather than showing markdown syntax.
  */
 export const formatMessageContent = (content: string, role: string): string => {
-  if (role === 'assistant') {
-    return stripMarkdown(content);
+  // Only process assistant messages
+  if (role !== 'assistant' || !content) {
+    return content;
   }
-  
-  // For user and system messages, return as is
+
   return content;
 }

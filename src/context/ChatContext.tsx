@@ -127,14 +127,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!currentChat) return;
       
-      console.log(`Sending message to chat ${currentChat.id}:`, { content });
-      // Only send the content, not the role (backend expects just content)
+      console.log(`Sending message to chat ${currentChat.id}:`, { content, role });
+      // Pass only the content to match our updated API function
       const response = await chatService.addMessage(currentChat.id, content);
       console.log('Message sent response:', response);
       console.log('Response data:', response.data);
       
       // Replace optimistic message with real one from server
-      const updatedChat = response.data as Chat;
+      // Handle the response based on its structure
+      let updatedChat: Chat;
+      if (response.data && typeof response.data === 'object') {
+        if ('messages' in response.data && Array.isArray(response.data.messages) && 'title' in response.data) {
+          // If the response is a full chat object with all required Chat properties
+          updatedChat = response.data as Chat;
+        } else {
+          // If the response is just the new message or another format
+          // Create an updated chat with the new message
+          const responseData = response.data as any; // Use any to avoid type errors
+          
+          // Keep the optimistic message but update with server data if available
+          updatedChat = {
+            ...currentChat,
+            messages: currentChat.messages.map(msg => 
+              msg.id === tempId && responseData.id 
+                ? { ...msg, id: responseData.id, content: responseData.content || msg.content } 
+                : msg
+            )
+          };
+        }
+      } else {
+        // If we didn't get a valid response, keep the optimistic update
+        updatedChat = {
+          ...currentChat,
+          messages: currentChat.messages
+        };
+      }
+      
       setCurrentChat(updatedChat);
       
       // Update chat in chats list

@@ -71,9 +71,12 @@ export const chatService = {
   
   createMessage: (chatId: string, messageData: MessageCreate) => {
     console.log(`Creating message in chat ${chatId}`);
-    // Only send the content field as the backend expects
-    const payload = { content: messageData.content };
-    console.log('Message data:', payload);
+    // Match the structure used in the WebSocket service
+    const payload = { 
+      content: messageData.content,
+      attachments: []
+    };
+    console.log('Message payload:', payload);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
@@ -89,8 +92,11 @@ export const chatService = {
   
   addMessage: (chatId: string, content: string) => {
     console.log(`Adding message to chat ${chatId}`);
-    // Send only the content field as the backend expects
-    const payload = { content };
+    // Match the structure used in the WebSocket service
+    const payload = { 
+      content: content,
+      attachments: []
+    };
     console.log('Message payload:', payload);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },

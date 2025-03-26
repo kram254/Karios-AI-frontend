@@ -71,7 +71,10 @@ export const chatService = {
   
   createMessage: (chatId: string, messageData: MessageCreate) => {
     console.log(`Creating message in chat ${chatId}`);
-    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, messageData);
+    // Only send the content field as the backend expects
+    const payload = { content: messageData.content };
+    console.log('Message data:', payload);
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
   updateMessage: (chatId: string, messageId: string, data: Partial<ChatMessage>) => {
@@ -86,10 +89,10 @@ export const chatService = {
   
   addMessage: (chatId: string, content: string) => {
     console.log(`Adding message to chat ${chatId}`);
-    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, { 
-      content,
-      role: 'user'
-    });
+    // Send only the content field as the backend expects
+    const payload = { content };
+    console.log('Message payload:', payload);
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
   // Chat Actions

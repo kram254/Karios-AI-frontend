@@ -127,11 +127,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!currentChat) return;
       
-      const response = await chatService.addMessage(currentChat.id, {
-        role,
-        content
-      });
-      console.log('Message sent:', response.data);
+      console.log(`Sending message to chat ${currentChat.id}:`, { content });
+      // Only send the content, not the role (backend expects just content)
+      const response = await chatService.addMessage(currentChat.id, content);
+      console.log('Message sent response:', response);
+      console.log('Response data:', response.data);
       
       // Replace optimistic message with real one from server
       const updatedChat = response.data as Chat;

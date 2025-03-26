@@ -61,7 +61,7 @@ export class Endpoints {
       },
     },
     [Environment.PRODUCTION]: {
-      API_BASE_URL: 'https://agentando-ai-backend-updated.onrender.com',
+      API_BASE_URL: 'https://agentando-ai-backend-j3ns.onrender.com',
       CHAT_ENDPOINTS: {
         GET_ALL_CHATS: '/api/v1/chat/chats',
         CREATE_CHAT: '/api/v1/chat/chats',

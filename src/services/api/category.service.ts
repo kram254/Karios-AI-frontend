@@ -82,12 +82,22 @@ export const categoryService = {
     },
 
     // URL Management
-    addUrl: (categoryId: number, url: string, description?: string) => 
-        api.post(`/api/v1/knowledge/categories/${categoryId}/url`, { url, description }),
+    addUrl: (categoryId: number, url: string, description?: string, updateFrequency: string = 'never') => 
+        api.post(`/api/v1/knowledge/categories/${categoryId}/url`, { 
+            url, 
+            description, 
+            content_type: 'url',
+            update_frequency: updateFrequency
+        }),
 
     // Text Content
-    addTextContent: (categoryId: number, content: string, title: string) => 
-        api.post(`/api/v1/knowledge/categories/${categoryId}/text`, { content, title }),
+    addTextContent: (categoryId: number, content: string, title: string, updateFrequency: string = 'never') => 
+        api.post(`/api/v1/knowledge/categories/${categoryId}/text`, { 
+            content, 
+            title, 
+            content_type: 'text',
+            update_frequency: updateFrequency 
+        }),
 
     deleteKnowledgeItem: (id: number) => api.delete(`/api/v1/knowledge/items/${id}`),
 };

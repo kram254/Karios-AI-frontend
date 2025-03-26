@@ -8,35 +8,32 @@ import {
     Tabs,
     Tab,
     IconButton,
-    Grid,
-    Chip,
-    Tooltip,
-    Alert,
-    CircularProgress,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     List,
     ListItem,
     ListItemText,
     ListItemIcon,
     ListItemSecondaryAction,
-    Divider
+    Divider,
+    MenuItem,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Alert,
+    CircularProgress,
+    Tooltip
 } from '@mui/material';
 import {
     Add as AddIcon,
     Delete as DeleteIcon,
-    Edit as EditIcon,
     Upload as UploadIcon,
     Link as LinkIcon,
     Description as DescriptionIcon,
     InsertDriveFile as FileIcon,
     Refresh as RefreshIcon,
-    MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import { categoryService } from '../../services/api/category.service';
-import { Category, KnowledgeItem, ContentType } from '../../types/knowledge';
+import { KnowledgeItem, ContentType, UpdateFrequency } from '../../types/knowledge';
 import './KnowledgeItemManager.css';
 
 interface TabPanelProps {
@@ -64,8 +61,12 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const [success, setSuccess] = useState<string | null>(null);
     
     // Form states
-    const [textContent, setTextContent] = useState({ title: '', content: '' });
-    const [urlContent, setUrlContent] = useState({ url: '', description: '' });
+    const [textContent, setTextContent] = useState({ title: '', content: '', updateFrequency: UpdateFrequency.NEVER });
+    const [urlContent, setUrlContent] = useState({ 
+        url: '', 
+        description: '', 
+        updateFrequency: UpdateFrequency.NEVER 
+    });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileDescription, setFileDescription] = useState('');
     
@@ -118,14 +119,13 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     };
 
     const resetForms = () => {
-        setTextContent({ title: '', content: '' });
-        setUrlContent({ url: '', description: '' });
+        setTextContent({ title: '', content: '', updateFrequency: UpdateFrequency.NEVER });
+        setUrlContent({ url: '', description: '', updateFrequency: UpdateFrequency.NEVER });
         setSelectedFile(null);
         setFileDescription('');
     };
 
-    const handleAddTextContent = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddTextContent = async () => {
         setLoading(true);
         clearMessages();
         
@@ -133,7 +133,8 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             const response = await categoryService.addTextContent(
                 parseInt(categoryId), 
                 textContent.content,
-                textContent.title
+                textContent.title,
+                textContent.updateFrequency
             );
             setSuccess('Text content added successfully');
             fetchKnowledgeItems();
@@ -158,7 +159,8 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             const response = await categoryService.addUrl(
                 parseInt(categoryId), 
                 urlContent.url,
-                urlContent.description
+                urlContent.description,
+                urlContent.updateFrequency
             );
             setSuccess('URL added successfully');
             fetchKnowledgeItems();
@@ -463,6 +465,37 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 }
                             }}
                         />
+                        <TextField
+                            fullWidth
+                            label="Update Frequency"
+                            select
+                            margin="normal"
+                            value={textContent.updateFrequency}
+                            onChange={(e) => setTextContent({ ...textContent, updateFrequency: e.target.value as UpdateFrequency })}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 3,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        >
+                            <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
+                            <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
+                            <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
+                            <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
+                        </TextField>
                         <Button
                             variant="contained"
                             onClick={handleAddTextContent}
@@ -535,6 +568,37 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 }
                             }}
                         />
+                        <TextField
+                            fullWidth
+                            label="Update Frequency"
+                            select
+                            margin="normal"
+                            value={urlContent.updateFrequency}
+                            onChange={(e) => setUrlContent({ ...urlContent, updateFrequency: e.target.value as UpdateFrequency })}
+                            InputLabelProps={{
+                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                            }}
+                            sx={{
+                                mb: 3,
+                                '& .MuiOutlinedInput-root': {
+                                    color: '#FFFFFF',
+                                    '& fieldset': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover fieldset': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused fieldset': {
+                                        borderColor: '#00F3FF'
+                                    }
+                                }
+                            }}
+                        >
+                            <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
+                            <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
+                            <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
+                            <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
+                        </TextField>
                         <Button
                             variant="contained"
                             onClick={handleAddUrl}

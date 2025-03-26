@@ -6,7 +6,12 @@ export class ApiService {
     private api: AxiosInstance = axios.create(); // Initialize with a default instance
 
     private constructor() {
-        const baseURL = Endpoints.API_BASE_URL;
+        // Get the base URL from environment variables or endpoints config
+        const envBaseUrl = import.meta.env.VITE_BACKEND_URL;
+        const configBaseUrl = Endpoints.API_BASE_URL;
+        const baseURL = envBaseUrl || configBaseUrl;
+        
+        console.log('Initializing API with base URL:', baseURL);
         
         this.api = axios.create({
             baseURL,
@@ -28,6 +33,13 @@ export class ApiService {
                 if (error.response && error.response.status === 401) {
                     console.error('Authentication error:', error);
                     // Don't redirect, just log the error
+                } else {
+                    console.error('API error:', error);
+                    console.error('Request details:', {
+                        url: error.config?.url,
+                        method: error.config?.method,
+                        baseURL: error.config?.baseURL
+                    });
                 }
                 return Promise.reject(error);
             }
@@ -47,27 +59,27 @@ export class ApiService {
 
     // Chat Methods - Updated to use correct backend API endpoints
     public async getChats(): Promise<AxiosResponse> {
-        return this.api.get('/api/v1/chat/chats');
+        return this.api.get('/api/chat/chats');
     }
 
     public async createChat(title: string = "New Chat", chat_type: string = "default"): Promise<AxiosResponse> {
-        return this.api.post('/api/v1/chat/chats', { title, chat_type });
+        return this.api.post('/api/chat/chats', { title, chat_type });
     }
 
     public async getChat(chatId: string): Promise<AxiosResponse> {
-        return this.api.get(`/api/v1/chat/chats/${chatId}`);
+        return this.api.get(`/api/chat/chats/${chatId}`);
     }
 
     public async deleteChat(chatId: string): Promise<AxiosResponse> {
-        return this.api.delete(`/api/v1/chat/chats/${chatId}`);
+        return this.api.delete(`/api/chat/chats/${chatId}`);
     }
 
     public async updateChatTitle(chatId: string, title: string): Promise<AxiosResponse> {
-        return this.api.put(`/api/v1/chat/chats/${chatId}/title`, { title });
+        return this.api.put(`/api/chat/chats/${chatId}/title`, { title });
     }
 
     public async sendMessage(chatId: string, message: string): Promise<AxiosResponse> {
-        return this.api.post(`/api/v1/chat/chats/${chatId}/messages`, { content: message });
+        return this.api.post(`/api/chat/chats/${chatId}/messages`, { content: message });
     }
 
     // Agent Methods
@@ -94,3 +106,4 @@ const apiService = ApiService.getInstance();
 const api = apiService.getApi();
 
 export { api };
+export default apiService;

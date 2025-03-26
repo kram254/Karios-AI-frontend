@@ -26,13 +26,16 @@ class WebSocketService {
     const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8000';
     console.log('Connecting to WebSocket:', wsUrl);
     
+    // Don't specify the path in the options if it's already in the URL
+    const hasPathInUrl = wsUrl.includes('/socket.io');
+    
     this.socket = io(wsUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       withCredentials: true,
       reconnectionAttempts: 5,
       timeout: 10000,
-      path: '/socket.io',
+      path: hasPathInUrl ? undefined : '/socket.io', // Only set path if not in URL
       forceNew: true,
       reconnection: true,
       reconnectionDelay: 1000,
@@ -49,6 +52,11 @@ class WebSocketService {
 
     this.socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
+      console.error('Connection details:', { 
+        url: wsUrl, 
+        transport: this.socket?.io?.engine?.transport?.name,
+        protocol: window.location.protocol
+      });
       notify.error(`Connection error: ${error.message}`);
     });
 
@@ -114,13 +122,3 @@ class WebSocketService {
 }
 
 export const websocketService = new WebSocketService();
-
-
-
-
-
-
-
-
-
-

@@ -33,93 +33,105 @@ export interface MessageCreate {
 
 export const chatService = {
   // Chat Management
-  getChats: () => 
-    api.get<Chat[]>('/api/chat/chats'),
+  getChats: () => {
+    console.log('Calling getChats API endpoint: /api/chat/chats');
+    return api.get<Chat[]>('/api/chat/chats');
+  },
   
-  createChat: (chatData: ChatCreate = {}) => 
-    api.post<Chat>('/api/chat/chats', chatData),
+  createChat: (chatData: ChatCreate = {}) => {
+    console.log(`Creating new chat with title: ${chatData.title || 'New Chat'} and type: ${chatData.chat_type || 'default'}`);
+    return api.post<Chat>('/api/chat/chats', chatData);
+  },
   
-  getChat: (chatId: string) => 
-    api.get<Chat>(`/api/chat/chats/${chatId}`),
+  getChat: (chatId: string) => {
+    console.log(`Getting chat with ID: ${chatId}`);
+    return api.get<Chat>(`/api/chat/chats/${chatId}`);
+  },
   
-  updateChat: (chatId: string, data: Partial<Chat>) => 
-    api.put<Chat>(`/api/chat/chats/${chatId}`, data),
+  updateChat: (chatId: string, data: Partial<Chat>) => {
+    console.log(`Updating chat ${chatId}`);
+    return api.put<Chat>(`/api/chat/chats/${chatId}`, data);
+  },
   
-  deleteChat: (chatId: string) => 
-    api.delete(`/api/chat/chats/${chatId}`),
+  deleteChat: (chatId: string) => {
+    console.log(`Deleting chat with ID: ${chatId}`);
+    return api.delete(`/api/chat/chats/${chatId}`);
+  },
+  
+  updateChatTitle: (chatId: string, title: string) => {
+    console.log(`Updating title for chat ${chatId} to: ${title}`);
+    return api.put(`/api/chat/chats/${chatId}/title`, { title });
+  },
   
   // Message Management
-  getMessages: (chatId: string) => 
-    api.get<ChatMessage[]>(`/api/chat/chats/${chatId}/messages`),
+  getMessages: (chatId: string) => {
+    console.log(`Getting messages for chat ${chatId}`);
+    return api.get<ChatMessage[]>(`/api/chat/chats/${chatId}/messages`);
+  },
   
-  createMessage: (chatId: string, messageData: MessageCreate) => 
-    api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, messageData),
+  createMessage: (chatId: string, messageData: MessageCreate) => {
+    console.log(`Creating message in chat ${chatId}`);
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, messageData);
+  },
   
-  updateMessage: (chatId: string, messageId: string, data: Partial<ChatMessage>) => 
-    api.put<ChatMessage>(`/api/chat/chats/${chatId}/messages/${messageId}`, data),
+  updateMessage: (chatId: string, messageId: string, data: Partial<ChatMessage>) => {
+    console.log(`Updating message ${messageId} in chat ${chatId}`);
+    return api.put<ChatMessage>(`/api/chat/chats/${chatId}/messages/${messageId}`, data);
+  },
   
-  deleteMessage: (chatId: string, messageId: string) => 
-    api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`),
+  deleteMessage: (chatId: string, messageId: string) => {
+    console.log(`Deleting message ${messageId} from chat ${chatId}`);
+    return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
+  },
+  
+  addMessage: (chatId: string, content: string) => {
+    console.log(`Adding message to chat ${chatId}`);
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, { 
+      content,
+      role: 'user'
+    });
+  },
   
   // Chat Actions
-  clearChatHistory: (chatId: string) => 
-    api.post(`/api/chat/chats/${chatId}/clear`),
-  
-  regenerateResponse: (chatId: string, messageId: string) => 
-    api.post(`/api/chat/chats/${chatId}/messages/${messageId}/regenerate`),
-  
-  // Agent Integration
-  assignAgent: (chatId: string, agentId: string) => 
-    api.post(`/api/chat/chats/${chatId}/agent`, { agent_id: agentId }),
-  
-  removeAgent: (chatId: string) => 
-    api.delete(`/api/chat/chats/${chatId}/agent`),
-  
-  // Chat Settings
-  updateChatSettings: (chatId: string, settings: Record<string, any>) => 
-    api.put(`/api/chat/chats/${chatId}/settings`, settings),
-  
-  // Export/Import
-  exportChat: (chatId: string) => 
-    api.get(`/api/chat/chats/${chatId}/export`),
-  
-  importChat: (data: any) => 
-    api.post('/api/chat/chats/import', data),
-
-  // WebSocket connection helpers
-  getWebSocketUrl: () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${protocol}//${host}/api/chat/ws`;
+  clearChatHistory: (chatId: string) => {
+    console.log(`Clearing history for chat ${chatId}`);
+    return api.post(`/api/chat/chats/${chatId}/clear`);
   },
-
-  // System message management
-  getSystemMessage: (chatId: string) => 
-    api.get<ChatMessage>(`/api/chat/chats/${chatId}/system-message`),
-
-  updateSystemMessage: (chatId: string, message: { message: string }) => 
-    api.put<ChatMessage>(`/api/chat/chats/${chatId}/system-message`, message),
-
-  // Knowledge-enhanced chat
-  queryWithKnowledge: (chatId: string, query: string, categoryIds?: number[]) => {
-    const payload = categoryIds ? { query, category_ids: categoryIds } : { query };
+  
+  regenerateResponse: (chatId: string, messageId: string) => {
+    console.log(`Regenerating response for message ${messageId} in chat ${chatId}`);
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/regenerate/${messageId}`);
+  },
+  
+  // Chat Query
+  queryChat: (chatId: string, query: string, options: any = {}) => {
+    console.log(`Querying chat ${chatId} with: ${query}`);
+    const payload = {
+      query,
+      ...options
+    };
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/query`, payload);
   },
 
   // Agent-specific chat
-  chatWithAgent: (agentId: number, message: string) => 
-    api.post<ChatMessage>(`/api/v1/chat/agents/${agentId}/chat`, { message }),
+  chatWithAgent: (agentId: number, message: string) => {
+    console.log(`Chatting with agent ${agentId}`);
+    return api.post<ChatMessage>(`/api/v1/chat/agents/${agentId}/chat`, { message });
+  },
 
   // Chat Status
-  getChatStatus: (chatId: string) => 
-    api.get<{ status: string }>(`/api/chat/chats/${chatId}/status`),
+  getChatStatus: (chatId: string) => {
+    console.log(`Getting status for chat ${chatId}`);
+    return api.get<{ status: string }>(`/api/chat/chats/${chatId}/status`);
+  },
     
-  // Add the missing methods
-  addMessage: (chatId: string, messageData: MessageCreate) => 
-    api.post<Chat>(`/api/chat/chats/${chatId}/messages`, messageData),
-    
-  updateChatTitle: (chatId: string, title: string) => 
-    api.put<Chat>(`/api/chat/chats/${chatId}/title`, { title })
+  // Debug info
+  getDebugInfo: () => {
+    return {
+      baseUrl: api.defaults.baseURL,
+      headers: api.defaults.headers
+    };
+  }
 };
 
 export default chatService;

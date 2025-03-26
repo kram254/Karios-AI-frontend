@@ -97,7 +97,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         }
     };
 
-    const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
     };
 
@@ -364,347 +364,355 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 </Typography>
                             </Box>
                         ) : (
-                            <List sx={{ width: '100%' }}>
-                                {knowledgeItems.map((item, index) => (
-                                    <React.Fragment key={item.id}>
-                                        {index > 0 && <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />}
-                                        <ListItem 
-                                            sx={{ 
-                                                py: 2,
-                                                '&:hover': {
-                                                    bgcolor: 'rgba(0, 243, 255, 0.05)'
-                                                }
-                                            }}
-                                        >
-                                            <ListItemIcon sx={{ color: '#00F3FF' }}>
-                                                {getItemIcon(item.content_type)}
-                                            </ListItemIcon>
-                                            <ListItemText
-                                                primary={
-                                                    <Typography variant="subtitle1" sx={{ color: '#FFFFFF' }}>
-                                                        {getItemTitle(item)}
-                                                    </Typography>
-                                                }
-                                                secondary={
-                                                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                                        {getItemDescription(item)}
-                                                    </Typography>
-                                                }
-                                            />
-                                            <ListItemSecondaryAction>
-                                                <Tooltip title="Delete Item">
-                                                    <IconButton 
-                                                        edge="end" 
-                                                        onClick={() => openDeleteDialog(item)}
-                                                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </ListItemSecondaryAction>
-                                        </ListItem>
-                                    </React.Fragment>
-                                ))}
-                            </List>
+                            <div className="scrollable-container">
+                                <List sx={{ width: '100%' }}>
+                                    {knowledgeItems.map((item, index) => (
+                                        <React.Fragment key={item.id}>
+                                            {index > 0 && <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />}
+                                            <ListItem 
+                                                sx={{ 
+                                                    py: 2,
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(0, 243, 255, 0.05)'
+                                                    }
+                                                }}
+                                            >
+                                                <ListItemIcon sx={{ color: '#00F3FF' }}>
+                                                    {getItemIcon(item.content_type)}
+                                                </ListItemIcon>
+                                                <ListItemText
+                                                    primary={
+                                                        <Typography variant="subtitle1" sx={{ color: '#FFFFFF' }}>
+                                                            {getItemTitle(item)}
+                                                        </Typography>
+                                                    }
+                                                    secondary={
+                                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                            {getItemDescription(item)}
+                                                        </Typography>
+                                                    }
+                                                />
+                                                <ListItemSecondaryAction>
+                                                    <Tooltip title="Delete Item">
+                                                        <IconButton 
+                                                            edge="end" 
+                                                            onClick={() => openDeleteDialog(item)}
+                                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                                        >
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </ListItemSecondaryAction>
+                                            </ListItem>
+                                        </React.Fragment>
+                                    ))}
+                                </List>
+                            </div>
                         )}
                     </TabPanel>
                     
                     <TabPanel value={tabValue} index={1}>
-                        <Typography variant="h6" gutterBottom>
-                            Add Text Content
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            label="Title"
-                            margin="normal"
-                            value={textContent.title}
-                            onChange={(e) => setTextContent({ ...textContent, title: e.target.value })}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 2,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                        <div className="scrollable-form-container">
+                            <Typography variant="h6" gutterBottom>
+                                Add Text Content
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                label="Title"
+                                margin="normal"
+                                value={textContent.title}
+                                onChange={(e) => setTextContent({ ...textContent, title: e.target.value })}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
                                     }
-                                }
-                            }}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Content"
-                            multiline
-                            rows={8}
-                            margin="normal"
-                            value={textContent.content}
-                            onChange={(e) => setTextContent({ ...textContent, content: e.target.value })}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 3,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                                }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Content"
+                                multiline
+                                rows={8}
+                                margin="normal"
+                                value={textContent.content}
+                                onChange={(e) => setTextContent({ ...textContent, content: e.target.value })}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 3,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
                                     }
-                                }
-                            }}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Update Frequency"
-                            select
-                            margin="normal"
-                            value={textContent.updateFrequency}
-                            onChange={(e) => setTextContent({ ...textContent, updateFrequency: e.target.value as UpdateFrequency })}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 3,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                                }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Update Frequency"
+                                select
+                                margin="normal"
+                                value={textContent.updateFrequency}
+                                onChange={(e) => setTextContent({ ...textContent, updateFrequency: e.target.value as UpdateFrequency })}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 3,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
                                     }
-                                }
-                            }}
-                        >
-                            <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
-                            <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
-                            <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
-                            <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
-                        </TextField>
-                        <Button
-                            variant="contained"
-                            onClick={handleAddTextContent}
-                            disabled={loading}
-                            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
-                            sx={{
-                                bgcolor: '#00F3FF',
-                                color: '#000000',
-                                '&:hover': {
-                                    bgcolor: '#00D4E0'
-                                }
-                            }}
-                        >
-                            Add Text
-                        </Button>
+                                }}
+                            >
+                                <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
+                                <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
+                                <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
+                                <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
+                            </TextField>
+                            <Button
+                                variant="contained"
+                                onClick={handleAddTextContent}
+                                disabled={loading}
+                                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
+                                sx={{
+                                    bgcolor: '#00F3FF',
+                                    color: '#000000',
+                                    '&:hover': {
+                                        bgcolor: '#00D4E0'
+                                    }
+                                }}
+                            >
+                                Add Text
+                            </Button>
+                        </div>
                     </TabPanel>
                     
                     <TabPanel value={tabValue} index={2}>
-                        <Typography variant="h6" gutterBottom>
-                            Add URL
-                        </Typography>
-                        <TextField
-                            fullWidth
-                            label="URL"
-                            placeholder="https://example.com"
-                            margin="normal"
-                            value={urlContent.url}
-                            onChange={(e) => setUrlContent({ ...urlContent, url: e.target.value })}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 2,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                        <div className="scrollable-form-container">
+                            <Typography variant="h6" gutterBottom>
+                                Add URL
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                label="URL"
+                                placeholder="https://example.com"
+                                margin="normal"
+                                value={urlContent.url}
+                                onChange={(e) => setUrlContent({ ...urlContent, url: e.target.value })}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 2,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
                                     }
-                                }
-                            }}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Description (Optional)"
-                            margin="normal"
-                            value={urlContent.description}
-                            onChange={(e) => setUrlContent({ ...urlContent, description: e.target.value })}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 3,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                                }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Description (Optional)"
+                                margin="normal"
+                                value={urlContent.description}
+                                onChange={(e) => setUrlContent({ ...urlContent, description: e.target.value })}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 3,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
                                     }
-                                }
-                            }}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Update Frequency"
-                            select
-                            margin="normal"
-                            value={urlContent.updateFrequency}
-                            onChange={(e) => setUrlContent({ ...urlContent, updateFrequency: e.target.value as UpdateFrequency })}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 3,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                                }}
+                            />
+                            <TextField
+                                fullWidth
+                                label="Update Frequency"
+                                select
+                                margin="normal"
+                                value={urlContent.updateFrequency}
+                                onChange={(e) => setUrlContent({ ...urlContent, updateFrequency: e.target.value as UpdateFrequency })}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 3,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
                                     }
-                                }
-                            }}
-                        >
-                            <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
-                            <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
-                            <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
-                            <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
-                        </TextField>
-                        <Button
-                            variant="contained"
-                            onClick={handleAddUrl}
-                            disabled={loading}
-                            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
-                            sx={{
-                                bgcolor: '#00F3FF',
-                                color: '#000000',
-                                '&:hover': {
-                                    bgcolor: '#00D4E0'
-                                }
-                            }}
-                        >
-                            Add URL
-                        </Button>
+                                }}
+                            >
+                                <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
+                                <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
+                                <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
+                                <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
+                            </TextField>
+                            <Button
+                                variant="contained"
+                                onClick={handleAddUrl}
+                                disabled={loading}
+                                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
+                                sx={{
+                                    bgcolor: '#00F3FF',
+                                    color: '#000000',
+                                    '&:hover': {
+                                        bgcolor: '#00D4E0'
+                                    }
+                                }}
+                            >
+                                Add URL
+                            </Button>
+                        </div>
                     </TabPanel>
                     
                     <TabPanel value={tabValue} index={3}>
-                        <Typography variant="h6" gutterBottom>
-                            Upload File
-                        </Typography>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            style={{ display: 'none' }}
-                            onChange={handleFileSelect}
-                        />
-                        <Box 
-                            sx={{ 
-                                border: '2px dashed rgba(255, 255, 255, 0.2)',
-                                borderRadius: 2,
-                                p: 3,
-                                textAlign: 'center',
-                                mb: 3,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    borderColor: '#00F3FF',
-                                    bgcolor: 'rgba(0, 243, 255, 0.05)'
-                                }
-                            }}
-                            onClick={triggerFileInput}
-                        >
-                            {selectedFile ? (
-                                <>
-                                    <FileIcon sx={{ fontSize: 40, color: '#00F3FF', mb: 1 }} />
-                                    <Typography variant="body1" gutterBottom>
-                                        {selectedFile.name}
-                                    </Typography>
-                                    <Typography variant="body2" color="textSecondary">
-                                        {(selectedFile.size / 1024).toFixed(2)} KB
-                                    </Typography>
-                                </>
-                            ) : (
-                                <>
-                                    <UploadIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.5)', mb: 1 }} />
-                                    <Typography variant="body1" gutterBottom>
-                                        Click to select a file
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                                        Supports PDF, DOCX, TXT, and more
-                                    </Typography>
-                                </>
-                            )}
-                        </Box>
-                        
-                        <TextField
-                            fullWidth
-                            label="Description (Optional)"
-                            margin="normal"
-                            value={fileDescription}
-                            onChange={(e) => setFileDescription(e.target.value)}
-                            InputLabelProps={{
-                                sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                            }}
-                            sx={{
-                                mb: 3,
-                                '& .MuiOutlinedInput-root': {
-                                    color: '#FFFFFF',
-                                    '& fieldset': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover fieldset': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused fieldset': {
-                                        borderColor: '#00F3FF'
+                        <div className="scrollable-form-container">
+                            <Typography variant="h6" gutterBottom>
+                                Upload File
+                            </Typography>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                onChange={handleFileSelect}
+                            />
+                            <Box 
+                                sx={{ 
+                                    border: '2px dashed rgba(255, 255, 255, 0.2)',
+                                    borderRadius: 2,
+                                    p: 3,
+                                    textAlign: 'center',
+                                    mb: 3,
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        borderColor: '#00F3FF',
+                                        bgcolor: 'rgba(0, 243, 255, 0.05)'
                                     }
-                                }
-                            }}
-                        />
-                        
-                        <Button
-                            variant="contained"
-                            onClick={handleUploadFile}
-                            disabled={loading || !selectedFile}
-                            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
-                            sx={{
-                                bgcolor: '#00F3FF',
-                                color: '#000000',
-                                '&:hover': {
-                                    bgcolor: '#00D4E0'
-                                }
-                            }}
-                        >
-                            Upload File
-                        </Button>
+                                }}
+                                onClick={triggerFileInput}
+                            >
+                                {selectedFile ? (
+                                    <>
+                                        <FileIcon sx={{ fontSize: 40, color: '#00F3FF', mb: 1 }} />
+                                        <Typography variant="body1" gutterBottom>
+                                            {selectedFile.name}
+                                        </Typography>
+                                        <Typography variant="body2" color="textSecondary">
+                                            {(selectedFile.size / 1024).toFixed(2)} KB
+                                        </Typography>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UploadIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.5)', mb: 1 }} />
+                                        <Typography variant="body1" gutterBottom>
+                                            Click to select a file
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                                            Supports PDF, DOCX, TXT, and more
+                                        </Typography>
+                                    </>
+                                )}
+                            </Box>
+                            
+                            <TextField
+                                fullWidth
+                                label="Description (Optional)"
+                                margin="normal"
+                                value={fileDescription}
+                                onChange={(e) => setFileDescription(e.target.value)}
+                                InputLabelProps={{
+                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                                sx={{
+                                    mb: 3,
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#FFFFFF',
+                                        '& fieldset': {
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF'
+                                        }
+                                    }
+                                }}
+                            />
+                            
+                            <Button
+                                variant="contained"
+                                onClick={handleUploadFile}
+                                disabled={loading || !selectedFile}
+                                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
+                                sx={{
+                                    bgcolor: '#00F3FF',
+                                    color: '#000000',
+                                    '&:hover': {
+                                        bgcolor: '#00D4E0'
+                                    }
+                                }}
+                            >
+                                Upload File
+                            </Button>
+                        </div>
                     </TabPanel>
                 </Box>
             </Paper>

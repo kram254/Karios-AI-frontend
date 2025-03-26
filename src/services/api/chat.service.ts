@@ -108,7 +108,7 @@ export const chatService = {
 
   // Agent-specific chat
   chatWithAgent: (agentId: number, message: string) => 
-    api.post<ChatMessage>(`/api/chat/agents/${agentId}/chat`, { message }),
+    api.post<ChatMessage>(`/api/v1/chat/agents/${agentId}/chat`, { message }),
 
   // Chat Status
   getChatStatus: (chatId: string) => 

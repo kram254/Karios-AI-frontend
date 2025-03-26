@@ -63,12 +63,12 @@ export class Endpoints {
     [Environment.PRODUCTION]: {
       API_BASE_URL: 'https://agentando-ai-backend-j3ns.onrender.com',
       CHAT_ENDPOINTS: {
-        GET_ALL_CHATS: '/api/v1/chat/chats',
-        CREATE_CHAT: '/api/v1/chat/chats',
-        GET_CHAT: (id: string) => `/api/v1/chat/chats/${id}`,
-        DELETE_CHAT: (id: string) => `/api/v1/chat/chats/${id}`,
-        UPDATE_CHAT_TITLE: (id: string) => `/api/v1/chat/chats/${id}/title`,
-        ADD_MESSAGE: (id: string) => `/api/v1/chat/chats/${id}/messages`,
+        GET_ALL_CHATS: '/api/chat/chats',
+        CREATE_CHAT: '/api/chat/chats',
+        GET_CHAT: (id: string) => `/api/chat/chats/${id}`,
+        DELETE_CHAT: (id: string) => `/api/chat/chats/${id}`,
+        UPDATE_CHAT_TITLE: (id: string) => `/api/chat/chats/${id}/title`,
+        ADD_MESSAGE: (id: string) => `/api/chat/chats/${id}/messages`,
       },
       ADMIN_ENDPOINTS: {
         GET_ALL_AGENTS: '/api/v1/agents/list',

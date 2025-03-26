@@ -6,11 +6,11 @@ const api = ApiService.getInstance().getApi();
 export const monitoringService = {
     // System Health
     getSystemHealth: () =>
-        api.get<SystemHealth>('/system/health'),
+        api.get<SystemHealth>('/api/v1/system/health'),
 
     // Usage Metrics
     getUserUsage: (userId: number) =>
-        api.get<UsageMetrics>(`/system/usage/${userId}`),
+        api.get<UsageMetrics>(`/api/v1/system/usage/${userId}`),
 
     // Credit System
     getCreditsInfo: (userId: number) =>
@@ -21,7 +21,7 @@ export const monitoringService = {
                 timestamp: string;
                 type: 'debit' | 'credit';
             }>;
-        }>(`/system/credits/${userId}`),
+        }>(`/api/v1/system/credits/${userId}`),
 
     // Performance Metrics
     getPerformanceMetrics: (params: {
@@ -30,14 +30,14 @@ export const monitoringService = {
         agentId?: number;
         userId?: number;
     }) =>
-        api.get('/system/performance', { params }),
+        api.get('/api/v1/system/performance', { params }),
 
     // Alerts
     getAlerts: (userId: number) =>
-        api.get<Alert[]>(`/system/alerts/${userId}`),
+        api.get<Alert[]>(`/api/v1/system/alerts/${userId}`),
 
     updateAlertStatus: (alertId: number, status: 'read' | 'unread' | 'archived') =>
-        api.put(`/system/alerts/${alertId}`, { status }),
+        api.put(`/api/v1/system/alerts/${alertId}`, { status }),
 
     // Reports
     generateReport: (params: {
@@ -46,7 +46,7 @@ export const monitoringService = {
         endDate: string;
         format: 'pdf' | 'csv';
     }) =>
-        api.post<Report>('/system/reports/generate', params),
+        api.post<Report>('/api/v1/system/reports/generate', params),
 
     // Cost Analysis
     getCostAnalysis: (params: {
@@ -54,5 +54,5 @@ export const monitoringService = {
         endDate: string;
         groupBy: 'day' | 'week' | 'month';
     }) =>
-        api.get('/system/cost-analysis', { params }),
+        api.get('/api/v1/system/cost-analysis', { params }),
 };

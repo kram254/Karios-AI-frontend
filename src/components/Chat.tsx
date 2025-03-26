@@ -5,6 +5,8 @@ import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import { MessageFormatter } from "./MessageFormatter";
+import AgentInfoBanner from "./agent/AgentInfoBanner";
+import "../styles/chat.css";
 
 interface Message {
   id: string;
@@ -21,6 +23,7 @@ interface Chat {
   messages: Message[];
   created_at?: string;
   updated_at?: string;
+  agent_id?: string;
 }
 
 const Chat: React.FC = () => {
@@ -90,6 +93,11 @@ const Chat: React.FC = () => {
         <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
       </div>
 
+      {/* Agent Info Banner - Show only if chat has an agent_id */}
+      {currentChat.agent_id && (
+        <AgentInfoBanner agentId={currentChat.agent_id} />
+      )}
+
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {currentChat.messages.map((msg) => (
@@ -97,17 +105,13 @@ const Chat: React.FC = () => {
             key={msg.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`message-container ${msg.role === "user" ? "user" : "agent"}`}
           >
             <div
-              className={`max-w-[80%] p-4 rounded-lg ${
-                msg.role === "user"
-                  ? "bg-cyan-500 text-black"
-                  : "bg-[#2A2A2A] text-white"
-              }`}
+              className={`message-content ${msg.role}`}
             >
               <MessageFormatter content={msg.content} role={msg.role} />
-              <div className="mt-2 text-xs opacity-70">
+              <div className="message-timestamp">
                 {(() => {
                   try {
                     // Check if timestamp is a string (from API) or a Date object
@@ -133,33 +137,31 @@ const Chat: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-[#2A2A2A]">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="w-full p-4 pr-12 bg-[#2A2A2A] text-white rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
-              rows={1}
-              disabled={isProcessing}
-            />
-            {isProcessing && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-              </div>
-            )}
-          </div>
-          <button
-            type="submit"
-            disabled={!message.trim() || isProcessing}
-            className="p-4 bg-cyan-500 text-black rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send className="w-5 h-5" />
-          </button>
+      {/* Input Form - Using new chat.css classes */}
+      <form onSubmit={handleSubmit} className="chat-input-container">
+        <div className="relative flex-1">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message..."
+            className="chat-textarea w-full"
+            rows={1}
+            disabled={isProcessing}
+          />
+          {isProcessing && (
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            </div>
+          )}
         </div>
+        <button
+          type="submit"
+          disabled={!message.trim() || isProcessing}
+          className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Send className="w-5 h-5" />
+        </button>
       </form>
     </div>
   );

@@ -5,6 +5,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/user';
+import AgentSelectionModal from './agent/AgentSelectionModal';
+import { Agent } from '../types/agent';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -17,11 +19,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCollapse,
   onSettingsClick,
 }) => {
-  const { chats, currentChat, createNewChat, setCurrentChat } = useChat();
+  const { chats, currentChat, createNewChat, setCurrentChat, createAgentChat, setSelectedAgent } = useChat();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [creatingChat, setCreatingChat] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
 
   const handleCreateNewChat = async () => {
     if (creatingChat) return;
@@ -51,6 +54,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
     } catch (error) {
       console.error('Error navigating to agents:', error);
       toast.error('Failed to navigate to agents page');
+    }
+  };
+
+  const handleShowAgentModal = () => {
+    setShowAgentModal(true);
+  };
+
+  const handleSelectAgent = async (agent: Agent) => {
+    try {
+      setCreatingChat(true);
+      setSelectedAgent(agent);
+      const chat = await createAgentChat();
+      if (chat) {
+        setCurrentChat(chat);
+      }
+      navigate('/chat');
+      toast.success(`Started chat with ${agent.name}`);
+    } catch (error) {
+      console.error('Error creating agent chat:', error);
+      toast.error('Failed to create agent chat. Please try again.');
+    } finally {
+      setCreatingChat(false);
     }
   };
 
@@ -118,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Agent Chat */}
         <button
-          onClick={() => navigate('/agent-chat')}
+          onClick={handleShowAgentModal}
           className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
             location.pathname.includes('/agent-chat') ? 'bg-[#2A2A2A]' : ''
           }`}
@@ -233,6 +258,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && <span className="ml-3">Settings</span>}
         </button>
       </div>
+      <AgentSelectionModal
+        isOpen={showAgentModal}
+        onClose={() => setShowAgentModal(false)}
+        onSelectAgent={handleSelectAgent}
+      />
     </aside>
   );
 };

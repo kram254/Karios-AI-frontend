@@ -20,6 +20,7 @@ export interface Chat {
 export interface ChatCreate {
   title?: string;
   chat_type?: string;
+  agent_id?: string;
 }
 
 export interface ChatTitleUpdate {
@@ -29,6 +30,11 @@ export interface ChatTitleUpdate {
 export interface MessageCreate {
   role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+export interface AgentChatCreate {
+  agent_id: string;
+  title?: string;
 }
 
 export const chatService = {
@@ -41,6 +47,15 @@ export const chatService = {
   createChat: (chatData: ChatCreate = {}) => {
     console.log(`Creating new chat with title: ${chatData.title || 'New Chat'} and type: ${chatData.chat_type || 'default'}`);
     return api.post<Chat>('/api/chat/chats', chatData);
+  },
+  
+  createAgentChat: (agentChatData: AgentChatCreate) => {
+    console.log(`Creating new agent chat with agent ID: ${agentChatData.agent_id}`);
+    return api.post<Chat>('/api/chat/chats', {
+      title: agentChatData.title || 'Agent Chat',
+      chat_type: 'agent_chat',
+      agent_id: agentChatData.agent_id
+    });
   },
   
   getChat: (chatId: string) => {

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { chatService } from '../services/api/chat.service';
 import toast from 'react-hot-toast';
 import { generateTitleFromMessage } from '../utils/titleGenerator';
+import { Agent } from '../types/agent';
 
 interface Message {
   id: string;
@@ -18,6 +19,7 @@ interface Chat {
   messages: Message[];
   created_at?: string; // For backend compatibility
   updated_at?: string; // For backend compatibility
+  agent_id?: string; // Add agent_id to Chat interface
 }
 
 interface ChatContextType {
@@ -26,10 +28,13 @@ interface ChatContextType {
   loading: boolean;
   error: string | null;
   createNewChat: () => Promise<Chat | null>;
+  createAgentChat: () => Promise<Chat | null>; // Update createAgentChat method
   setCurrentChat: (chat: Chat) => void;
   addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string }) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
+  selectedAgent: Agent | null; // Add selectedAgent state
+  setSelectedAgent: (agent: Agent | null) => void; // Add setSelectedAgent method
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -39,6 +44,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null); // Initialize selectedAgent state
 
   useEffect(() => {
     loadChats();
@@ -88,6 +94,40 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
       setError('Failed to create chat');
       toast.error('Failed to create chat');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createAgentChat = async () => {
+    if (!selectedAgent) {
+      console.error('No agent selected');
+      toast.error('No agent selected');
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`Creating a new chat with agent ${selectedAgent.id}...`);
+      const response = await chatService.createAgentChat({
+        agent_id: selectedAgent.id.toString(),
+        title: `Chat with ${selectedAgent.name}`
+      });
+      console.log('Agent chat created response:', response);
+      
+      const newChat = response.data;
+      setChats(prev => [newChat, ...prev]);
+      setCurrentChat(newChat);
+      
+      toast.success(`Chat with ${selectedAgent.name} created`);
+      setError(null);
+      return newChat;
+    } catch (err: unknown) {
+      console.error('Error creating agent chat:', err);
+      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
+      setError('Failed to create agent chat');
+      toast.error('Failed to create agent chat');
       throw err;
     } finally {
       setLoading(false);
@@ -244,10 +284,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     error,
     createNewChat,
+    createAgentChat, 
     setCurrentChat,
     addMessage,
     deleteChat,
-    updateChatTitle
+    updateChatTitle,
+    selectedAgent,
+    setSelectedAgent
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

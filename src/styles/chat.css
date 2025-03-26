@@ -1,0 +1,137 @@
+/* Chat Message Styles */
+.message-container {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.message-container.user {
+  justify-content: flex-end;
+}
+
+.message-container.agent {
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 80%;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  position: relative;
+}
+
+.message-content.user {
+  background-color: #00b4d8;
+  color: #000;
+  border-top-right-radius: 0;
+}
+
+.message-content.assistant {
+  background-color: #2A2A2A;
+  color: #fff;
+  border-top-left-radius: 0;
+}
+
+.message-content.agent {
+  background-color: #2A2A2A;
+  border-left: 3px solid #00b4d8;
+  color: #fff;
+}
+
+.message-timestamp {
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  text-align: right;
+}
+
+/* Agent Info Banner */
+.agent-info-banner {
+  background-color: #1A1A1A;
+  border-bottom: 1px solid #2A2A2A;
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.agent-info-banner .agent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agent-info-banner .agent-avatar {
+  background-color: #2A2A2A;
+  padding: 0.5rem;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+}
+
+.agent-info-banner .agent-details {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: #222222;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.agent-info-banner .agent-property {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.agent-info-banner .agent-property-label {
+  color: #9CA3AF;
+}
+
+.agent-info-banner .agent-property-value {
+  color: #E5E7EB;
+}
+
+/* Input Area */
+.chat-input-container {
+  display: flex;
+  align-items: flex-end;
+  padding: 1rem;
+  border-top: 1px solid #2A2A2A;
+  background-color: #0A0A0A;
+}
+
+.chat-textarea {
+  flex: 1;
+  padding: 0.75rem 3rem 0.75rem 0.75rem;
+  background-color: #2A2A2A;
+  color: white;
+  border-radius: 0.5rem;
+  resize: none;
+  min-height: 3rem;
+  max-height: 10rem;
+  border: none;
+  outline: none;
+}
+
+.chat-textarea:focus {
+  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.5);
+}
+
+.chat-send-button {
+  margin-left: 0.75rem;
+  padding: 0.75rem;
+  background-color: #00b4d8;
+  color: black;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chat-send-button:hover {
+  background-color: #00a0c0;
+}
+
+.chat-send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

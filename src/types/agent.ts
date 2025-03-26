@@ -52,6 +52,7 @@ export interface Agent {
     name: string;
     description?: string;
     ai_role: AgentRole;
+    custom_role?: string;
     owner_id: number;
     status: AgentStatus;
     language: string;

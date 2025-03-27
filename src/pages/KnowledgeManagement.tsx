@@ -83,6 +83,16 @@ export const KnowledgeManagement: React.FC = () => {
     }, 500);
   };
 
+  const handleKnowledgeAdded = async () => {
+    // Refresh categories to update item count
+    await fetchCategories();
+  };
+
+  const handleKnowledgeDeleted = async () => {
+    // Refresh categories to update item count
+    await fetchCategories();
+  };
+
   return (
     <Container maxWidth="lg" sx={{ pt: 4, pb: 8, height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ mb: 4 }}>
@@ -157,6 +167,8 @@ export const KnowledgeManagement: React.FC = () => {
             {selectedCategory ? (
               <KnowledgeItemManager 
                 categoryId={String(selectedCategory.id)} 
+                onKnowledgeAdded={handleKnowledgeAdded}
+                onKnowledgeDeleted={handleKnowledgeDeleted}
               />
             ) : (
               <Box sx={{ p: 4, textAlign: 'center' }}>

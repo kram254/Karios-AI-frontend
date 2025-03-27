@@ -51,9 +51,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 interface KnowledgeItemManagerProps {
     categoryId: string;
     onKnowledgeAdded?: (knowledgeItem: KnowledgeItem) => void;
+    onKnowledgeDeleted?: () => void;
 }
 
-export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ categoryId, onKnowledgeAdded }) => {
+export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ categoryId, onKnowledgeAdded, onKnowledgeDeleted }) => {
     const [tabValue, setTabValue] = useState(0);
     const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -214,6 +215,9 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             setSuccess('Knowledge item deleted successfully');
             setDeleteDialogOpen(false);
             fetchKnowledgeItems();
+            if (onKnowledgeDeleted) {
+                onKnowledgeDeleted();
+            }
         } catch (error) {
             console.error('Failed to delete knowledge item:', error);
             setError('Failed to delete knowledge item. Please try again.');

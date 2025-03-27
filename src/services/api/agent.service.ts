@@ -4,14 +4,15 @@ import { Agent, AgentConfig, AgentStatus, AgentTestResult, AgentMetrics, AgentRo
 // Define a type for agent creation that matches what the backend expects
 interface AgentCreatePayload {
     name: string;
-    description?: string;
     ai_role: AgentRole;
     language: string;
     mode: AgentMode;
     response_style: number;
     response_length: number;
     knowledge_item_ids: number[];
-    actions?: string[];
+    config?: {
+        tools_enabled?: string[];
+    };
 }
 
 export const agentService = {
@@ -34,14 +35,15 @@ export const agentService = {
         // Ensure we have the required fields for the backend
         const payload = {
             name: agentData.name || 'New Agent',
-            description: agentData.description || '',
             ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT,
             language: agentData.language || 'en',
             mode: agentData.mode || AgentMode.TEXT,
             response_style: agentData.response_style !== undefined ? agentData.response_style : 0.5,
             response_length: agentData.response_length || 150,
             knowledge_item_ids: agentData.knowledge_item_ids || [],
-            actions: agentData.actions || []
+            config: {
+                tools_enabled: agentData.config?.tools_enabled || []
+            }
         };
         
         return api.post<Agent>('/api/v1/agents/create', payload);

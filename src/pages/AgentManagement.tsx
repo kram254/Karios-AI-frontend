@@ -158,14 +158,15 @@ export const AgentManagement: React.FC = () => {
             
             const response = await agentService.createAgent({ 
                 name: agentData.name || '', 
-                description: agentData.description || '', 
                 ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT, 
                 language: agentData.language || 'en', 
                 mode: agentData.mode || AgentMode.TEXT, 
                 response_style: agentData.response_style || 0.5, 
                 response_length: agentData.response_length || 150, 
                 knowledge_item_ids: selectedKnowledgeIds,
-                actions: agentData.actions || []
+                config: {
+                    tools_enabled: agentData.actions || []
+                }
             });
             
             if (response && response.data) {

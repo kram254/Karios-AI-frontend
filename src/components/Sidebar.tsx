@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/user';
 import AgentSelectionModal from './agent/AgentSelectionModal';
 import { Agent } from '../types/agent';
-import LanguageSelector from './LanguageSelector';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -239,9 +238,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer Navigation */}
       <div className="border-t border-[#2A2A2A]">
-        {/* Language Selector */}
-        <LanguageSelector isCollapsed={isCollapsed} />
-        
         {/* Profile */}
         <button
           onClick={() => navigate('/profile')}

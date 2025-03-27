@@ -84,7 +84,7 @@ export const KnowledgeManagement: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ pt: 4, pb: 8 }}>
+    <Container maxWidth="lg" sx={{ pt: 4, pb: 8, height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom>
           Knowledge Management
@@ -114,7 +114,11 @@ export const KnowledgeManagement: React.FC = () => {
           bgcolor: '#1A1A1A',
           color: '#FFFFFF',
           border: '1px solid rgba(0, 243, 255, 0.2)',
-          mb: 4
+          mb: 4,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
         }}
       >
         <Tabs 
@@ -141,7 +145,7 @@ export const KnowledgeManagement: React.FC = () => {
           />
         </Tabs>
         
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
           <TabPanel value={selectedTab} index={0}>
             <CategoryManagement 
               onCategorySelect={handleCategorySelect}

@@ -19,6 +19,8 @@ import { AgentChatInterface } from './components/agent/AgentChatInterface';
 import { AgentKnowledgeManager } from './pages/AgentKnowledgeManager';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { LanguageProvider } from './context/LanguageContext';
+import { LanguageDemo } from './components/LanguageDemo';
 
 // Create a dark theme
 const darkTheme = createTheme({
@@ -125,78 +127,84 @@ function App() {
   // }
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <div className="app-container flex h-screen bg-[#0A0A0A] text-white">
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#1A1A1A',
-              color: '#FFFFFF',
-              border: '1px solid rgba(0, 243, 255, 0.2)',
-            },
-          }}
-        />
-        <Sidebar
-          isCollapsed={isSidebarCollapsed}
-          onCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          onSettingsClick={() => setIsSettingsOpen(true)}
-        />
-        <main className="flex-1 overflow-hidden">
-          <ErrorBoundary>
-            <Routes>
-              {/* Public Routes (commented out login route) */}
-              {/* <Route path="/login" element={<Login />} /> */}
-              
-              {/* Protected Routes */}
-              <Route element={<PrivateRoute />}>
-                {/* Default route */}
-                <Route path="/" element={<Navigate to="/chat" replace />} />
-                
-                {/* Chat */}
-                <Route path="/chat" element={<Chat />} />
-                
-                {/* Agent Chat Interface */}
-                <Route path="/agent-chat/:agentId" element={
-                  <AgentChatInterface agentId={Number(window.location.pathname.split('/').pop())} />
-                } />
-                
-                {/* Agent Knowledge Manager */}
-                <Route path="/agent-knowledge/:agentId" element={<AgentKnowledgeManager />} />
-                
-                {/* Agent Management */}
-                <Route path="/agents" element={<AgentManagement />} />
-                
-                {/* Knowledge Management */}
-                <Route path="/knowledge" element={<KnowledgeManagement />} />
-                
-                {/* Dashboard - Access based on role */}
-                <Route path="/dashboard" element={<DashboardComponent />} />
-                
-                {/* User Profile */}
-                <Route path="/profile" element={<UserProfile />} />
-              </Route>
-              
-              {/* Role-restricted Routes */}
-              <Route element={<PrivateRoute allowedRoles={[UserRole.SUPER_ADMIN, UserRole.RESELLER]} />}>
-                {/* User Management - Only for SUPER_ADMIN and RESELLER */}
-                <Route path="/users" element={<UserManagement />} />
-              </Route>
-              
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/chat" replace />} />
-            </Routes>
-          </ErrorBoundary>
-        </main>
-        {isSettingsOpen && (
-          <Settings
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
+    <LanguageProvider>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <div className="app-container flex h-screen bg-[#0A0A0A] text-white">
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#1A1A1A',
+                color: '#FFFFFF',
+                border: '1px solid rgba(0, 243, 255, 0.2)',
+              },
+            }}
           />
-        )}
-      </div>
-    </ThemeProvider>
+          <Sidebar
+            isCollapsed={isSidebarCollapsed}
+            onCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            onSettingsClick={() => setIsSettingsOpen(true)}
+          />
+          <main className="flex-1 overflow-hidden">
+            <ErrorBoundary>
+              <Routes>
+                {/* Public Routes (commented out login route) */}
+                {/* <Route path="/login" element={<Login />} /> */}
+                
+                {/* Protected Routes */}
+                <Route element={<PrivateRoute />}>
+                  {/* Default route */}
+                  <Route path="/" element={<Navigate to="/chat" replace />} />
+                  
+                  {/* Chat */}
+                  <Route path="/chat" element={<Chat />} />
+                  
+                  {/* Agent Chat Interface */}
+                  <Route path="/agent-chat/:agentId" element={
+                    <AgentChatInterface agentId={Number(window.location.pathname.split('/').pop())} />
+                  } />
+                  
+                  {/* Agent Knowledge Manager */}
+                  <Route path="/agent-knowledge/:agentId" element={<AgentKnowledgeManager />} />
+                  
+                  {/* Agent Management */}
+                  <Route path="/agents" element={<AgentManagement />} />
+                  
+                  {/* Knowledge Management */}
+                  <Route path="/knowledge" element={<KnowledgeManagement />} />
+                  
+                  {/* Dashboard - Access based on role */}
+                  <Route path="/dashboard" element={<DashboardComponent />} />
+                  
+                  {/* User Profile */}
+                  <Route path="/profile" element={<UserProfile />} />
+                </Route>
+                
+                {/* Role-restricted Routes */}
+                <Route element={<PrivateRoute allowedRoles={[UserRole.SUPER_ADMIN, UserRole.RESELLER]} />}>
+                  {/* User Management - Only for SUPER_ADMIN and RESELLER */}
+                  <Route path="/users" element={<UserManagement />} />
+                </Route>
+                
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/chat" replace />} />
+              </Routes>
+            </ErrorBoundary>
+          </main>
+          {isSettingsOpen && (
+            <Settings
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+            />
+          )}
+          {/* Language Demo Component - Visible on all pages to demonstrate language changes */}
+          <div className="fixed bottom-4 right-4 z-50">
+            <LanguageDemo />
+          </div>
+        </div>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 

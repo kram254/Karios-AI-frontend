@@ -21,6 +21,7 @@ export interface ChatCreate {
   title?: string;
   chat_type?: string;
   agent_id?: string;
+  language?: string;
 }
 
 export interface ChatTitleUpdate {

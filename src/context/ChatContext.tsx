@@ -3,6 +3,7 @@ import { chatService } from '../services/api/chat.service';
 import toast from 'react-hot-toast';
 import { generateTitleFromMessage } from '../utils/titleGenerator';
 import { Agent } from '../types/agent';
+import { useLanguage } from './LanguageContext';
 
 interface Message {
   id: string;
@@ -20,6 +21,7 @@ interface Chat {
   created_at?: string; // For backend compatibility
   updated_at?: string; // For backend compatibility
   agent_id?: string; // Add agent_id to Chat interface
+  language?: string; // Add language property to Chat interface
 }
 
 interface ChatContextType {
@@ -45,6 +47,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null); // Initialize selectedAgent state
+  const { language } = useLanguage(); // Get the current language
 
   useEffect(() => {
     loadChats();
@@ -78,7 +81,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Attempting to create a new chat...');
       const response = await chatService.createChat({
         title: 'New Chat',
-        chat_type: 'default'
+        chat_type: 'default',
+        language: language.code // Include the selected language
       });
       console.log('Chat created response:', response);
       
@@ -110,9 +114,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       console.log(`Creating a new chat with agent ${selectedAgent.id}...`);
-      const response = await chatService.createAgentChat({
+      const response = await chatService.createChat({
         agent_id: selectedAgent.id.toString(),
-        title: `Chat with ${selectedAgent.name}`
+        title: `Chat with ${selectedAgent.name}`,
+        chat_type: 'sales_agent',
+        language: selectedAgent.language || language.code // Use agent's language if available, otherwise use app language
       });
       console.log('Agent chat created response:', response);
       
@@ -132,6 +138,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add this function to get the chat's language or default to app language
+  const getChatLanguage = (chat: Chat | null) => {
+    if (chat && chat.language) {
+      return chat.language;
+    }
+    return language.code;
   };
 
   const addMessage = async ({ role, content }: { role: 'user' | 'assistant' | 'system'; content: string }) => {

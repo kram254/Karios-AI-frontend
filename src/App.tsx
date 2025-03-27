@@ -20,7 +20,6 @@ import { AgentKnowledgeManager } from './pages/AgentKnowledgeManager';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { LanguageProvider } from './context/LanguageContext';
-import { LanguageDemo } from './components/LanguageDemo';
 
 // Create a dark theme
 const darkTheme = createTheme({
@@ -198,10 +197,6 @@ function App() {
               onClose={() => setIsSettingsOpen(false)}
             />
           )}
-          {/* Language Demo Component - Visible on all pages to demonstrate language changes */}
-          <div className="fixed bottom-4 right-4 z-50">
-            <LanguageDemo />
-          </div>
         </div>
       </ThemeProvider>
     </LanguageProvider>

@@ -11,8 +11,13 @@ import {
     Slider,
     Checkbox,
     Modal,
-    Paper
+    Paper,
+    InputAdornment,
+    IconButton,
+    Tooltip,
+    FormHelperText
 } from '@mui/material';
+import Language from '@mui/icons-material/Language';
 import { Agent, AgentRole, AgentMode } from '../../types/agent';
 import { KnowledgeSelector } from '../knowledge/KnowledgeSelector';
 import './AgentCreationWizard.css';
@@ -513,6 +518,15 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                     open={languageSelectOpen}
                                     onOpen={() => setLanguageSelectOpen(true)}
                                     onClose={() => setLanguageSelectOpen(false)}
+                                    startAdornment={
+                                        <InputAdornment position="start">
+                                            <Tooltip title="Select the language the agent will use to interact with users">
+                                                <IconButton edge="start" size="small">
+                                                    <Language sx={{ color: '#00F3FF', fontSize: '1.2rem' }} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </InputAdornment>
+                                    }
                                     MenuProps={{
                                         disablePortal: false,
                                         container: document.body,
@@ -563,19 +577,52 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         },
                                     }}
                                 >
-                                    <MenuItem value="en">English</MenuItem>
-                                    <MenuItem value="es">Spanish (Español)</MenuItem>
-                                    <MenuItem value="fr">French (Français)</MenuItem>
-                                    <MenuItem value="de">German (Deutsch)</MenuItem>
-                                    <MenuItem value="it">Italian (Italiano)</MenuItem>
-                                    <MenuItem value="pt">Portuguese (Português)</MenuItem>
-                                    <MenuItem value="ru">Russian (Русский)</MenuItem>
-                                    <MenuItem value="zh">Chinese (中文)</MenuItem>
-                                    <MenuItem value="ja">Japanese (日本語)</MenuItem>
-                                    <MenuItem value="ar">Arabic (العربية)</MenuItem>
-                                    <MenuItem value="hi">Hindi (हिन्दी)</MenuItem>
-                                    <MenuItem value="nl">Dutch (Nederlands)</MenuItem>
+                                    <MenuItem value="en">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/en.png" alt="English" width={20} height={15} style={{ marginRight: 8 }} />
+                                            English
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="es">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/es.png" alt="Spanish" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Spanish (Español)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="fr">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/fr.png" alt="French" width={20} height={15} style={{ marginRight: 8 }} />
+                                            French (Français)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="de">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/de.png" alt="German" width={20} height={15} style={{ marginRight: 8 }} />
+                                            German (Deutsch)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="it">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/it.png" alt="Italian" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Italian (Italiano)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="pt">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/pt.png" alt="Portuguese" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Portuguese (Português)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="ru">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/ru.png" alt="Russian" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Russian (Русский)
+                                        </Box>
+                                    </MenuItem>
                                 </Select>
+                                <FormHelperText sx={{ color: '#AAAAAA' }}>
+                                    The agent will respond in this language
+                                </FormHelperText>
                             </FormControl>
                             
                             <Box sx={{ mb: 2 }}>

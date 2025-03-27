@@ -73,6 +73,31 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
     }
   };
 
+  const getLanguageDisplay = (language: string) => {
+    switch (language) {
+      case 'en':
+        return 'English';
+      case 'es':
+        return 'Spanish';
+      case 'fr':
+        return 'French';
+      case 'de':
+        return 'German';
+      case 'it':
+        return 'Italian';
+      case 'pt':
+        return 'Portuguese';
+      case 'zh':
+        return 'Chinese';
+      case 'ja':
+        return 'Japanese';
+      case 'ko':
+        return 'Korean';
+      default:
+        return language;
+    }
+  };
+
   const getAgentStatusColor = (status: AgentStatus) => {
     switch (status) {
       case AgentStatus.ONLINE:
@@ -160,7 +185,7 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
               
               <Chip 
                 size="small"
-                label={agent.language}
+                label={getLanguageDisplay(agent.language)}
                 icon={<LanguageIcon sx={{ fontSize: '0.8rem' }} />}
                 sx={{ 
                   bgcolor: 'rgba(156, 39, 176, 0.1)', 

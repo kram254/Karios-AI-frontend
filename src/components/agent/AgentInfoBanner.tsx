@@ -78,7 +78,15 @@ const AgentInfoBanner: React.FC<AgentInfoBannerProps> = ({ agentId }) => {
           <p className="text-gray-300 mb-2">{agent.description || `A ${agent.ai_role.replace('_', ' ')} agent designed to assist you.`}</p>
           <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="text-gray-400">Language:</div>
-            <div className="text-white">{agent.language}</div>
+            <div className="text-white flex items-center">
+              {agent.language === 'en' && 'English'}
+              {agent.language === 'es' && 'Spanish (Español)'}
+              {agent.language === 'fr' && 'French (Français)'}
+              {agent.language === 'de' && 'German (Deutsch)'}
+              {agent.language === 'it' && 'Italian (Italiano)'}
+              {agent.language === 'pt' && 'Portuguese (Português)'}
+              {agent.language === 'ru' && 'Russian (Русский)'}
+            </div>
             
             <div className="text-gray-400">Response Style:</div>
             <div className="text-white">

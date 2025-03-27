@@ -1,22 +1,17 @@
 import { KnowledgeItem } from './knowledge';
 
 export enum AgentStatus {
-    ACTIVE = 'active',
-    INACTIVE = 'inactive',
-    MAINTENANCE = 'maintenance',
-    ERROR = 'error',
     ONLINE = 'online',
     OFFLINE = 'offline',
-    TEST = 'test'
+    TEST = 'test',
+    MAINTENANCE = 'maintenance'
 }
 
 export enum AgentRole {
     CUSTOMER_SUPPORT = 'customer_support',
     TECHNICAL_SUPPORT = 'technical_support',
-    SALES_ASSISTANT = 'sales_assistant',
     SALES_SERVICES = 'sales_services',
-    CONSULTING = 'consulting',
-    CUSTOM = 'custom'
+    CONSULTING = 'consulting'
 }
 
 export enum AgentMode {

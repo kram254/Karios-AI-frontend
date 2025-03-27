@@ -10,9 +10,6 @@ interface AgentCreatePayload {
     response_style: number;
     response_length: number;
     knowledge_item_ids: number[];
-    config?: {
-        tools_enabled?: string[];
-    };
 }
 
 export const agentService = {
@@ -38,14 +35,15 @@ export const agentService = {
             ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT,
             language: agentData.language || 'en',
             mode: agentData.mode || AgentMode.TEXT,
-            response_style: agentData.response_style !== undefined ? agentData.response_style : 0.5,
-            response_length: agentData.response_length || 150,
-            knowledge_item_ids: agentData.knowledge_item_ids || [],
-            config: {
-                tools_enabled: agentData.config?.tools_enabled || []
-            }
+            response_style: typeof agentData.response_style === 'number' ? 
+                Math.max(0, Math.min(1, agentData.response_style)) : 0.5, // Ensure between 0 and 1
+            response_length: typeof agentData.response_length === 'number' ? 
+                Math.max(50, Math.min(500, agentData.response_length)) : 150, // Ensure between 50 and 500
+            knowledge_item_ids: Array.isArray(agentData.knowledge_item_ids) ? 
+                agentData.knowledge_item_ids.map(id => parseInt(String(id), 10)) : []
         };
         
+        console.log('Final payload being sent:', JSON.stringify(payload, null, 2));
         return api.post<Agent>('/api/v1/agents/create', payload);
     },
 

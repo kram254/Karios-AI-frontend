@@ -156,17 +156,19 @@ export const AgentManagement: React.FC = () => {
             console.log('Creating agent with data:', agentData);
             console.log('Selected knowledge IDs:', selectedKnowledgeIds);
             
+            // Convert any string IDs to integers
+            const knowledgeIds = selectedKnowledgeIds.map(id => typeof id === 'string' ? parseInt(id, 10) : id);
+            
             const response = await agentService.createAgent({ 
-                name: agentData.name || '', 
+                name: agentData.name || 'New Agent', 
                 ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT, 
                 language: agentData.language || 'en', 
                 mode: agentData.mode || AgentMode.TEXT, 
-                response_style: agentData.response_style || 0.5, 
-                response_length: agentData.response_length || 150, 
-                knowledge_item_ids: selectedKnowledgeIds,
-                config: {
-                    tools_enabled: agentData.actions || []
-                }
+                response_style: typeof agentData.response_style === 'number' ? 
+                    Math.max(0, Math.min(1, agentData.response_style)) : 0.5,
+                response_length: typeof agentData.response_length === 'number' ? 
+                    Math.max(50, Math.min(500, agentData.response_length)) : 150,
+                knowledge_item_ids: knowledgeIds
             });
             
             if (response && response.data) {

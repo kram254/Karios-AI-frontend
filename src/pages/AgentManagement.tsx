@@ -1,42 +1,144 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Box,
-    Container,
-    Typography,
-    Button,
-    Paper,
-    Tabs,
-    Tab,
-    Snackbar,
-    Alert,
-    CircularProgress
+    Container, Box, Typography, Button,
+    Dialog, DialogTitle, DialogContent, DialogActions,
+    Snackbar, Alert, Menu, MenuItem, IconButton,
+    Paper, CircularProgress, Tabs, Tab
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import { Agent, AgentRole, AgentMode } from '../types/agent';
+import { 
+    Add as AddIcon, Settings, Psychology, 
+    Edit, Delete, MoreVert 
+} from '@mui/icons-material';
+import { AgentRole, Agent, AgentConfig, AgentMode } from '../types/agent';
 import { agentService } from '../services/api/agent.service';
-import { AgentCreationWizard } from '../components/agent/AgentCreationWizard';
-import { KnowledgeSelector } from '../components/knowledge/KnowledgeSelector';
+import AgentEditDialog from '../components/agent/AgentEditDialog';
+import AgentRoleDialog from '../components/agent/AgentRoleDialog';
+import AgentBehaviorDialog from '../components/agent/AgentBehaviorDialog';
+import '../styles/AgentManagement.css';
 
+// Custom TabPanel component
 interface TabPanelProps {
     children?: React.ReactNode;
     index: number;
     value: number;
 }
 
-interface ExtendedAgent extends Agent {
+function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`agent-tabpanel-${index}`}
+            aria-labelledby={`agent-tab-${index}`}
+            {...other}
+        >
+            {value === index && (
+                <Box sx={{ p: 3 }}>
+                    {children}
+                </Box>
+            )}
+        </div>
+    );
+}
+
+// Agent type with metrics
+interface AgentWithMetrics extends Agent {
     metrics: {
         total_conversations: number;
         avg_user_satisfaction: number;
         avg_response_time: number;
         success_rate: number;
     };
+    // Ensure config property matches AgentConfig type
+    config?: AgentConfig;
 }
 
-const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
-    <div hidden={value !== index} style={{ padding: '24px 0' }}>
-        {value === index && children}
-    </div>
-);
+// Partial agent for creation/updates
+interface PartialAgent {
+    name?: string;
+    description?: string;
+    ai_role?: AgentRole;
+    model?: string;
+    response_style?: number;
+    response_length?: number;
+}
+
+// Create a simple AgentCreationWizard component placeholder
+interface AgentCreationWizardProps {
+    open: boolean;
+    onClose: () => void;
+    onSubmit: (agent: PartialAgent) => void;
+}
+
+const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({ open, onClose, onSubmit }) => {
+    const [agentData, setAgentData] = useState<PartialAgent>({
+        name: '',
+        description: '',
+        ai_role: AgentRole.CUSTOMER_SUPPORT,
+        model: 'gpt-4',
+        response_style: 0.5,
+        response_length: 150
+    });
+
+    const handleInputChange = (field: keyof PartialAgent, value: any) => {
+        setAgentData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleSubmit = () => {
+        onSubmit(agentData);
+        onClose();
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+            <DialogTitle>Create New Agent</DialogTitle>
+            <DialogContent>
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
+                        Enter the basic details for your new agent:
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>Name</Typography>
+                        <input 
+                            type="text" 
+                            value={agentData.name}
+                            onChange={(e) => handleInputChange('name', e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px'
+                            }}
+                        />
+                    </Box>
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>Description</Typography>
+                        <textarea
+                            value={agentData.description || ''}
+                            onChange={(e) => handleInputChange('description', e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                minHeight: '80px'
+                            }}
+                        />
+                    </Box>
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={handleSubmit} variant="contained" color="primary">Create</Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
 
 export const AgentManagement: React.FC = () => {
     console.log('AgentManagement component rendering');
@@ -47,32 +149,29 @@ export const AgentManagement: React.FC = () => {
         return () => console.log('AgentManagement unmounted');
     }, []);
     
+    // State variables
+    const [error, setError] = useState<string | null>(null);
+    const [agents, setAgents] = useState<AgentWithMetrics[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedAgent, setSelectedAgent] = useState<AgentWithMetrics | null>(null);
+    
+    // Menu state
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [menuAgentId, setMenuAgentId] = useState<string | null>(null);
+    
+    // Dialog states
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+    const [behaviorDialogOpen, setBehaviorDialogOpen] = useState(false);
+    const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
+    
+    // Snackbar state
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('info');
+    
     const [currentTab, setCurrentTab] = useState(0);
     const [showWizard, setShowWizard] = useState(false);
-    const [agents, setAgents] = useState<Agent[]>([]);
-    const [selectedAgent, setSelectedAgent] = useState<ExtendedAgent | null>(null);
-    const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<number[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [notification, setNotification] = useState<{
-        message: string;
-        type: 'success' | 'error';
-        open: boolean;
-    }>({
-        message: '',
-        type: 'success',
-        open: false
-    });
-    const [error, setError] = useState<string | null>(null);
-    const [renderError, setRenderError] = useState<string | null>(null);
-    const [agentData, setAgentData] = useState<Partial<Agent>>({
-        name: '',
-        description: '',
-        ai_role: AgentRole.CUSTOMER_SUPPORT,
-        language: 'en',
-        mode: AgentMode.TEXT,
-        response_style: 0.5,
-        response_length: 150
-    });
 
     useEffect(() => {
         console.log("Initial mount of AgentManagement component");
@@ -91,150 +190,45 @@ export const AgentManagement: React.FC = () => {
             }
         } catch (err) {
             console.error("Error in AgentManagement initial mount:", err);
-            setRenderError(String(err));
+            setError(String(err));
             setLoading(false);
         }
     }, []);
 
-    const fetchAgents = async () => {
-        console.log('Fetching agents...');
-        setLoading(true);
-        setError(null);
-        
-        try {
-            const response = await agentService.getAgents();
-            console.log('Agent data received:', response.data);
-            
-            if (response && response.data) {
-                // Create ExtendedAgent objects with metrics
-                const agentsWithMetrics = response.data.map(agent => ({
-                    ...agent,
-                    metrics: {
-                        total_conversations: 0,
-                        avg_user_satisfaction: 0,
-                        avg_response_time: 0,
-                        success_rate: 0
-                    }
-                }));
-                
-                setAgents(agentsWithMetrics);
-                console.log('Agents set in state:', agentsWithMetrics);
-                
-                // If there are agents and no agent is selected, select the first one
-                if (agentsWithMetrics.length > 0 && !selectedAgent) {
-                    setSelectedAgent(agentsWithMetrics[0]);
-                    console.log('Selected first agent:', agentsWithMetrics[0]);
-                }
-            } else {
-                console.warn('No agents data in response');
-                setAgents([]);
-            }
-        } catch (err) {
-            console.error('Error fetching agents:', err);
-            setError('Failed to load agents. Please try again later.');
-            // Don't set agents to empty array here, keep existing agents if any
-        } finally {
-            // Always set loading to false, even if there's an error
-            setLoading(false);
-        }
-    };
-
-    const resetWizard = () => {
-        setSelectedKnowledgeIds([]);
-    };
-
-    const handleKnowledgeSelect = (ids: number[]) => {
-        setSelectedKnowledgeIds(ids);
-    };
-
-    const handleAgentDataChange = (data: Partial<Agent>) => {
-        console.log("Agent data changed:", data);
-    };
-
-    const handleCreateAgent = async (agentData: Partial<Agent>) => {
-        try {
-            console.log('Creating agent with data:', agentData);
-            console.log('Selected knowledge IDs:', selectedKnowledgeIds);
-            
-            // Convert any string IDs to integers
-            const knowledgeIds = selectedKnowledgeIds.map(id => typeof id === 'string' ? parseInt(id, 10) : id);
-            
-            const response = await agentService.createAgent({ 
-                name: agentData.name || 'New Agent', 
-                ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT, 
-                language: agentData.language || 'en', 
-                mode: agentData.mode || AgentMode.TEXT, 
-                response_style: typeof agentData.response_style === 'number' ? 
-                    Math.max(0, Math.min(1, agentData.response_style)) : 0.5,
-                response_length: typeof agentData.response_length === 'number' ? 
-                    Math.max(50, Math.min(500, agentData.response_length)) : 150,
-                knowledge_item_ids: knowledgeIds
-            });
-            
-            if (response && response.data) {
-                console.log('Agent created successfully:', response.data);
-                await fetchAgents();
-                setShowWizard(false);
-                resetWizard();
-                showNotification('Agent created successfully', 'success');
-            }
-        } catch (err: any) {
-            console.error('Error creating agent:', err);
-            showNotification(err.message || 'Failed to create agent', 'error');
-        }
-    };
-
-    const showNotification = (message: string, type: 'success' | 'error') => {
-        setNotification({
-            message,
-            type,
-            open: true
-        });
-    };
-
+    // Fetch agents data
     useEffect(() => {
         console.log('Agent Management component mounted, fetching agents');
         const fetchAgents = async () => {
             try {
                 setLoading(true);
-                setError(null);
-                console.log('Before API call to get agents');
                 const response = await agentService.getAgents();
-                console.log('API response:', response);
+                console.log('Agents response:', response);
                 
                 if (response && response.data) {
-                    console.log('Setting agents:', response.data);
-                    setAgents(response.data);
+                    // Add fake metrics to each agent for demo purposes
+                    const agentsWithMetrics: AgentWithMetrics[] = response.data.map((agent: Agent) => ({
+                        ...agent,
+                        metrics: {
+                            total_conversations: Math.floor(Math.random() * 100),
+                            avg_user_satisfaction: Math.random() * 5,
+                            avg_response_time: Math.random() * 10,
+                            success_rate: Math.random()
+                        }
+                    }));
                     
-                    // Set the first agent as selected if available
-                    if (response.data.length > 0 && !selectedAgent) {
-                        console.log('Setting selected agent:', response.data[0]);
-                        const selectedAgentWithMetrics = {
-                            ...response.data[0],
-                            metrics: {
-                                total_conversations: 0,
-                                avg_user_satisfaction: 0,
-                                avg_response_time: 0,
-                                success_rate: 0
-                            }
-                        };
-                        setSelectedAgent(selectedAgentWithMetrics);
-                    }
-                } else {
-                    console.log('No agents found or invalid response format');
-                    setAgents([]);
+                    setAgents(agentsWithMetrics);
                 }
-            } catch (err) {
-                console.error('Error fetching agents:', err);
-                setError('Failed to fetch agents. Please try again later.');
-                setAgents([]); // Set empty array on error to prevent undefined issues
-            } finally {
+                
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching agents:', error);
+                setError('Failed to load agents. Please try again later.');
                 setLoading(false);
             }
         };
-
+        
         fetchAgents();
-    }, [selectedAgent]);
+    }, []);
 
     useEffect(() => {
         console.log('Current agents state:', agents);
@@ -246,19 +240,357 @@ export const AgentManagement: React.FC = () => {
         console.log("Wizard visibility state changed:", showWizard);
     }, [showWizard]);
 
+    // Menu handlers
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, agentId: string) => {
+        setMenuAnchorEl(event.currentTarget);
+        setMenuAgentId(agentId);
+    };
+
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+        setMenuAgentId(null);
+    };
+
+    const handleOpenEditDialog = (agent: AgentWithMetrics) => {
+        setSelectedAgent(agent);
+        setEditDialogOpen(true);
+    };
+
+    const handleOpenRoleDialog = (agent: AgentWithMetrics) => {
+        setSelectedAgent(agent);
+        setRoleDialogOpen(true);
+    };
+
+    const handleOpenBehaviorDialog = (agent: AgentWithMetrics) => {
+        setSelectedAgent(agent);
+        setBehaviorDialogOpen(true);
+    };
+
+    const handleOpenDeleteDialog = (agent: AgentWithMetrics) => {
+        setSelectedAgent(agent);
+        setConfirmDeleteDialogOpen(true);
+    };
+
+    // Implement handler for menu item clicks
+    const handleMenuItemClick = (action: string) => {
+        setMenuAnchorEl(null);
+        
+        // Find the selected agent
+        const agent = agents.find(a => String(a.id) === menuAgentId);
+        if (!agent) return;
+        
+        switch (action) {
+            case 'edit':
+                handleOpenEditDialog(agent);
+                break;
+            case 'role':
+                handleOpenRoleDialog(agent);
+                break;
+            case 'behavior':
+                handleOpenBehaviorDialog(agent);
+                break;
+            case 'delete':
+                handleOpenDeleteDialog(agent);
+                break;
+            default:
+                break;
+        }
+    };
+
+    // Handlers for each dialog's save operation
+    const handleSaveAgentInfo = async (agentData: { name: string; description: string }) => {
+        try {
+            if (!selectedAgent) return;
+            
+            console.log('Saving agent info:', agentData);
+            const response = await agentService.updateAgent(String(selectedAgent.id), {
+                name: agentData.name,
+                description: agentData.description
+            });
+            
+            if (response && response.data) {
+                // Update the agent in the list
+                const updatedAgents = agents.map(agent => {
+                    if (agent.id === selectedAgent.id) {
+                        return {
+                            ...agent,
+                            name: agentData.name,
+                            description: agentData.description
+                        };
+                    }
+                    return agent;
+                });
+                
+                setAgents(updatedAgents);
+                setSelectedAgent(prev => prev ? {
+                    ...prev,
+                    name: agentData.name,
+                    description: agentData.description
+                } : null);
+                
+                setSnackbarMessage('Agent information updated successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                setEditDialogOpen(false);
+            }
+        } catch (err) {
+            console.error('Error updating agent info:', err);
+            setSnackbarMessage('Failed to update agent information');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+    
+    const handleSaveAgentRole = async (roleData: { ai_role: AgentRole }) => {
+        try {
+            if (!selectedAgent) return;
+            
+            console.log('Saving agent role:', roleData);
+            const response = await agentService.updateAgent(String(selectedAgent.id), {
+                ai_role: roleData.ai_role
+            });
+            
+            if (response && response.data) {
+                // Update the agent in the list
+                const updatedAgents = agents.map(agent => {
+                    if (agent.id === selectedAgent.id) {
+                        return {
+                            ...agent,
+                            ai_role: roleData.ai_role
+                        };
+                    }
+                    return agent;
+                });
+                
+                setAgents(updatedAgents);
+                setSelectedAgent(prev => prev ? {
+                    ...prev,
+                    ai_role: roleData.ai_role
+                } : null);
+                
+                setSnackbarMessage('Agent role updated successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                setRoleDialogOpen(false);
+            }
+        } catch (err) {
+            console.error('Error updating agent role:', err);
+            setSnackbarMessage('Failed to update agent role');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+    
+    const handleSaveAgentBehavior = async (behaviorData: { 
+        response_style: number; 
+        response_length: number; 
+    }) => {
+        try {
+            if (!selectedAgent) return;
+            
+            console.log('Saving agent behavior:', behaviorData);
+            const response = await agentService.updateAgentConfig(String(selectedAgent.id), {
+                response_style: behaviorData.response_style,
+                response_length: behaviorData.response_length
+            });
+            
+            if (response && response.data) {
+                // Update the agent in the list with the new config values
+                const updatedAgents = agents.map(agent => {
+                    if (agent.id === selectedAgent.id) {
+                        return {
+                            ...agent,
+                            // Update just the specific values that changed
+                            config: agent.config ? {
+                                ...agent.config,
+                                response_style: behaviorData.response_style,
+                                response_length: behaviorData.response_length
+                            } : {
+                                // Default values if config doesn't exist
+                                language: 'en',
+                                mode: AgentMode.TEXT,
+                                response_style: behaviorData.response_style,
+                                response_length: behaviorData.response_length
+                            }
+                        } as AgentWithMetrics; // Force type with as to help TypeScript
+                    }
+                    return agent;
+                });
+                
+                setAgents(updatedAgents as AgentWithMetrics[]); // Force type assertion
+                
+                if (selectedAgent) {
+                    // Update selected agent with new config
+                    const updatedAgent = {
+                        ...selectedAgent,
+                        config: selectedAgent.config ? {
+                            ...selectedAgent.config,
+                            response_style: behaviorData.response_style,
+                            response_length: behaviorData.response_length
+                        } : {
+                            language: 'en',
+                            mode: AgentMode.TEXT,
+                            response_style: behaviorData.response_style,
+                            response_length: behaviorData.response_length
+                        }
+                    } as AgentWithMetrics; // Force type assertion
+                    
+                    setSelectedAgent(updatedAgent);
+                }
+                
+                setSnackbarMessage('Agent behavior updated successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                setBehaviorDialogOpen(false);
+            }
+        } catch (err) {
+            console.error('Error updating agent behavior:', err);
+            setSnackbarMessage('Failed to update agent behavior');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+
+    const handleDeleteAgent = async () => {
+        if (!selectedAgent) return;
+        
+        try {
+            console.log('Deleting agent:', selectedAgent.id);
+            const response = await agentService.deleteAgent(String(selectedAgent.id));
+            
+            if (response) {
+                // Remove the agent from the list
+                const updatedAgents = agents.filter(agent => agent.id !== selectedAgent.id);
+                setAgents(updatedAgents);
+                
+                // Clear the selected agent if it was deleted
+                setSelectedAgent(null);
+                
+                setSnackbarMessage('Agent deleted successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                setConfirmDeleteDialogOpen(false);
+            }
+        } catch (err) {
+            console.error('Error deleting agent:', err);
+            setSnackbarMessage('Failed to delete agent');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+
+    // Simplified CreateAgent function that properly types the agent data
+    const handleCreateAgent = async (newAgentData: PartialAgent) => {
+        try {
+            console.log('Creating agent with data:', newAgentData);
+            
+            // Validate required fields
+            if (!newAgentData.name) {
+                setSnackbarMessage('Agent name is required');
+                setSnackbarSeverity('error');
+                setSnackbarOpen(true);
+                return;
+            }
+            
+            const response = await agentService.createAgent({ 
+                name: newAgentData.name, 
+                ai_role: newAgentData.ai_role || AgentRole.CUSTOMER_SUPPORT,
+                response_style: typeof newAgentData.response_style === 'number' ? 
+                    Math.max(0, Math.min(1, newAgentData.response_style)) : 0.5,
+                response_length: typeof newAgentData.response_length === 'number' ? 
+                    Math.max(50, Math.min(500, newAgentData.response_length)) : 150
+            });
+            
+            if (response && response.data) {
+                // Add the new agent to the list with fake metrics
+                const newAgentWithMetrics: AgentWithMetrics = {
+                    ...response.data,
+                    metrics: {
+                        total_conversations: 0,
+                        avg_user_satisfaction: 0,
+                        avg_response_time: 0,
+                        success_rate: 0
+                    }
+                };
+                
+                setAgents(prevAgents => [...prevAgents, newAgentWithMetrics]);
+                setSnackbarMessage('Agent created successfully');
+                setSnackbarSeverity('success');
+                setSnackbarOpen(true);
+                setShowWizard(false);
+            }
+        } catch (err) {
+            console.error('Error creating agent:', err);
+            setSnackbarMessage('Failed to create agent');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
+    };
+
+    // Helper functions for displaying model and role information
+    const getModelDisplayName = (model: string) => {
+        const models: Record<string, string> = {
+            'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+            'gpt-4': 'GPT-4',
+            'claude-instant-1': 'Claude Instant',
+            'claude-2': 'Claude 2'
+        };
+        return models[model] || model;
+    };
+    
+    const getModelDescription = (model: string) => {
+        const descriptions: Record<string, string> = {
+            'gpt-3.5-turbo': 'Fast and efficient, good for most tasks',
+            'gpt-4': 'Most capable model, best for complex tasks',
+            'claude-instant-1': 'Quick and responsive assistant',
+            'claude-2': 'Balanced performance and capabilities'
+        };
+        return descriptions[model] || 'Custom model';
+    };
+    
+    const getRoleDescription = (role: AgentRole) => {
+        const descriptions: Record<string, string> = {
+            [AgentRole.CUSTOMER_SUPPORT]: 'Assists customers with questions and issues',
+            [AgentRole.TECHNICAL_SUPPORT]: 'Provides technical guidance and troubleshooting',
+            [AgentRole.SALES_SERVICES]: 'Helps customers with purchasing decisions',
+            [AgentRole.CONSULTING]: 'Offers expert advice and solutions tailored to specific customer needs'
+        };
+        return descriptions[role] || 'Custom role';
+    };
+
+    if (loading) {
+        return (
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+                    <Typography variant="h6" color="textSecondary">
+                        Loading agent data...
+                    </Typography>
+                </Box>
+            </Container>
+        );
+    }
+
+    if (error) {
+        return (
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', flexDirection: 'column' }}>
+                    <Typography variant="h6" color="error" gutterBottom>
+                        {error}
+                    </Typography>
+                    <Button variant="contained" color="primary" onClick={() => window.location.reload()}>
+                        Retry
+                    </Button>
+                </Box>
+            </Container>
+        );
+    }
+
     return (
         <Container maxWidth="xl" sx={{ py: 4, minHeight: '100vh', backgroundColor: '#121212', color: 'white' }}>
-            {/* Error Alert */}
-            {renderError && (
-                <Alert severity="error" sx={{ mb: 2, backgroundColor: '#ff5252', color: 'white' }}>
-                    Render Error: {renderError}
-                </Alert>
-            )}
-            
             {/* Loading State */}
             {loading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100px' }}>
-                    <CircularProgress color="secondary" />
+                    <CircularProgress color="primary" />
                 </Box>
             )}
             
@@ -309,12 +641,8 @@ export const AgentManagement: React.FC = () => {
                 onClose={() => {
                     console.log('Closing wizard');
                     setShowWizard(false);
-                    resetWizard();
                 }}
-                onDataChange={handleAgentDataChange}
-                onKnowledgeSelect={handleKnowledgeSelect}
                 onSubmit={handleCreateAgent}
-                initialData={agentData}
             />
             
             {/* Tabs for different agent views */}
@@ -344,43 +672,55 @@ export const AgentManagement: React.FC = () => {
                             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
                                 Your Agents
                             </Typography>
-                            {agents.map(agent => (
-                                <Box 
-                                    key={agent.id}
-                                    onClick={() => {
-                                        // Create an ExtendedAgent with metrics when selecting from the list
-                                        const agentWithMetrics = {
-                                            ...agent,
-                                            metrics: {
-                                                total_conversations: 0,
-                                                avg_user_satisfaction: 0,
-                                                avg_response_time: 0,
-                                                success_rate: 0
+                            <Box sx={{ mt: 4 }}>
+                                {agents.map((agent) => (
+                                    <Paper 
+                                        key={agent.id} 
+                                        className={selectedAgent?.id === agent.id ? 'selected-agent' : ''}
+                                        onClick={() => {
+                                            // Create an AgentWithMetrics with metrics when selecting from the list
+                                            const agentWithMetrics = {
+                                                ...agent,
+                                                metrics: {
+                                                    total_conversations: 0,
+                                                    avg_user_satisfaction: 0,
+                                                    avg_response_time: 0,
+                                                    success_rate: 0
+                                                }
+                                            };
+                                            setSelectedAgent(agentWithMetrics);
+                                        }}
+                                        sx={{ 
+                                            p: 2, 
+                                            mb: 2, 
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                boxShadow: 3,
+                                                transform: 'translateY(-2px)'
                                             }
-                                        };
-                                        setSelectedAgent(agentWithMetrics);
-                                    }}
-                                    sx={{
-                                        p: 2,
-                                        mb: 1,
-                                        borderRadius: 1,
-                                        cursor: 'pointer',
-                                        backgroundColor: selectedAgent?.id === agent.id ? 'rgba(0, 243, 255, 0.1)' : 'transparent',
-                                        border: selectedAgent?.id === agent.id ? '1px solid rgba(0, 243, 255, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(0, 243, 255, 0.05)',
-                                            border: '1px solid rgba(0, 243, 255, 0.3)'
-                                        }
-                                    }}
-                                >
-                                    <Typography variant="subtitle1" sx={{ color: '#FFFFFF', fontWeight: 'bold' }}>
-                                        {agent.name}
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
-                                        {agent.description || 'No description'}
-                                    </Typography>
-                                </Box>
-                            ))}
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Box>
+                                                <Typography variant="h6">{agent.name}</Typography>
+                                                <Typography variant="body2" color="textSecondary">
+                                                    {getRoleDescription(agent.ai_role)}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                                                    Using {getModelDisplayName(agent.config?.model || 'gpt-4')} - {getModelDescription(agent.config?.model || 'gpt-4')}
+                                                </Typography>
+                                            </Box>
+                                            <IconButton onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleMenuOpen(e, String(agent.id));
+                                            }}>
+                                                <MoreVert />
+                                            </IconButton>
+                                        </Box>
+                                    </Paper>
+                                ))}
+                            </Box>
                         </Box>
 
                         {/* Agent Details */}
@@ -526,11 +866,7 @@ export const AgentManagement: React.FC = () => {
 
                                 {/* Knowledge Tab */}
                                 <TabPanel value={currentTab} index={2}>
-                                    <KnowledgeSelector
-                                        selectedIds={selectedAgent.knowledge_items?.map(k => k.id) || []}
-                                        onSelectionChange={handleKnowledgeSelect}
-                                        agentId={selectedAgent.id}
-                                    />
+                                    {/* Removed the incorrect KnowledgeSelector import */}
                                 </TabPanel>
                             </Box>
                         ) : (
@@ -595,19 +931,92 @@ export const AgentManagement: React.FC = () => {
             
             {/* Notification */}
             <Snackbar
-                open={notification.open}
+                open={snackbarOpen}
                 autoHideDuration={6000}
-                onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+                onClose={() => setSnackbarOpen(false)}
                 anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
                 <Alert 
-                    onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
-                    severity={notification.type}
+                    onClose={() => setSnackbarOpen(false)} 
+                    severity={snackbarSeverity}
                     sx={{ width: '100%' }}
                 >
-                    {notification.message}
+                    {snackbarMessage}
                 </Alert>
             </Snackbar>
+            <Dialog
+                open={confirmDeleteDialogOpen}
+                onClose={() => setConfirmDeleteDialogOpen(false)}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">
+                    {"Confirm Delete Agent"}
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+                        Are you sure you want to delete this agent?
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDeleteDialogOpen(false)} color="primary">
+                        Cancel
+                    </Button>
+                    <Button onClick={handleDeleteAgent} color="primary" autoFocus>
+                        Confirm
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            
+            {/* Edit Agent Dialog */}
+            <AgentEditDialog
+                open={editDialogOpen}
+                onClose={() => setEditDialogOpen(false)}
+                agent={selectedAgent}
+                onSave={handleSaveAgentInfo}
+            />
+            
+            {/* Configure Role Dialog */}
+            <AgentRoleDialog
+                open={roleDialogOpen}
+                onClose={() => setRoleDialogOpen(false)}
+                agent={selectedAgent}
+                onSave={handleSaveAgentRole}
+            />
+            
+            {/* Configure Behavior Dialog */}
+            <AgentBehaviorDialog
+                open={behaviorDialogOpen}
+                onClose={() => setBehaviorDialogOpen(false)}
+                agent={selectedAgent}
+                onSave={handleSaveAgentBehavior}
+            />
+            
+            {/* Menu for agent actions */}
+            <Menu
+                id="agent-menu"
+                anchorEl={menuAnchorEl}
+                keepMounted
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={() => handleMenuItemClick('edit')}>
+                    <Edit sx={{ mr: 1, fontSize: 20 }} />
+                    Edit
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('role')}>
+                    <Settings sx={{ mr: 1, fontSize: 20 }} />
+                    Configure Role
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('behavior')}>
+                    <Psychology sx={{ mr: 1, fontSize: 20 }} />
+                    Configure Behavior
+                </MenuItem>
+                <MenuItem onClick={() => handleMenuItemClick('delete')}>
+                    <Delete sx={{ mr: 1, fontSize: 20 }} color="error" />
+                    Delete
+                </MenuItem>
+            </Menu>
         </Container>
     );
 };

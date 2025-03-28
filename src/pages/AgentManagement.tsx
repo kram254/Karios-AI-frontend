@@ -43,7 +43,7 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
-// Agent type with metrics
+// Update AgentWithMetrics interface to explicitly extend Agent
 interface AgentWithMetrics extends Agent {
     metrics: {
         total_conversations: number;
@@ -51,7 +51,7 @@ interface AgentWithMetrics extends Agent {
         avg_response_time: number;
         success_rate: number;
     };
-    // Ensure config property matches AgentConfig type
+    // Ensure config property is properly defined
     config?: AgentConfig;
 }
 
@@ -241,9 +241,9 @@ export const AgentManagement: React.FC = () => {
     }, [showWizard]);
 
     // Menu handlers
-    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, agentId: string) => {
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, agentId: number) => {
         setMenuAnchorEl(event.currentTarget);
-        setMenuAgentId(agentId);
+        setMenuAgentId(String(agentId));
     };
 
     const handleMenuClose = () => {
@@ -678,7 +678,6 @@ export const AgentManagement: React.FC = () => {
                                         key={agent.id} 
                                         className={selectedAgent?.id === agent.id ? 'selected-agent' : ''}
                                         onClick={() => {
-                                            // Create an AgentWithMetrics with metrics when selecting from the list
                                             const agentWithMetrics = {
                                                 ...agent,
                                                 metrics: {
@@ -713,7 +712,7 @@ export const AgentManagement: React.FC = () => {
                                             </Box>
                                             <IconButton onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleMenuOpen(e, String(agent.id));
+                                                handleMenuOpen(e, agent.id);
                                             }}>
                                                 <MoreVert />
                                             </IconButton>

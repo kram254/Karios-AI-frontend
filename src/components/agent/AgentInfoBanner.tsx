@@ -44,11 +44,20 @@ const AgentInfoBanner: React.FC<AgentInfoBannerProps> = ({ agentId }) => {
     );
   }
 
-  if (error || !agent) {
+  if (error) {
     return (
       <div className="bg-[#1A1A1A] border-b border-[#2A2A2A] p-3 flex items-center text-red-400">
         <Info className="w-5 h-5 mr-2" />
         <span>Failed to load agent information</span>
+      </div>
+    );
+  }
+
+  if (!agent) {
+    return (
+      <div className="bg-[#1A1A1A] border-b border-[#2A2A2A] p-3 flex items-center">
+        <Bot className="w-5 h-5 mr-2 text-cyan-500" />
+        <span className="text-gray-300">Chat Agent</span>
       </div>
     );
   }

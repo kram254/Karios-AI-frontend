@@ -119,11 +119,11 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
     );
   }
 
-  if (error || !agent) {
+  if (error) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="h6" color="error" gutterBottom>
-          {error || 'Failed to load agent'}
+          {error}
         </Typography>
         <Button 
           variant="outlined" 
@@ -139,6 +139,31 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
         >
           Try Again
         </Button>
+      </Box>
+    );
+  }
+
+  if (!agent) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: 'rgba(0, 243, 255, 0.2)',
+              color: '#00F3FF',
+              width: 60,
+              height: 60
+            }}
+          >
+            <BotIcon sx={{ fontSize: 30 }} />
+          </Avatar>
+        </Box>
+        <Typography variant="h6" sx={{ color: '#FFFFFF', mb: 1 }}>
+          Chat Agent
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+          Ready to assist you
+        </Typography>
       </Box>
     );
   }

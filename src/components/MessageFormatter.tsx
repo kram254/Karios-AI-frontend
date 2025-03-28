@@ -18,7 +18,71 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
     return <>{content}</>;
   }
 
-  // Process the content as plain text first to remove all markdown symbols
+  // Check if the content already appears to be formatted by the AI model
+  // Look for patterns like numbered lists with multiple formats ("1. 1." pattern)
+  const hasAIFormatting = (
+    // Check for "1. 1." or similar patterns that indicate AI has already formatted the text
+    /\d+\. \d+\./.test(content) ||
+    // Check for common AI-formatted list patterns
+    /\d+\. [A-Z][^\n]+\n\s*- /.test(content) ||
+    // Check for well-structured markdown headers with numbers
+    /\d+\. ##/.test(content)
+  );
+
+  // If AI has already formatted the content, just render it as is with markdown
+  if (hasAIFormatting) {
+    return (
+      <div className="message-content">
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
+            // Style headers
+            h1: ({children}) => <h1 className="message-heading-1">{children}</h1>,
+            h2: ({children}) => <h2 className="message-heading-2">{children}</h2>,
+            h3: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+            h4: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+            h5: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+            h6: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+            
+            // Style lists
+            ul: ({children}) => <ul className="message-list">{children}</ul>,
+            ol: ({children}) => <ol className="message-ordered-list">{children}</ol>,
+            li: ({children}) => <li className="message-list-item">{children}</li>,
+            
+            // Style code blocks with a simpler approach to avoid TypeScript errors
+            code: ({children, ...props}: any) => {
+              const isInline = !(props.className && /language-/.test(props.className));
+              return isInline 
+                ? <code className="message-inline-code" {...props}>{children}</code>
+                : <code className="message-block-code" {...props}>{children}</code>;
+            },
+            
+            // Add proper spacing for paragraphs
+            p: ({children}) => <p className="message-paragraph">{children}</p>,
+            
+            // Style blockquotes
+            blockquote: ({children}) => <blockquote className="message-blockquote">{children}</blockquote>,
+            
+            // Style tables
+            table: ({children}) => <table className="message-table">{children}</table>,
+            th: ({children}) => <th>{children}</th>,
+            td: ({children}) => <td>{children}</td>,
+            
+            // Style emphasis and strong
+            em: ({children}) => <em className="message-emphasis">{children}</em>,
+            strong: ({children}) => <strong className="message-strong">{children}</strong>,
+            
+            // Style horizontal rules
+            hr: () => <hr className="message-hr" />,
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+
+  // For content without AI formatting, apply our custom formatting
   let plainTextContent = content;
 
   // Remove all hash marks from headings and make the text bold

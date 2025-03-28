@@ -1,0 +1,59 @@
+/* Styles for Agent Management Page */
+
+.agent-list-container {
+  margin-top: 20px;
+}
+
+.agent-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.agent-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.agent-card.selected {
+  border-left: 4px solid #1976d2;
+}
+
+.agent-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-info {
+  flex-grow: 1;
+}
+
+.agent-actions {
+  display: flex;
+  align-items: center;
+}
+
+.tab-panel {
+  padding: 16px 0;
+}
+
+.wizard-step-container {
+  padding: 24px 0;
+}
+
+.metrics-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.metrics-content {
+  flex-grow: 1;
+}
+
+.metrics-value {
+  font-size: 2rem;
+  font-weight: 500;
+  margin-top: 8px;
+}

@@ -39,6 +39,14 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
 
   const fetchAgent = async () => {
     setLoading(true);
+    setError(null);
+    
+    // Quick check to ensure we have a valid agentId
+    if (!agentId) {
+      setLoading(false);
+      return; // Just return without setting an error for new sessions
+    }
+    
     try {
       // Using the list endpoint and finding the agent by ID
       // since there's no specific getAgent endpoint in our service
@@ -48,11 +56,13 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
       if (foundAgent) {
         setAgent(foundAgent);
       } else {
-        setError('Agent not found');
+        // Don't set an error message, just set agent to null
+        setAgent(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching agent:', err);
-      setError('Failed to load agent information');
+      // Don't set an error message - just leave it null
+      setAgent(null);
     } finally {
       setLoading(false);
     }
@@ -122,13 +132,29 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
   if (error) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="error" gutterBottom>
-          {error}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Avatar 
+            sx={{ 
+              bgcolor: 'rgba(0, 243, 255, 0.2)',
+              color: '#00F3FF',
+              width: 60,
+              height: 60
+            }}
+          >
+            <BotIcon sx={{ fontSize: 30 }} />
+          </Avatar>
+        </Box>
+        <Typography variant="h6" sx={{ color: '#FFFFFF', mb: 1 }}>
+          Chat Agent
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+          Ready to assist you
         </Typography>
         <Button 
           variant="outlined" 
           onClick={fetchAgent}
           sx={{
+            mt: 2,
             borderColor: '#00F3FF',
             color: '#00F3FF',
             '&:hover': {
@@ -137,7 +163,7 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
             }
           }}
         >
-          Try Again
+          Refresh
         </Button>
       </Box>
     );

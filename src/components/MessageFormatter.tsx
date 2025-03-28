@@ -18,19 +18,34 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
     return <>{content}</>;
   }
 
-  // Check if the content already appears to be formatted by the AI model
-  // Look for patterns like numbered lists with multiple formats ("1. 1." pattern)
+  // Check for patterns that indicate AI has already formatted the content
   const hasAIFormatting = (
-    // Check for "1. 1." or similar patterns that indicate AI has already formatted the text
-    /\d+\. \d+\./.test(content) ||
-    // Check for common AI-formatted list patterns
-    /\d+\. [A-Z][^\n]+\n\s*- /.test(content) ||
-    // Check for well-structured markdown headers with numbers
-    /\d+\. ##/.test(content)
+    // Checking for AI-specific formatting patterns
+    /\d+\. #{1,3} \d+\./.test(content) || // Matches "1. ### 1. Porsche"
+    /\d+\. #{1,3}/.test(content) ||       // Matches numbered headings like "1. ### Heading"
+    /\n- Key Features:/.test(content) ||   // Common AI response pattern with key features
+    /^(\d+\. ).*\n.*- /.test(content)     // Numbered list followed by bullet points
   );
 
-  // If AI has already formatted the content, just render it as is with markdown
+  // For AI-formatted content, pre-process it to fix common markdown issues
   if (hasAIFormatting) {
+    // Clean up the content to ensure proper markdown rendering
+    let processedContent = content
+      // Fix numbered headings to proper markdown format
+      .replace(/(\d+)\. #{1,3} (\d+)\./g, '$1. **$2.**')
+      
+      // Convert "X. ### Title" to "**X. Title**" bold format
+      .replace(/(\d+)\. #{1,3} ([^\n]+)/g, '**$1. $2**')
+      
+      // Ensure proper spacing around bullet points
+      .replace(/\n- /g, '\n\n- ')
+      
+      // Preserve Key Features bullet points
+      .replace(/- Key Features:/g, '**Key Features:**')
+      
+      // Ensure proper spacing between list items for improved readability
+      .replace(/(\d+\. .+)\n(?=\d+\.)/g, '$1\n\n');
+
     return (
       <div className="message-content">
         <ReactMarkdown 
@@ -41,8 +56,8 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
             h2: ({children}) => <h2 className="message-heading-2">{children}</h2>,
             h3: ({children}) => <h3 className="message-heading-3">{children}</h3>,
             h4: ({children}) => <h3 className="message-heading-3">{children}</h3>,
-            h5: ({children}) => <h3 className="message-heading-3">{children}</h3>,
-            h6: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+            h5: ({children}) => <h5 className="message-heading-3">{children}</h5>,
+            h6: ({children}) => <h6 className="message-heading-3">{children}</h6>,
             
             // Style lists
             ul: ({children}) => <ul className="message-list">{children}</ul>,
@@ -76,7 +91,7 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
             hr: () => <hr className="message-hr" />,
           }}
         >
-          {content}
+          {processedContent}
         </ReactMarkdown>
       </div>
     );
@@ -88,7 +103,7 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
   // Remove all hash marks from headings and make the text bold
   plainTextContent = plainTextContent
     // Handle numbered section with hash marks - replace with bold
-    .replace(/^(\d+)\.\s+#{1,3}\s+(.+)$/gm, '$1. **$2**')
+    .replace(/^(\d+)\.\s+#{1,3}\s+(.+)$/gm, '**$1. $2**')
     
     // Handle hash marks at the beginning of lines - replace with bold
     .replace(/^(\s*)#{1,3}\s+(.+)$/gm, '$1**$2**')
@@ -96,9 +111,9 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
     // Remove any remaining ### that weren't caught by the above patterns
     .replace(/#{1,3}/g, '')
     
-    // Remove bullet markers but preserve the text
-    .replace(/^\s*[-*]\s+/gm, '')
-    .replace(/^\s*o\s+/gm, '')
+    // Preserve bullet points rather than removing them
+    .replace(/^\s*[-*]\s+/gm, '- ')
+    .replace(/^\s*o\s+/gm, '- ')
     
     // Normalize multiple consecutive line breaks
     .replace(/\n{3,}/g, '\n\n');
@@ -113,8 +128,8 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
           h2: ({children}) => <h2 className="message-heading-2">{children}</h2>,
           h3: ({children}) => <h3 className="message-heading-3">{children}</h3>,
           h4: ({children}) => <h3 className="message-heading-3">{children}</h3>,
-          h5: ({children}) => <h3 className="message-heading-3">{children}</h3>,
-          h6: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+          h5: ({children}) => <h5 className="message-heading-3">{children}</h5>,
+          h6: ({children}) => <h6 className="message-heading-3">{children}</h6>,
           
           // Style lists
           ul: ({children}) => <ul className="message-list">{children}</ul>,

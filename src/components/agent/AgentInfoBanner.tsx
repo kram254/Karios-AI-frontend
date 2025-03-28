@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, User, UserCheck } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { Agent } from '../../types/agent';
 import { agentService } from '../../services/api/agent.service';
 

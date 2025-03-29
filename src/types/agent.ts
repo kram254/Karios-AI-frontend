@@ -11,7 +11,9 @@ export enum AgentRole {
     CUSTOMER_SUPPORT = 'customer_support',
     TECHNICAL_SUPPORT = 'technical_support',
     SALES_SERVICES = 'sales_services',
-    CONSULTING = 'consulting'
+    CONSULTING = 'consulting',
+    SALES_ASSISTANT = 'sales_assistant',
+    CUSTOM = 'custom'
 }
 
 export enum AgentMode {

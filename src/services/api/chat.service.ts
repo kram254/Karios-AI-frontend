@@ -54,8 +54,12 @@ export const chatService = {
     console.log(`Creating new agent chat with agent ID: ${agentChatData.agent_id}`);
     return api.post<Chat>('/api/chat/chats', {
       title: agentChatData.title || 'Agent Chat',
-      chat_type: 'agent_chat',
-      agent_id: agentChatData.agent_id
+      chat_type: 'agent_chat',  
+      agent_id: agentChatData.agent_id,
+      language: 'en' 
+    }).catch(error => {
+      console.error('Error creating agent chat:', error.response || error);
+      throw error; 
     });
   },
   
@@ -106,13 +110,26 @@ export const chatService = {
     return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
   },
   
-  addMessage: (chatId: string, content: string) => {
+  addMessage: (chatId: string, content: string | ChatMessage) => {
     console.log(`Adding message to chat ${chatId}`);
     // Match the structure used in the WebSocket service
-    const payload = { 
-      content: content,
-      attachments: []
-    };
+    let payload;
+    
+    if (typeof content === 'string') {
+      payload = { 
+        content: content,
+        attachments: []
+      };
+    } else {
+      // If a ChatMessage object is passed, extract the content
+      payload = {
+        content: content.content,
+        attachments: [],
+        // Optionally preserve role if backend API supports it
+        role: content.role
+      };
+    }
+    
     console.log('Message payload:', payload);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
@@ -134,6 +151,15 @@ export const chatService = {
     const payload = {
       query,
       ...options
+    };
+    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/query`, payload);
+  },
+  
+  queryWithKnowledge: (chatId: string, query: string, categoryIds?: number[]) => {
+    console.log(`Querying chat ${chatId} with knowledge categories`);
+    const payload = {
+      query,
+      category_ids: categoryIds
     };
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/query`, payload);
   },

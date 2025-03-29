@@ -119,7 +119,78 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
       
       // If agent ID is provided, use agent-specific endpoint
       if (agentId) {
-        response = await chatService.chatWithAgent(agentId, input);
+        // First create an agent chat if we don't have a chatId
+        if (!chatId) {
+          try {
+            // Create a proper agent chat with the correct chat_type
+            const newChatResponse = await chatService.createAgentChat({
+              agent_id: agentId.toString(),
+              title: `Agent Chat - ${input.substring(0, 30)}${input.length > 30 ? '...' : ''}`
+            });
+            
+            // Add the user message to the new chat
+            await chatService.addMessage(newChatResponse.data.id, { ...userMessage });
+            
+            // Update the URL without reloading the page (if needed)
+            // This is optional but helps maintain the chat in history
+            if (window.history && window.history.pushState) {
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.set('chat', newChatResponse.data.id);
+              window.history.pushState({}, '', newUrl.toString());
+            }
+            
+            // Now chat with the agent using the new chat - pass knowledge categories if selected
+            if (selectedCategories.length > 0) {
+              // If categories are selected, use queryWithKnowledge for agent as well
+              response = await chatService.queryWithKnowledge(
+                newChatResponse.data.id,
+                input,
+                selectedCategories
+              );
+            } else {
+              // Otherwise use regular agent endpoint
+              response = await chatService.chatWithAgent(agentId, input);
+            }
+            
+            // Add the response to the chat
+            if (response.data && response.data.content) {
+              await chatService.addMessage(newChatResponse.data.id, {
+                id: `assistant-${Date.now()}`,
+                role: 'assistant',
+                content: response.data.content,
+                created_at: new Date().toISOString()
+              });
+            }
+          } catch (err) {
+            console.error('Error creating agent chat:', err);
+            setError('Failed to create agent chat. Please try again.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          // If we already have a chatId, use agent endpoint or knowledge query based on categories
+          if (selectedCategories.length > 0) {
+            // If categories are selected, use queryWithKnowledge for agent as well
+            response = await chatService.queryWithKnowledge(
+              chatId,
+              input,
+              selectedCategories
+            );
+          } else {
+            // Otherwise use regular agent endpoint
+            response = await chatService.chatWithAgent(agentId, input);
+          }
+          
+          // Make sure to add the message to the existing chat
+          if (response.data && chatId) {
+            await chatService.addMessage(chatId, {
+              id: `assistant-${Date.now()}`,
+              role: 'assistant',
+              content: response.data.content || JSON.stringify(response.data),
+              created_at: new Date().toISOString()
+            });
+          }
+        }
       } 
       // Otherwise use knowledge-based query
       else if (chatId) {
@@ -173,15 +244,15 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
           });
           
           // Add both messages to the new chat
-          await chatService.addMessage(newChat.data.id, userMessage);
-          await chatService.addMessage(newChat.data.id, assistantMessage);
+          await chatService.addMessage(newChat.data.id, { ...userMessage });
+          await chatService.addMessage(newChat.data.id, { ...assistantMessage });
         } catch (err) {
           console.error('Error creating new chat:', err);
         }
       } else {
         // Add messages to existing chat
-        await chatService.addMessage(chatId, userMessage);
-        await chatService.addMessage(chatId, assistantMessage);
+        await chatService.addMessage(chatId, { ...userMessage });
+        await chatService.addMessage(chatId, { ...assistantMessage });
       }
     } catch (err) {
       console.error('Error sending message:', err);

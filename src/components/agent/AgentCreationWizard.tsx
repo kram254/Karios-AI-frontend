@@ -257,7 +257,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                     mb: 3
                 }}>
                     {currentStep === 1 && (
-                        <Box>
+                        <Box sx={{ p: 2, borderRadius: 1, bgcolor: '#333' }}>
                             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
                                 Basic Information
                             </Typography>
@@ -324,7 +324,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                     )}
                     
                     {currentStep === 2 && (
-                        <Box>
+                        <Box sx={{ p: 2, borderRadius: 1, bgcolor: '#333' }}>
                             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
                                 Role & Behavior
                             </Typography>
@@ -332,7 +332,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
                                 <InputLabel id="agent-role-label" sx={{ 
                                     color: '#AAAAAA', 
-                                    bgcolor: '#1e1e1e', 
+                                    bgcolor: '#333', 
                                     px: 1, 
                                     ml: -0.5,
                                     zIndex: 1 
@@ -378,7 +378,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         }
                                     }}
                                     sx={{
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         color: '#FFFFFF',
                                         '.MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#555',
@@ -435,7 +435,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
                                 <InputLabel id="agent-mode-label" sx={{ 
                                     color: '#AAAAAA', 
-                                    bgcolor: '#1e1e1e', 
+                                    bgcolor: '#333', 
                                     px: 1, 
                                     ml: -0.5,
                                     zIndex: 1 
@@ -481,7 +481,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         }
                                     }}
                                     sx={{
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         color: '#FFFFFF',
                                         '.MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#555',
@@ -506,7 +506,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
                                 <InputLabel id="agent-language-label" sx={{ 
                                     color: '#AAAAAA', 
-                                    bgcolor: '#1e1e1e', 
+                                    bgcolor: '#333', 
                                     px: 1, 
                                     ml: -0.5,
                                     zIndex: 1 
@@ -561,7 +561,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         }
                                     }}
                                     sx={{
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         color: '#FFFFFF',
                                         '.MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#555',
@@ -684,35 +684,60 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                     )}
                     
                     {currentStep === 3 && (
-                        <Box>
+                        <Box sx={{ p: 2, borderRadius: 1, bgcolor: '#333' }}>
                             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
                                 Knowledge Base
                             </Typography>
                             
-                            <Typography variant="body2" paragraph sx={{ color: '#AAAAAA' }}>
-                                Select the knowledge categories that this agent should have access to when responding to customers.
+                            <Typography variant="body2" sx={{ color: '#AAAAAA', mb: 2 }}>
+                                Associate knowledge items with this agent. The agent will use these
+                                documents to provide more accurate and relevant responses.
                             </Typography>
                             
-                            <Box sx={{ mt: 2 }}>
-                                <KnowledgeSelector
-                                    selectedIds={selectedKnowledgeIds}
-                                    onSelectionChange={(ids) => {
-                                        setSelectedKnowledgeIds(ids);
-                                        onKnowledgeSelect(ids);
+                            <KnowledgeSelector 
+                                onSelectionChange={(ids: number[]) => {
+                                    setSelectedKnowledgeIds(ids);
+                                    onKnowledgeSelect(ids);
+                                }}
+                                selectedIds={selectedKnowledgeIds}
+                            />
+                            
+                            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+                                    Selected: {selectedKnowledgeIds.length} item(s)
+                                </Typography>
+                                
+                                <Button 
+                                    variant="outlined" 
+                                    size="small"
+                                    onClick={() => {
+                                        setSelectedKnowledgeIds([]);
+                                        onKnowledgeSelect([]);
                                     }}
-                                />
+                                    sx={{
+                                        borderColor: '#555',
+                                        color: '#AAAAAA',
+                                        '&:hover': {
+                                            borderColor: '#00F3FF',
+                                            color: '#00F3FF',
+                                            bgcolor: 'rgba(0, 243, 255, 0.08)'
+                                        }
+                                    }}
+                                >
+                                    Clear Selection
+                                </Button>
                             </Box>
                         </Box>
                     )}
                     
                     {currentStep === 4 && (
-                        <Box>
+                        <Box sx={{ p: 2, borderRadius: 1, bgcolor: '#333' }}>
                             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
-                                Agent Actions
+                                Actions
                             </Typography>
                             
-                            <Typography variant="body2" paragraph sx={{ color: '#AAAAAA' }}>
-                                Select what actions this agent can perform:
+                            <Typography variant="body2" sx={{ color: '#AAAAAA', mb: 2 }}>
+                                Enable additional actions this agent can perform beyond text responses.
                             </Typography>
                             
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -721,7 +746,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         display: 'flex', 
                                         alignItems: 'center',
                                         p: 1.25,
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         borderRadius: 1
                                     }}
                                 >
@@ -747,7 +772,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         display: 'flex', 
                                         alignItems: 'center',
                                         p: 1.25,
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         borderRadius: 1
                                     }}
                                 >
@@ -782,7 +807,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         display: 'flex', 
                                         alignItems: 'center',
                                         p: 1.25,
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         borderRadius: 1
                                     }}
                                 >
@@ -817,7 +842,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                                         display: 'flex', 
                                         alignItems: 'center',
                                         p: 1.25,
-                                        bgcolor: '#333',
+                                        bgcolor: '#444',
                                         borderRadius: 1
                                     }}
                                 >
@@ -851,13 +876,13 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                     )}
                     
                     {currentStep === 5 && (
-                        <Box>
+                        <Box sx={{ p: 2, borderRadius: 1, bgcolor: '#333' }}>
                             <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
                                 Review Agent Configuration
                             </Typography>
                             
                             <Box sx={{ 
-                                bgcolor: '#1a1a1a', 
+                                bgcolor: '#222', 
                                 p: 2, 
                                 borderRadius: 1, 
                                 mb: 2
@@ -888,7 +913,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                             </Box>
                             
                             <Box sx={{ 
-                                bgcolor: '#1a1a1a', 
+                                bgcolor: '#222', 
                                 p: 2, 
                                 borderRadius: 1, 
                                 mb: 2
@@ -940,7 +965,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                             </Box>
                             
                             <Box sx={{ 
-                                bgcolor: '#1a1a1a', 
+                                bgcolor: '#222', 
                                 p: 2, 
                                 borderRadius: 1, 
                                 mb: 2
@@ -971,7 +996,7 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                             </Box>
                             
                             <Box sx={{ 
-                                bgcolor: '#1a1a1a', 
+                                bgcolor: '#222', 
                                 p: 2, 
                                 borderRadius: 1, 
                                 mb: 2

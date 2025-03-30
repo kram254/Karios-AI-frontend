@@ -67,20 +67,25 @@ export const KnowledgeManagement: React.FC = () => {
     setSelectedTab(newValue);
   };
 
-  const handleCategorySelect = (category: Category) => {
+  const handleCategorySelect = (category: Category | null) => {
     setSelectedCategory(category);
-    setSelectedTab(1); // Switch to knowledge items tab
+    if (category) {
+      setSelectedTab(1); // Switch to knowledge items tab only if we have a valid category
+    }
   };
 
   const handleCategoryCreated = async () => {
-    await fetchCategories();
-    // Wait for categories to be fetched, then select the last one (newly created)
-    setTimeout(() => {
-      if (categories.length > 0) {
-        setSelectedCategory(categories[categories.length - 1]);
-        setSelectedTab(1); // Switch to knowledge items tab
-      }
-    }, 500);
+    // Fetch the latest categories from the server
+    const response = await categoryService.getCategories();
+    const freshCategories = response.data || [];
+    setCategories(freshCategories);
+    
+    // Only select a category if we actually have categories
+    if (freshCategories.length > 0) {
+      // Select the last one (newly created)
+      setSelectedCategory(freshCategories[freshCategories.length - 1]);
+      setSelectedTab(1); // Switch to knowledge items tab
+    }
   };
 
   const handleKnowledgeAdded = async () => {

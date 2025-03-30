@@ -11,70 +11,15 @@ interface MessageFormatterProps {
 /**
  * Component to format message content with proper styling
  * Uses React Markdown to render markdown as properly formatted HTML
+ * Simplified to avoid over-formatting content that already has structure
  */
 export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, role }) => {
-  // Only format assistant messages
-  if (role !== 'assistant' || !content) {
+  // If content is empty or not from assistant, don't process
+  if (!content) {
     return <>{content}</>;
   }
 
-  // Improved detection of already formatted content
-  const hasDoubleNumbering = /\d+\s*\.\s*\d+\s*\./.test(content); // More flexible spacing
-  const hasNumberedItems = /^\s*\d+\s*\.\s*\*\*/.test(content); // Already bolded numbering
-  const hasKeyFeatures = /\*\*Key Features:\*\*/.test(content); // Already bolded key features
-  const hasBoldedNumbers = /\*\*\d+\.\*\*/.test(content); // Check if numbers are already bolded
-  
-  // Improved detection logic for already formatted content
-  const isAlreadyFormatted = hasDoubleNumbering || hasNumberedItems || hasKeyFeatures || hasBoldedNumbers;
-
-  // Process the content to fix formatting issues
-  let processedContent = content;
-  
-  // Only apply transformations if the content is not already formatted
-  if (!isAlreadyFormatted) {
-    // Detect if this appears to be an AI-formatted list
-    const appearsToBeNumberedList = /^\s*\d+\s*\.\s+[^\n]+/m.test(content);
-    const hasMultipleNumberedItems = (content.match(/\d+\s*\.\s+/g) || []).length > 1;
-    
-    // For content with AI-typical formatting patterns
-    if (appearsToBeNumberedList && hasMultipleNumberedItems) {
-      // Check for double numbering pattern like "1. 1. Porsche 911"
-      if (/\d+\s*\.\s*\d+\s*\./.test(content)) {
-        // Remove the first number in double-numbered patterns
-        processedContent = processedContent.replace(/(\d+)\s*\.\s*(\d+)\s*\.\s*/g, '**$2.** ');
-      } else {
-        // Format single numbering pattern like "1. Porsche 911"
-        processedContent = processedContent.replace(/^(\d+)\s*\.\s*/gm, '**$1.** ');
-      }
-      
-      // Format "Key Features:" as bold if present
-      processedContent = processedContent.replace(/Key Features:/g, '**Key Features:**');
-      
-      // Ensure proper spacing around bullet points
-      processedContent = processedContent.replace(/\n- /g, '\n\n- ');
-      
-      // Ensure proper spacing between entries in a list
-      processedContent = processedContent.replace(/(\d+\. .+)\n(?=\d+\.)/g, '$1\n\n');
-    } else {
-      // For general content, apply standard formatting
-      // Handle numbered section with hash marks - replace with bold
-      processedContent = processedContent.replace(/^(\d+)\s*\.\s+#{1,3}\s+(.+)$/gm, '**$1. $2**');
-      
-      // Handle hash marks at the beginning of lines - replace with bold
-      processedContent = processedContent.replace(/^(\s*)#{1,3}\s+(.+)$/gm, '$1**$2**');
-      
-      // Remove any remaining hash marks that weren't caught by the above patterns
-      processedContent = processedContent.replace(/#{1,3}/g, '');
-      
-      // Preserve bullet points rather than removing them
-      processedContent = processedContent.replace(/^\s*[-*]\s+/gm, '- ');
-      processedContent = processedContent.replace(/^\s*o\s+/gm, '- ');
-    }
-  }
-  
-  // Normalize multiple consecutive line breaks (apply this regardless of formatting)
-  processedContent = processedContent.replace(/\n{3,}/g, '\n\n');
-
+  // Simply pass the content to ReactMarkdown without additional preprocessing
   return (
     <div className="message-content">
       <ReactMarkdown 
@@ -101,26 +46,24 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
               : <code className="message-block-code" {...props}>{children}</code>;
           },
           
-          // Add proper spacing for paragraphs
-          p: ({children}) => <p className="message-paragraph">{children}</p>,
-          
-          // Style blockquotes
-          blockquote: ({children}) => <blockquote className="message-blockquote">{children}</blockquote>,
-          
           // Style tables
           table: ({children}) => <table className="message-table">{children}</table>,
-          th: ({children}) => <th>{children}</th>,
-          td: ({children}) => <td>{children}</td>,
+          thead: ({children}) => <thead className="message-table-header">{children}</thead>,
+          tbody: ({children}) => <tbody className="message-table-body">{children}</tbody>,
+          tr: ({children}) => <tr className="message-table-row">{children}</tr>,
+          td: ({children}) => <td className="message-table-cell">{children}</td>,
+          th: ({children}) => <th className="message-table-header-cell">{children}</th>,
           
-          // Style emphasis and strong
+          // Style paragraphs and links
+          p: ({children}) => <p className="message-paragraph">{children}</p>,
+          a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>,
+          
+          // Style emphasis
           em: ({children}) => <em className="message-emphasis">{children}</em>,
           strong: ({children}) => <strong className="message-strong">{children}</strong>,
-          
-          // Style horizontal rules
-          hr: () => <hr className="message-hr" />,
         }}
       >
-        {processedContent}
+        {content}
       </ReactMarkdown>
     </div>
   );

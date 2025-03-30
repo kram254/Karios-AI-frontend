@@ -28,7 +28,7 @@ import { Category } from '../../types/knowledge';
 import './CategoryManagement.css';
 
 interface CategoryManagementProps {
-    onCategorySelect?: (category: Category) => void;
+    onCategorySelect?: (category: Category | null) => void;
     onCategoryCreated?: () => Promise<void>;
 }
 
@@ -144,17 +144,24 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
             setSuccess('Category deleted successfully!');
             handleCloseDeleteDialog();
             
-            // Update the categories list
-            const updatedCategories = categories.filter(c => c.id !== selectedCategory.id);
-            setCategories(updatedCategories);
-            if (updatedCategories.length > 0) {
-                setSelectedCategory(updatedCategories[0]);
-                if (onCategorySelect) {
-                    onCategorySelect(updatedCategories[0]);
-                }
-            } else {
-                setSelectedCategory(null);
+            // Completely refetch categories instead of filtering locally
+            await fetchCategories();
+            
+            // Reset selection properly
+            setSelectedCategory(null);
+            if (onCategorySelect) {
+                onCategorySelect(null);
             }
+            
+            // Slight delay before attempting to select a new category (if any)
+            setTimeout(() => {
+                if (categories.length > 0) {
+                    setSelectedCategory(categories[0]);
+                    if (onCategorySelect) {
+                        onCategorySelect(categories[0]);
+                    }
+                }
+            }, 300);
         } catch (error) {
             console.error('Failed to delete category:', error);
             setError('Failed to delete category. Please try again.');

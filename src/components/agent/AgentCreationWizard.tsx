@@ -1,8 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Agent, AgentRole, AgentMode } from '../../types/agent';
-import { KnowledgeSelector } from '../knowledge/KnowledgeSelector';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Agent, AgentRole, AgentMode, AgentConfig } from '../../types/agent';
+import { useNavigate } from 'react-router-dom';
 import './AgentCreationWizard.css';
 import './dropdownFix.css';
+import { KnowledgeSelector } from '../knowledge/KnowledgeSelector';
+
+// Material UI components
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import Modal from '@mui/material/Modal';
+import Paper from '@mui/material/Paper';
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
+import InputLabel from '@mui/material/InputLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Slider from '@mui/material/Slider';
+import Tooltip from '@mui/material/Tooltip';
+import InputAdornment from '@mui/material/InputAdornment';
+
+// Material UI icons
+import CloseIcon from '@mui/icons-material/Close';
+import LanguageIcon from '@mui/icons-material/Language';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CheckIcon from '@mui/icons-material/Check';
 
 // Define the props interface
 interface AgentCreationWizardProps {
@@ -14,43 +40,66 @@ interface AgentCreationWizardProps {
     initialData?: Partial<Agent>;
 }
 
-// Define the steps in the wizard
-const STEPS = [
-    { id: 1, label: 'Basic Info' },
-    { id: 2, label: 'Role & Behavior' },
-    { id: 3, label: 'Knowledge Base' },
-    { id: 4, label: 'Actions' },
-    { id: 5, label: 'Review' }
+// Define the step interface
+interface Step {
+    label: string;
+    description: string;
+}
+
+// Steps for the wizard
+const STEPS: Step[] = [
+    { label: 'Basic Info', description: 'Name and description of your agent' },
+    { label: 'Role & Behavior', description: 'Define how your agent interacts' },
+    { label: 'Knowledge Base', description: 'Select knowledge for your agent' },
+    { label: 'Agent Actions', description: 'Choose actions your agent can perform' },
+    { label: 'Review', description: 'Review your agent before creation' }
 ];
 
-export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({ 
+export default function AgentCreationWizard({
     open, 
     onClose, 
     onDataChange, 
-    onKnowledgeSelect,
+    onKnowledgeSelect, 
     onSubmit,
     initialData
-}) => {
-    console.log("AgentCreationWizard rendered with open:", open);
-    
-    // State for the current step
-    const [currentStep, setCurrentStep] = useState<number>(1);
-    
-    // State for form data
+}: AgentCreationWizardProps) {
+    const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState<Partial<Agent>>(initialData || {
-        name: '',
-        description: '',
-        ai_role: AgentRole.CUSTOMER_SUPPORT,
+        actions: [],
+        ai_role: AgentRole.CUSTOMER_SUPPORT, 
         language: 'en',
         mode: AgentMode.TEXT,
         response_style: 0.5,
-        response_length: 150,
-        actions: []
+        response_length: 150
     });
     
-    // State for selected knowledge IDs
     const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<number[]>([]);
-    
+    const [roleSelectOpen, setRoleSelectOpen] = useState(false);
+    const [modeSelectOpen, setModeSelectOpen] = useState(false);
+    const [languageSelectOpen, setLanguageSelectOpen] = useState(false);
+    const [customRole, setCustomRole] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Function to handle opening the modal
+    useEffect(() => {
+        console.log('Modal open state:', open);
+    }, [open]);
+
+    // Update form data when initialData changes
+    useEffect(() => {
+        if (initialData) {
+            setFormData(initialData);
+            // If there are knowledge item IDs, update the selected knowledge IDs
+            if (initialData.config?.knowledge_item_ids) {
+                setSelectedKnowledgeIds(initialData.config.knowledge_item_ids);
+            } else if (initialData.knowledge_items) {
+                // Extract IDs from knowledge_items if available
+                const knowledgeIds = initialData.knowledge_items.map(item => item.id);
+                setSelectedKnowledgeIds(knowledgeIds);
+            }
+        }
+    }, [initialData]);
+
     // Function to handle input changes
     const handleInputChange = (field: keyof Agent, value: any) => {
         const updatedData = { ...formData, [field]: value };
@@ -60,15 +109,39 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
     
     // Function to handle submit
     const handleSubmit = () => {
-        onSubmit(formData);
+        setIsLoading(true);
+        
+        // Create a valid config object with all required fields from the AgentConfig interface
+        const configUpdate: AgentConfig = {
+            // These fields are required according to the AgentConfig interface
+            language: formData.language || 'en', // Default to English if not set
+            mode: formData.mode || AgentMode.TEXT, // Default to TEXT mode if not set
+            response_style: typeof formData.response_style === 'number' ? formData.response_style : 0.5,
+            response_length: typeof formData.response_length === 'number' ? formData.response_length : 150,
+            // Optional fields
+            model: formData.config?.model,
+            temperature: formData.config?.temperature,
+            max_tokens: formData.config?.max_tokens,
+            knowledge_item_ids: selectedKnowledgeIds,
+            actions: formData.actions,
+            system_prompt: formData.config?.system_prompt,
+            webhook_url: formData.config?.webhook_url,
+            additional_context: formData.config?.additional_context
+        };
+        
+        // Create a copy of the form data with the updated config
+        const updatedData: Partial<Agent> = { 
+            ...formData,
+            config: configUpdate
+        };
+        
+        onSubmit(updatedData);
     };
     
     // Function to go to the next step
     const nextStep = () => {
         if (currentStep < STEPS.length) {
             setCurrentStep(currentStep + 1);
-        } else if (currentStep === STEPS.length) {
-            handleSubmit();
         }
     };
     
@@ -79,6 +152,15 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
         }
     };
     
+    // Handle opening the custom role input if "Custom" is selected
+    useEffect(() => {
+        if (formData.ai_role === AgentRole.CUSTOM) {
+            setCustomRole(true);
+        } else {
+            setCustomRole(false);
+        }
+    }, [formData.ai_role]);
+
     // Add console logs for debugging
     useEffect(() => {
         console.log("AgentCreationWizard - currentStep:", currentStep);
@@ -93,8 +175,15 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
         console.log('Current step:', currentStep);
         console.log('Current form data:', formData);
         
+        const handleBeforeUnload = () => {
+            console.log('Page is being unloaded');
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
         return () => {
             console.log('AgentCreationWizard unmounted');
+            window.removeEventListener('beforeunload', handleBeforeUnload);
         };
     }, [open, currentStep, formData]);
     
@@ -115,357 +204,877 @@ export const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({
                 return false;
         }
     };
+    
+    // Function to handle changes to agent actions
+    const handleActionChange = (actionId: string, checked: boolean) => {
+        const currentActions = formData.actions || [];
+        let updatedActions;
+        
+        if (checked) {
+            updatedActions = [...currentActions, actionId];
+        } else {
+            updatedActions = currentActions.filter(id => id !== actionId);
+        }
+        
+        handleInputChange('actions', updatedActions);
+    };
+    
+    // Function to check if an action is selected
+    const isActionSelected = (actionId: string): boolean => {
+        return (formData.actions || []).includes(actionId);
+    };
 
-    if (!open) return null;
-
+    // Render using Material-UI Modal
     return (
-        <div className="wizard-overlay">
-            <div className="wizard-container">
-                {/* Header */}
-                <div className="wizard-header">
-                    <h2>Create New Agent</h2>
-                    <button className="close-button" onClick={onClose}>×</button>
-                </div>
+        <Modal
+            open={open}
+            onClose={onClose}
+            aria-labelledby="agent-creation-wizard-title"
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '& .MuiBackdrop-root': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                }
+            }}
+        >
+            <Paper 
+                sx={{
+                    backgroundColor: '#1e1e1e',
+                    color: '#FFFFFF',
+                    width: '90%',
+                    maxWidth: '800px',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    borderRadius: 2,
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+                }}
+            >
+                {/* Wizard Header */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    p: 2,
+                    borderBottom: '1px solid #333' 
+                }}>
+                    <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: '#FFFFFF' }}>
+                        {currentStep === STEPS.length ? 'Create New Agent' : `Create New Agent: ${STEPS[currentStep - 1].label}`}
+                    </Typography>
+                    <IconButton 
+                        onClick={onClose} 
+                        size="large" 
+                        sx={{ 
+                            color: '#AAAAAA',
+                            '&:hover': {
+                                color: '#FFFFFF',
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            } 
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </Box>
 
-                {/* Progress Steps */}
-                <div className="wizard-progress">
-                    {STEPS.map((step) => (
-                        <div 
-                            key={step.id} 
-                            className={`step ${currentStep === step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}
-                            onClick={() => setCurrentStep(step.id)}
+                {/* Steps indicator */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    p: 2 
+                }}>
+                    {STEPS.map((step, index) => (
+                        <Box 
+                            key={step.label} 
+                            sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center',
+                                mx: 1.5
+                            }}
                         >
-                            <div className="step-number">{step.id}</div>
-                            <div className="step-label">{step.label}</div>
-                        </div>
+                            <Box 
+                                sx={{
+                                    width: 40,
+                                    height: 40,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '50%',
+                                    mb: 1,
+                                    bgcolor: currentStep > index + 1 ? '#00F3FF' : 
+                                            currentStep === index + 1 ? '#333' : '#222',
+                                    color: currentStep > index + 1 ? '#000' : '#AAAAAA',
+                                    border: currentStep === index + 1 ? '2px solid #00F3FF' : 'none'
+                                }}
+                            >
+                                {currentStep > index + 1 ? (
+                                    <CheckIcon />
+                                ) : (
+                                    <Typography variant="body1">{index + 1}</Typography>
+                                )}
+                            </Box>
+                            <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                    color: currentStep === index + 1 ? '#00F3FF' : '#AAAAAA',
+                                    fontWeight: currentStep === index + 1 ? 'bold' : 'normal',
+                                }}
+                            >
+                                {step.label}
+                            </Typography>
+                        </Box>
                     ))}
-                </div>
+                </Box>
 
                 {/* Content */}
-                <div className="wizard-content">
+                <Box sx={{ p: 3 }}>
                     {currentStep === 1 && (
-                        <div>
-                            <h3>Basic Information</h3>
-                            <div className="input-group">
-                                <label htmlFor="agent-name">Agent Name *</label>
-                                <input
-                                    id="agent-name"
-                                    type="text"
-                                    className="input-field"
-                                    value={formData.name || ''}
-                                    onChange={(e) => handleInputChange('name', e.target.value)}
-                                    placeholder="Enter agent name"
-                                    required
-                                />
-                            </div>
-                            <div className="input-group">
-                                <label htmlFor="agent-description">Description</label>
-                                <textarea
-                                    id="agent-description"
-                                    className="input-field textarea-field"
-                                    value={formData.description || ''}
-                                    onChange={(e) => handleInputChange('description', e.target.value)}
-                                    placeholder="Enter agent description"
-                                    rows={4}
-                                />
-                            </div>
-                        </div>
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                Basic Information
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 3, color: '#AAAAAA' }}>
+                                Provide a name and description for your agent.
+                            </Typography>
+                            
+                            <TextField
+                                fullWidth
+                                required
+                                label="Agent Name"
+                                variant="outlined"
+                                value={formData.name || ''}
+                                onChange={(e) => handleInputChange('name', e.target.value)}
+                                margin="normal"
+                                InputLabelProps={{
+                                    style: { color: '#AAAAAA' },
+                                    shrink: true,
+                                }}
+                                InputProps={{
+                                    style: { color: '#FFFFFF' },
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                            borderColor: '#555',
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: '#888',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                    },
+                                }}
+                            />
+                            
+                            <TextField
+                                fullWidth
+                                label="Description"
+                                variant="outlined"
+                                value={formData.description || ''}
+                                onChange={(e) => handleInputChange('description', e.target.value)}
+                                margin="normal"
+                                multiline
+                                rows={4}
+                                InputLabelProps={{
+                                    style: { color: '#AAAAAA' },
+                                    shrink: true,
+                                }}
+                                InputProps={{
+                                    style: { color: '#FFFFFF' },
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                            borderColor: '#555',
+                                        },
+                                        '&:hover fieldset': {
+                                            borderColor: '#888',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                    },
+                                }}
+                            />
+                        </Box>
                     )}
 
                     {currentStep === 2 && (
-                        <div>
-                            <h3>Role & Behavior</h3>
-                            <div className="input-group">
-                                <label htmlFor="agent-role">Agent Role</label>
-                                <div className="select-container">
-                                    <select
-                                        id="agent-role"
-                                        className="select-field"
-                                        value={formData.ai_role || ''}
-                                        onChange={(e) => handleInputChange('ai_role', e.target.value)}
-                                    >
-                                        <option value={AgentRole.CUSTOMER_SUPPORT}>Customer Support</option>
-                                        <option value={AgentRole.SALES_ASSISTANT}>Sales Assistant</option>
-                                        <option value={AgentRole.TECHNICAL_SUPPORT}>Technical Support</option>
-                                        <option value={AgentRole.CONSULTING}>Consulting Services</option>
-                                        <option value={AgentRole.SALES_SERVICES}>Sales Services</option>
-                                        <option value={AgentRole.CUSTOM}>Custom...</option>
-                                    </select>
-                                    <div className="select-arrow">▼</div>
-                                </div>
-                            </div>
+                        <Box>
+                            <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                Role & Behavior
+                            </Typography>
+                            
+                            <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
+                                <InputLabel id="agent-role-label" sx={{ 
+                                    color: '#AAAAAA', 
+                                    bgcolor: '#1e1e1e', 
+                                    px: 1, 
+                                    ml: -0.5,
+                                    zIndex: 1 
+                                }}>Agent Role</InputLabel>
+                                <Select
+                                    labelId="agent-role-label"
+                                    value={formData.ai_role || ''}
+                                    onChange={(e) => handleInputChange('ai_role', e.target.value)}
+                                    open={roleSelectOpen}
+                                    onOpen={() => setRoleSelectOpen(true)}
+                                    onClose={() => setRoleSelectOpen(false)}
+                                    MenuProps={{
+                                        disablePortal: false,
+                                        container: document.body,
+                                        PaperProps: {
+                                            sx: {
+                                                bgcolor: '#333',
+                                                color: '#FFFFFF',
+                                                '& .MuiMenuItem-root:hover': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.08)',
+                                                },
+                                                '& .MuiMenuItem-root.Mui-selected': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.15)',
+                                                },
+                                                maxHeight: 300,
+                                                overflow: 'auto',
+                                                mt: 1
+                                            }
+                                        },
+                                        slotProps: {
+                                            paper: {
+                                                elevation: 8,
+                                                sx: { zIndex: 9999 }
+                                            }
+                                        },
+                                        anchorOrigin: {
+                                            vertical: 'bottom',
+                                            horizontal: 'left',
+                                        },
+                                        transformOrigin: {
+                                            vertical: 'top',
+                                            horizontal: 'left',
+                                        }
+                                    }}
+                                    sx={{
+                                        bgcolor: '#333',
+                                        color: '#FFFFFF',
+                                        '.MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#555',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                        '.MuiSvgIcon-root': {
+                                            color: '#FFFFFF',
+                                        },
+                                    }}
+                                >
+                                    <MenuItem value={AgentRole.CUSTOMER_SUPPORT}>Customer Support</MenuItem>
+                                    <MenuItem value={AgentRole.SALES_ASSISTANT}>Sales Assistant</MenuItem>
+                                    <MenuItem value={AgentRole.TECHNICAL_SUPPORT}>Technical Support</MenuItem>
+                                    <MenuItem value={AgentRole.CONSULTING}>Consulting Services</MenuItem>
+                                    <MenuItem value={AgentRole.SALES_SERVICES}>Sales Services</MenuItem>
+                                    <MenuItem value={AgentRole.CUSTOM}>Custom...</MenuItem>
+                                </Select>
+                                {formData.ai_role === AgentRole.CUSTOM && (
+                                    <TextField
+                                        fullWidth
+                                        margin="normal"
+                                        label="Custom Role"
+                                        placeholder="Enter custom role..."
+                                        value={formData.custom_role || ''}
+                                        onChange={(e) => handleInputChange('custom_role', e.target.value)}
+                                        sx={{
+                                            mt: 1,
+                                            '.MuiOutlinedInput-root': {
+                                                color: '#FFFFFF',
+                                                bgcolor: '#333',
+                                                '.MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#555',
+                                                },
+                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#00F3FF',
+                                                },
+                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: '#00F3FF',
+                                                },
+                                            },
+                                            '.MuiInputLabel-root': {
+                                                color: '#AAAAAA',
+                                            },
+                                        }}
+                                    />
+                                )}
+                            </FormControl>
 
-                            <div className="input-group">
-                                <label htmlFor="agent-mode">Interaction Mode</label>
-                                <div className="select-container">
-                                    <select
-                                        id="agent-mode"
-                                        className="select-field"
-                                        value={formData.mode || ''}
-                                        onChange={(e) => handleInputChange('mode', e.target.value)}
-                                    >
-                                        <option value={AgentMode.TEXT}>Text Only</option>
-                                        <option value={AgentMode.AUDIO}>Audio Enabled</option>
-                                        <option value={AgentMode.VIDEO}>Video Enabled</option>
-                                    </select>
-                                    <div className="select-arrow">▼</div>
-                                </div>
-                            </div>
+                            <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
+                                <InputLabel id="agent-mode-label" sx={{ 
+                                    color: '#AAAAAA', 
+                                    bgcolor: '#1e1e1e', 
+                                    px: 1, 
+                                    ml: -0.5,
+                                    zIndex: 1 
+                                }}>Interaction Mode</InputLabel>
+                                <Select
+                                    labelId="agent-mode-label"
+                                    value={formData.mode || ''}
+                                    onChange={(e) => handleInputChange('mode', e.target.value)}
+                                    open={modeSelectOpen}
+                                    onOpen={() => setModeSelectOpen(true)}
+                                    onClose={() => setModeSelectOpen(false)}
+                                    MenuProps={{
+                                        disablePortal: false,
+                                        container: document.body,
+                                        PaperProps: {
+                                            sx: {
+                                                bgcolor: '#333',
+                                                color: '#FFFFFF',
+                                                '& .MuiMenuItem-root:hover': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.08)',
+                                                },
+                                                '& .MuiMenuItem-root.Mui-selected': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.15)',
+                                                },
+                                                maxHeight: 300,
+                                                overflow: 'auto',
+                                                mt: 1
+                                            }
+                                        },
+                                        slotProps: {
+                                            paper: {
+                                                elevation: 8,
+                                                sx: { zIndex: 9999 }
+                                            }
+                                        },
+                                        anchorOrigin: {
+                                            vertical: 'bottom',
+                                            horizontal: 'left',
+                                        },
+                                        transformOrigin: {
+                                            vertical: 'top',
+                                            horizontal: 'left',
+                                        }
+                                    }}
+                                    sx={{
+                                        bgcolor: '#333',
+                                        color: '#FFFFFF',
+                                        '.MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#555',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                        '.MuiSvgIcon-root': {
+                                            color: '#FFFFFF',
+                                        },
+                                    }}
+                                >
+                                    <MenuItem value={AgentMode.TEXT}>Text Only</MenuItem>
+                                    <MenuItem value={AgentMode.AUDIO}>Audio Enabled</MenuItem>
+                                    <MenuItem value={AgentMode.VIDEO}>Video Enabled</MenuItem>
+                                </Select>
+                            </FormControl>
 
-                            <div className="input-group">
-                                <label htmlFor="agent-language">Language</label>
-                                <div className="select-container">
-                                    <select
-                                        id="agent-language"
-                                        className="select-field"
-                                        value={formData.language || 'en'}
-                                        onChange={(e) => handleInputChange('language', e.target.value)}
-                                    >
-                                        <option value="en">English</option>
-                                        <option value="es">Spanish (Español)</option>
-                                        <option value="fr">French (Français)</option>
-                                        <option value="de">German (Deutsch)</option>
-                                        <option value="it">Italian (Italiano)</option>
-                                        <option value="pt">Portuguese (Português)</option>
-                                        <option value="ru">Russian (Русский)</option>
-                                    </select>
-                                    <div className="select-arrow">▼</div>
-                                </div>
-                                <small>The agent will respond in this language</small>
-                            </div>
+                            <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
+                                <InputLabel id="agent-language-label" sx={{ 
+                                    color: '#AAAAAA', 
+                                    bgcolor: '#1e1e1e', 
+                                    px: 1, 
+                                    ml: -0.5,
+                                    zIndex: 1 
+                                }}>Language</InputLabel>
+                                <Select
+                                    labelId="agent-language-label"
+                                    value={formData.language || 'en'}
+                                    onChange={(e) => handleInputChange('language', e.target.value)}
+                                    open={languageSelectOpen}
+                                    onOpen={() => setLanguageSelectOpen(true)}
+                                    onClose={() => setLanguageSelectOpen(false)}
+                                    startAdornment={
+                                        <InputAdornment position="start">
+                                            <Tooltip title="Select the language the agent will use to interact with users">
+                                                <IconButton edge="start" size="small">
+                                                    <LanguageIcon sx={{ color: '#00F3FF', fontSize: '1.2rem' }} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </InputAdornment>
+                                    }
+                                    MenuProps={{
+                                        disablePortal: false,
+                                        container: document.body,
+                                        PaperProps: {
+                                            sx: {
+                                                bgcolor: '#333',
+                                                color: '#FFFFFF',
+                                                '& .MuiMenuItem-root:hover': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.08)',
+                                                },
+                                                '& .MuiMenuItem-root.Mui-selected': {
+                                                    bgcolor: 'rgba(0, 243, 255, 0.15)',
+                                                },
+                                                maxHeight: 300,
+                                                overflow: 'auto',
+                                                mt: 1
+                                            }
+                                        },
+                                        slotProps: {
+                                            paper: {
+                                                elevation: 8,
+                                                sx: { zIndex: 9999 }
+                                            }
+                                        },
+                                        anchorOrigin: {
+                                            vertical: 'bottom',
+                                            horizontal: 'left',
+                                        },
+                                        transformOrigin: {
+                                            vertical: 'top',
+                                            horizontal: 'left',
+                                        }
+                                    }}
+                                    sx={{
+                                        bgcolor: '#333',
+                                        color: '#FFFFFF',
+                                        '.MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#555',
+                                        },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#00F3FF',
+                                        },
+                                        '.MuiSvgIcon-root': {
+                                            color: '#FFFFFF',
+                                        },
+                                    }}
+                                >
+                                    <MenuItem value="en">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/en.png" alt="English" width={20} height={15} style={{ marginRight: 8 }} />
+                                            English
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="es">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/es.png" alt="Spanish" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Spanish (Español)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="fr">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/fr.png" alt="French" width={20} height={15} style={{ marginRight: 8 }} />
+                                            French (Français)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="de">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/de.png" alt="German" width={20} height={15} style={{ marginRight: 8 }} />
+                                            German (Deutsch)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="it">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/it.png" alt="Italian" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Italian (Italiano)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="pt">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/pt.png" alt="Portuguese" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Portuguese (Português)
+                                        </Box>
+                                    </MenuItem>
+                                    <MenuItem value="ru">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src="/flags/ru.png" alt="Russian" width={20} height={15} style={{ marginRight: 8 }} />
+                                            Russian (Русский)
+                                        </Box>
+                                    </MenuItem>
+                                </Select>
+                                <FormHelperText sx={{ color: '#AAAAAA' }}>
+                                    The agent will respond in this language
+                                </FormHelperText>
+                            </FormControl>
 
-                            <div className="slider-container">
-                                <div className="slider-header">
-                                    <span className="slider-label">Response Style:</span>
-                                    <span className="slider-value">
-                                        {formData.response_style === 0 ? 'Formal' : 
-                                        formData.response_style === 1 ? 'Casual' : 
-                                        `${formData.response_style ? Math.round(formData.response_style * 100) : 50}% Casual`}
-                                    </span>
-                                </div>
-                                <input
-                                    type="range"
-                                    className="slider"
-                                    min="0"
-                                    max="1"
-                                    step="0.1"
-                                    value={formData.response_style !== undefined ? formData.response_style : 0.5}
-                                    onChange={(e) => handleInputChange('response_style', parseFloat(e.target.value))}
+                            <Box sx={{ mt: 4 }}>
+                                <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                    Response Style
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Formal</Typography>
+                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Casual</Typography>
+                                </Box>
+                                <Slider
+                                    aria-labelledby="response-style-slider-label"
+                                    value={formData.response_style || 0.5}
+                                    onChange={(_, value) => handleInputChange('response_style', value as number)}
+                                    step={0.25}
+                                    marks
+                                    min={0}
+                                    max={1}
+                                    valueLabelDisplay="auto"
+                                    valueLabelFormat={(value) => 
+                                        value === 0 ? 'Very Formal' : 
+                                        value === 0.25 ? 'Formal' : 
+                                        value === 0.5 ? 'Balanced' : 
+                                        value === 0.75 ? 'Casual' : 'Very Casual'
+                                    }
+                                    sx={{
+                                        color: '#00F3FF',
+                                        '& .MuiSlider-rail': {
+                                            opacity: 0.5,
+                                            backgroundColor: '#333',
+                                        },
+                                        '& .MuiSlider-mark': {
+                                            backgroundColor: '#555',
+                                            height: 8,
+                                            width: 1,
+                                            marginTop: -3,
+                                        },
+                                        '& .MuiSlider-thumb': {
+                                            width: 22,
+                                            height: 22,
+                                            backgroundColor: '#00F3FF',
+                                            '&:before': {
+                                                boxShadow: '0 4px 8px rgba(0, 243, 255, 0.4)',
+                                            },
+                                            '&:hover, &.Mui-focusVisible': {
+                                                boxShadow: '0 0 0 8px rgba(0, 243, 255, 0.16)',
+                                            },
+                                        },
+                                        '& .MuiSlider-valueLabel': {
+                                            backgroundColor: '#00F3FF',
+                                            color: '#000',
+                                        },
+                                    }}
                                 />
-                                <div className="slider-range">
-                                    <span className="slider-min">Formal</span>
-                                    <span className="slider-max">Casual</span>
-                                </div>
-                            </div>
+                            </Box>
 
-                            <div className="slider-container">
-                                <div className="slider-header">
-                                    <span className="slider-label">Response Length:</span>
-                                    <span className="slider-value">{formData.response_length || 150} words</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    className="slider"
-                                    min="50"
-                                    max="500"
-                                    step="50"
+                            <Box sx={{ mt: 4 }}>
+                                <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                    Response Length (words)
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Short</Typography>
+                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Long</Typography>
+                                </Box>
+                                <Slider
+                                    aria-labelledby="response-length-slider-label"
                                     value={formData.response_length || 150}
-                                    onChange={(e) => handleInputChange('response_length', parseInt(e.target.value))}
+                                    onChange={(_, value) => handleInputChange('response_length', value as number)}
+                                    step={50}
+                                    marks
+                                    min={50}
+                                    max={350}
+                                    valueLabelDisplay="auto"
+                                    sx={{
+                                        color: '#00F3FF',
+                                        '& .MuiSlider-rail': {
+                                            opacity: 0.5,
+                                            backgroundColor: '#333',
+                                        },
+                                        '& .MuiSlider-mark': {
+                                            backgroundColor: '#555',
+                                            height: 8,
+                                            width: 1,
+                                            marginTop: -3,
+                                        },
+                                        '& .MuiSlider-thumb': {
+                                            width: 22,
+                                            height: 22,
+                                            backgroundColor: '#00F3FF',
+                                            '&:before': {
+                                                boxShadow: '0 4px 8px rgba(0, 243, 255, 0.4)',
+                                            },
+                                            '&:hover, &.Mui-focusVisible': {
+                                                boxShadow: '0 0 0 8px rgba(0, 243, 255, 0.16)',
+                                            },
+                                        },
+                                        '& .MuiSlider-valueLabel': {
+                                            backgroundColor: '#00F3FF',
+                                            color: '#000',
+                                        },
+                                    }}
                                 />
-                                <div className="slider-range">
-                                    <span className="slider-min">50</span>
-                                    <span className="slider-max">500</span>
-                                </div>
-                            </div>
-                        </div>
+                            </Box>
+                        </Box>
                     )}
 
                     {currentStep === 3 && (
-                        <div>
-                            <h3>Knowledge Base</h3>
-                            <p>Select the knowledge categories that this agent should have access to when responding to customers.</p>
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                Knowledge Base
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 3, color: '#AAAAAA' }}>
+                                Select knowledge sources your agent can reference when answering questions.
+                            </Typography>
                             
-                            <div className="knowledge-section">
-                                <input
-                                    type="text"
-                                    className="search-box"
-                                    placeholder="Search knowledge bases..."
-                                />
-                                
-                                <KnowledgeSelector
-                                    selectedIds={selectedKnowledgeIds}
-                                    onSelectionChange={(ids) => {
-                                        setSelectedKnowledgeIds(ids);
-                                        onKnowledgeSelect(ids);
-                                    }}
-                                />
-                            </div>
-                        </div>
+                            <KnowledgeSelector 
+                                selectedIds={selectedKnowledgeIds}
+                                onSelectionChange={(ids: number[]) => {
+                                    setSelectedKnowledgeIds(ids);
+                                    onKnowledgeSelect(ids);
+                                }}
+                            />
+                        </Box>
                     )}
-
+                    
                     {currentStep === 4 && (
-                        <div>
-                            <h3>Agent Actions</h3>
-                            <p>Select what actions this agent can perform:</p>
+                        <Box>
+                            <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                Agent Actions
+                            </Typography>
                             
-                            <div className="checkbox-container">
-                                <input
-                                    type="checkbox"
-                                    id="action-text"
-                                    className="checkbox"
-                                    checked={true}
-                                    disabled
-                                />
-                                <label htmlFor="action-text" className="checkbox-label">Text Output</label>
-                            </div>
+                            <Typography variant="body2" paragraph sx={{ color: '#AAAAAA' }}>
+                                Select what actions this agent can perform:
+                            </Typography>
                             
-                            <div className="checkbox-container">
-                                <input
-                                    type="checkbox"
-                                    id="action-send-file"
-                                    className="checkbox"
-                                    checked={formData.actions?.includes('send_file') || false}
-                                    onChange={(e) => {
-                                        const currentActions = formData.actions || [];
-                                        let newActions;
-                                        if (e.target.checked) {
-                                            newActions = [...currentActions, 'send_file'];
-                                        } else {
-                                            newActions = currentActions.filter(a => a !== 'send_file');
-                                        }
-                                        handleInputChange('actions', newActions);
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                <Box 
+                                    sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        p: 1.25,
+                                        bgcolor: '#333',
+                                        borderRadius: 1
                                     }}
-                                />
-                                <label htmlFor="action-send-file" className="checkbox-label">Send File</label>
-                            </div>
-                            
-                            <div className="checkbox-container">
-                                <input
-                                    type="checkbox"
-                                    id="action-send-link"
-                                    className="checkbox"
-                                    checked={formData.actions?.includes('send_link') || false}
-                                    onChange={(e) => {
-                                        const currentActions = formData.actions || [];
-                                        let newActions;
-                                        if (e.target.checked) {
-                                            newActions = [...currentActions, 'send_link'];
-                                        } else {
-                                            newActions = currentActions.filter(a => a !== 'send_link');
-                                        }
-                                        handleInputChange('actions', newActions);
+                                >
+                                    <Checkbox
+                                        checked={true}
+                                        disabled
+                                        sx={{
+                                            color: '#AAAAAA',
+                                            '&.Mui-checked': {
+                                                color: '#00F3FF',
+                                            },
+                                        }}
+                                    />
+                                    <Box sx={{ ml: 1 }}>
+                                        <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
+                                            Text Output
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                
+                                <Box 
+                                    sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        p: 1.25,
+                                        bgcolor: '#333',
+                                        borderRadius: 1
                                     }}
-                                />
-                                <label htmlFor="action-send-link" className="checkbox-label">Send Link</label>
-                            </div>
-                        </div>
+                                >
+                                    <Checkbox
+                                        checked={isActionSelected('send_file')}
+                                        onChange={(e) => handleActionChange('send_file', e.target.checked)}
+                                        sx={{
+                                            color: '#AAAAAA',
+                                            '&.Mui-checked': {
+                                                color: '#00F3FF',
+                                            },
+                                        }}
+                                    />
+                                    <Box sx={{ ml: 1 }}>
+                                        <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
+                                            Send File
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                
+                                <Box 
+                                    sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        p: 1.25,
+                                        bgcolor: '#333',
+                                        borderRadius: 1
+                                    }}
+                                >
+                                    <Checkbox
+                                        checked={isActionSelected('send_link')}
+                                        onChange={(e) => handleActionChange('send_link', e.target.checked)}
+                                        sx={{
+                                            color: '#AAAAAA',
+                                            '&.Mui-checked': {
+                                                color: '#00F3FF',
+                                            },
+                                        }}
+                                    />
+                                    <Box sx={{ ml: 1 }}>
+                                        <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
+                                            Send Link
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </Box>
                     )}
 
                     {currentStep === 5 && (
-                        <div>
-                            <h3>Review</h3>
+                        <Box sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>
+                                Review Agent Configuration
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 3, color: '#AAAAAA' }}>
+                                Review your agent configuration before creating it.
+                            </Typography>
                             
-                            <div className="review-section">
-                                <h4 className="review-title">Basic Information</h4>
-                                <div className="review-content">
-                                    <div className="review-line">
-                                        <span className="review-label">Name:</span>
-                                        <span className="review-value">{formData.name}</span>
-                                    </div>
-                                    <div className="review-line">
-                                        <span className="review-label">Description:</span>
-                                        <span className="review-value">{formData.description || 'No description provided.'}</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.4)', borderRadius: 2, mt: 2 }}>
+                                <Typography variant="subtitle1" sx={{ color: '#00F3FF', mb: 2 }}>
+                                    Basic Information
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ color: '#AAAAAA', width: '30%' }}>
+                                            Name:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#FFFFFF', width: '70%' }}>
+                                            {formData.name}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ color: '#AAAAAA', width: '30%' }}>
+                                            Description:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#FFFFFF', width: '70%' }}>
+                                            {formData.description || 'N/A'}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ color: '#AAAAAA', width: '30%' }}>
+                                            Role:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#FFFFFF', width: '70%' }}>
+                                            {formData.ai_role}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ color: '#AAAAAA', width: '30%' }}>
+                                            Mode:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#FFFFFF', width: '70%' }}>
+                                            {formData.mode}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Paper>
                             
-                            <div className="review-section">
-                                <h4 className="review-title">Configuration</h4>
-                                <div className="review-content">
-                                    <div className="review-line">
-                                        <span className="review-label">Role:</span>
-                                        <span className="review-value">{formData.ai_role}</span>
-                                    </div>
-                                    <div className="review-line">
-                                        <span className="review-label">Mode:</span>
-                                        <span className="review-value">{formData.mode}</span>
-                                    </div>
-                                    <div className="review-line">
-                                        <span className="review-label">Language:</span>
-                                        <span className="review-value">{formData.language}</span>
-                                    </div>
-                                    <div className="review-line">
-                                        <span className="review-label">Response Style:</span>
-                                        <span className="review-value">
-                                            {formData.response_style === 0 ? 'Formal' : 
-                                            formData.response_style === 1 ? 'Casual' : 
-                                            `${formData.response_style ? Math.round(formData.response_style * 100) : 50}% Casual`}
-                                        </span>
-                                    </div>
-                                    <div className="review-line">
-                                        <span className="review-label">Response Length:</span>
-                                        <span className="review-value">{formData.response_length} words</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.4)', borderRadius: 2, mt: 2 }}>
+                                <Typography variant="subtitle1" sx={{ color: '#00F3FF', mb: 2 }}>
+                                    Response Configuration
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ color: '#AAAAAA', width: '30%' }}>
+                                            Response Style:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#FFFFFF', width: '70%' }}>
+                                            {formData.response_style === 0 ? 'Very Formal' : 
+                                             formData.response_style === 0.25 ? 'Formal' :
+                                             formData.response_style === 0.5 ? 'Balanced' :
+                                             formData.response_style === 0.75 ? 'Casual' : 'Very Casual'}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ color: '#AAAAAA', width: '30%' }}>
+                                            Response Length:
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#FFFFFF', width: '70%' }}>
+                                            {formData.response_length} words
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Paper>
                             
-                            <div className="review-section">
-                                <h4 className="review-title">Knowledge & Actions</h4>
-                                <div className="review-content">
-                                    <div className="review-line">
-                                        <span className="review-label">Knowledge Bases:</span>
-                                        <span className="review-value">
-                                            {selectedKnowledgeIds.length > 0 ? 
-                                                `${selectedKnowledgeIds.length} knowledge base(s) selected` : 
-                                                'None selected'}
-                                        </span>
-                                    </div>
-                                    <div className="review-line">
-                                        <span className="review-label">Actions:</span>
-                                        <span className="review-value">
-                                            Text Output
-                                            {formData.actions?.includes('send_file') && ', Send File'}
-                                            {formData.actions?.includes('send_link') && ', Send Link'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.4)', borderRadius: 2, mt: 2 }}>
+                                <Typography variant="subtitle1" sx={{ color: '#00F3FF', mb: 2 }}>
+                                    Selected Actions
+                                </Typography>
+                                {(formData.actions || []).length > 0 ? (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {(formData.actions || []).map((action, index) => (
+                                            <Typography key={index} variant="body2" sx={{ color: '#FFFFFF' }}>
+                                                • {action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </Typography>
+                                        ))}
+                                    </Box>
+                                ) : (
+                                    <Typography variant="body2" sx={{ color: '#AAAAAA' }}>
+                                        No actions selected
+                                    </Typography>
+                                )}
+                            </Paper>
+                        </Box>
                     )}
-                </div>
+                </Box>
 
-                {/* Footer Buttons */}
-                <div className="wizard-footer">
-                    <div>
-                        {currentStep > 1 && (
-                            <button 
-                                className="back-button" 
-                                onClick={prevStep}
-                            >
-                                Back
-                            </button>
-                        )}
-                    </div>
-                    <div>
-                        {currentStep < STEPS.length ? (
-                            <button 
-                                className="next-button" 
-                                onClick={nextStep}
-                                disabled={!validateStep()}
-                            >
-                                Next
-                            </button>
-                        ) : (
-                            <button 
-                                className="create-button" 
-                                onClick={handleSubmit}
-                            >
-                                Create
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+                {/* Footer */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    p: 2, 
+                    borderTop: '1px solid #333',
+                    mt: 'auto'
+                }}>
+                    <Button
+                        startIcon={<ArrowBackIcon />}
+                        onClick={prevStep}
+                        variant="outlined"
+                        sx={{
+                            visibility: currentStep === 1 ? 'hidden' : 'visible',
+                            borderColor: '#555',
+                            color: '#AAAAAA',
+                            '&:hover': {
+                                borderColor: '#00F3FF',
+                                color: '#FFFFFF',
+                                backgroundColor: 'rgba(0, 243, 255, 0.08)'
+                            }
+                        }}
+                    >
+                        Back
+                    </Button>
+                    
+                    {isLoading ? (
+                        <Button
+                            variant="contained"
+                            disabled
+                            sx={{
+                                bgcolor: '#555',
+                                color: '#888',
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <span className="loading-spinner" style={{ marginRight: '8px' }}></span>
+                                Creating...
+                            </Box>
+                        </Button>
+                    ) : (
+                        <Button
+                            endIcon={currentStep < STEPS.length ? <ArrowForwardIcon /> : undefined}
+                            onClick={currentStep < STEPS.length ? nextStep : handleSubmit}
+                            variant="contained"
+                            sx={{
+                                bgcolor: '#00F3FF',
+                                color: '#000',
+                                fontWeight: 'bold',
+                                '&:hover': {
+                                    bgcolor: 'rgba(0, 243, 255, 0.8)',
+                                }
+                            }}
+                        >
+                            {currentStep < STEPS.length ? 'Continue' : 'Create Agent'}
+                        </Button>
+                    )}
+                </Box>
+            </Paper>
+        </Modal>
     );
-};
+}

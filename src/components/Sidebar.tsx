@@ -31,9 +31,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     
     try {
       setCreatingChat(true);
-      await createNewChat();
-      navigate('/chat');
-      toast.success('New chat created successfully');
+      const newChat = await createNewChat();
+      if (newChat) {
+        navigate('/chat');
+        toast.success('New chat created successfully');
+      } else {
+        throw new Error('Failed to create new chat');
+      }
     } catch (error) {
       console.error('Error creating new chat:', error);
       toast.error('Failed to create new chat. Please try again.');
@@ -121,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleCreateNewChat}
           disabled={creatingChat}
-          className={`flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
             creatingChat ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >

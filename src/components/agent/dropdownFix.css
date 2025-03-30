@@ -1,67 +1,79 @@
-/* Dropdown Menu Fix */
-.MuiMenu-paper {
-  background-color: #333 !important;
-  color: #FFFFFF !important;
-  z-index: 9999 !important;
-  max-height: 300px !important;
-  overflow-y: auto !important; /* Enable vertical scrolling */
+/* Custom Dropdown Styling */
+.select-container {
+  position: relative;
+  z-index: 10;
 }
 
-.MuiMenu-list {
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
-  max-height: 290px !important;
-  overflow-y: auto !important;
+.select-field {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
 }
 
-.MuiMenuItem-root {
-  color: #FFFFFF !important;
-  padding: 8px 16px !important;
+.select-field:focus {
+  outline: none;
+  border-color: #00F3FF;
 }
 
-.MuiMenuItem-root:hover {
-  background-color: rgba(0, 243, 255, 0.08) !important;
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  pointer-events: none;
+  color: #AAAAAA;
+  transition: transform 0.2s ease;
 }
 
-.MuiMenuItem-root.Mui-selected {
-  background-color: rgba(0, 243, 255, 0.15) !important;
+.select-container:hover .select-arrow {
+  color: #00F3FF;
 }
 
-/* Force the dropdown menu to be visible and in front */
-.MuiPopover-root {
-  z-index: 9999 !important;
+/* Custom scrollbar styling for all scrollable elements */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Make sure select dropdown works properly */
-.MuiSelect-select {
-  cursor: pointer !important;
+::-webkit-scrollbar-track {
+  background: #444;
+  border-radius: 3px;
 }
 
-/* Fix for modal dialogs to ensure dropdowns render on top */
-.MuiModal-root {
-  z-index: 1300 !important;
+::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 3px;
 }
 
-.MuiPopover-root.MuiModal-root {
-  z-index: 1400 !important;
+::-webkit-scrollbar-thumb:hover {
+  background: #00F3FF;
 }
 
-/* Ensure scrollbars are visible and styled */
-.MuiMenu-paper::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
+/* Fix for z-index issues */
+.wizard-overlay {
+  z-index: 9999;
 }
 
-.MuiMenu-paper::-webkit-scrollbar-track {
-  background: #444 !important;
-  border-radius: 3px !important;
+.wizard-container {
+  z-index: 10000;
 }
 
-.MuiMenu-paper::-webkit-scrollbar-thumb {
-  background: #666 !important;
-  border-radius: 3px !important;
+/* Fix for select dropdown focus */
+.select-field:focus + .select-arrow {
+  color: #00F3FF;
 }
 
-.MuiMenu-paper::-webkit-scrollbar-thumb:hover {
-  background: #00F3FF !important;
+/* Fix for Firefox */
+@-moz-document url-prefix() {
+  .select-field {
+    padding-right: 25px;
+  }
+}
+
+/* Ensure proper nesting of knowledge selectors */
+.knowledge-section {
+  position: relative;
+  z-index: 1;
 }

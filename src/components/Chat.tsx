@@ -4,7 +4,6 @@ import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
-import { MessageFormatter } from "./MessageFormatter";
 import AgentInfoBanner from "./agent/AgentInfoBanner";
 import "../styles/chat.css";
 
@@ -110,7 +109,7 @@ const Chat: React.FC = () => {
             <div
               className={`message-content ${msg.role}`}
             >
-              <MessageFormatter content={msg.content} role={msg.role} />
+              <div className="message-text">{msg.content}</div>
               <div className="message-timestamp">
                 {(() => {
                   try {

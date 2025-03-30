@@ -14,6 +14,7 @@ import { agentService } from '../services/api/agent.service';
 import AgentEditDialog from '../components/agent/AgentEditDialog';
 import AgentRoleDialog from '../components/agent/AgentRoleDialog';
 import AgentBehaviorDialog from '../components/agent/AgentBehaviorDialog';
+import AgentCreationWizard from '../components/agent/AgentCreationWizard';
 import '../styles/AgentManagement.css';
 
 // Custom TabPanel component
@@ -64,81 +65,6 @@ interface PartialAgent {
     response_style?: number;
     response_length?: number;
 }
-
-// Create a simple AgentCreationWizard component placeholder
-interface AgentCreationWizardProps {
-    open: boolean;
-    onClose: () => void;
-    onSubmit: (agent: PartialAgent) => void;
-}
-
-const AgentCreationWizard: React.FC<AgentCreationWizardProps> = ({ open, onClose, onSubmit }) => {
-    const [agentData, setAgentData] = useState<PartialAgent>({
-        name: '',
-        description: '',
-        ai_role: AgentRole.CUSTOMER_SUPPORT,
-        model: 'gpt-4',
-        response_style: 0.5,
-        response_length: 150
-    });
-
-    const handleInputChange = (field: keyof PartialAgent, value: any) => {
-        setAgentData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const handleSubmit = () => {
-        onSubmit(agentData);
-        onClose();
-    };
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle>Create New Agent</DialogTitle>
-            <DialogContent>
-                <Box sx={{ p: 2 }}>
-                    <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
-                        Enter the basic details for your new agent:
-                    </Typography>
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>Name</Typography>
-                        <input 
-                            type="text" 
-                            value={agentData.name}
-                            onChange={(e) => handleInputChange('name', e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px'
-                            }}
-                        />
-                    </Box>
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>Description</Typography>
-                        <textarea
-                            value={agentData.description || ''}
-                            onChange={(e) => handleInputChange('description', e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px',
-                                minHeight: '80px'
-                            }}
-                        />
-                    </Box>
-                </Box>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSubmit} variant="contained" color="primary">Create</Button>
-            </DialogActions>
-        </Dialog>
-    );
-};
 
 export const AgentManagement: React.FC = () => {
     console.log('AgentManagement component rendering');
@@ -643,6 +569,18 @@ export const AgentManagement: React.FC = () => {
                     setShowWizard(false);
                 }}
                 onSubmit={handleCreateAgent}
+                onDataChange={(data) => console.log('Agent data updated:', data)}
+                onKnowledgeSelect={(ids) => console.log('Knowledge selected:', ids)}
+                initialData={{
+                    name: '',
+                    description: '',
+                    ai_role: AgentRole.CUSTOMER_SUPPORT,
+                    mode: AgentMode.TEXT,
+                    language: 'en',
+                    response_style: 0.5,
+                    response_length: 150,
+                    actions: []
+                }}
             />
             
             {/* Tabs for different agent views */}

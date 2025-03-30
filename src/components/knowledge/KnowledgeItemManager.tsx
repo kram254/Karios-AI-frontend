@@ -88,6 +88,16 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         clearMessages();
         
         try {
+            // First check if the category still exists and is not deleted
+            try {
+                await categoryService.getCategoryById(parseInt(categoryId));
+            } catch (categoryError) {
+                console.error('Category may have been deleted:', categoryError);
+                setError('This category no longer exists. Please create a new category or select a different one.');
+                setLoading(false);
+                return;
+            }
+            
             const response = await categoryService.getCategoryItems(parseInt(categoryId));
             setKnowledgeItems(response.data);
         } catch (error) {

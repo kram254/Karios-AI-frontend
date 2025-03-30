@@ -280,8 +280,9 @@ export default function AgentCreationWizard({
                 {/* Steps indicator */}
                 <Box sx={{ 
                     display: 'flex', 
-                    justifyContent: 'center', 
-                    p: 2 
+                    justifyContent: 'space-between', 
+                    p: 2,
+                    mb: 2
                 }}>
                     {STEPS.map((step, index) => (
                         <Box 
@@ -290,39 +291,42 @@ export default function AgentCreationWizard({
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 alignItems: 'center',
-                                mx: 1.5
+                                width: `${100 / STEPS.length}%`,
+                                px: 1
                             }}
                         >
                             <Box 
                                 sx={{
-                                    width: 40,
-                                    height: 40,
+                                    width: '100%',
+                                    height: 70,
                                     display: 'flex',
+                                    flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    borderRadius: '50%',
-                                    mb: 1,
-                                    bgcolor: currentStep > index + 1 ? '#00F3FF' : 
-                                            currentStep === index + 1 ? '#333' : '#222',
-                                    color: currentStep > index + 1 ? '#000' : '#AAAAAA',
-                                    border: currentStep === index + 1 ? '2px solid #00F3FF' : 'none'
-                                }}
-                            >
-                                {currentStep > index + 1 ? (
-                                    <CheckIcon />
-                                ) : (
-                                    <Typography variant="body1">{index + 1}</Typography>
-                                )}
-                            </Box>
-                            <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                    color: currentStep === index + 1 ? '#00F3FF' : '#AAAAAA',
+                                    borderRadius: 1,
+                                    backgroundColor: currentStep === index + 1 ? 'rgba(0, 243, 255, 0.1)' : '#222',
+                                    color: currentStep === index + 1 ? '#00F3FF' : 
+                                           currentStep > index + 1 ? '#FFFFFF' : '#AAAAAA',
+                                    border: currentStep === index + 1 ? '1px solid #00F3FF' : 'none',
+                                    position: 'relative',
+                                    overflow: 'hidden',
                                     fontWeight: currentStep === index + 1 ? 'bold' : 'normal',
                                 }}
                             >
-                                {step.label}
-                            </Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                                    {index + 1}
+                                </Typography>
+                                <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                        color: currentStep === index + 1 ? '#00F3FF' : 
+                                               currentStep > index + 1 ? '#FFFFFF' : '#AAAAAA',
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    {step.label}
+                                </Typography>
+                            </Box>
                         </Box>
                     ))}
                 </Box>
@@ -359,10 +363,12 @@ export default function AgentCreationWizard({
                                             borderColor: '#555',
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: '#888',
+                                            borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
                                         },
                                         '&.Mui-focused fieldset': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
                                         },
                                     },
                                 }}
@@ -390,10 +396,12 @@ export default function AgentCreationWizard({
                                             borderColor: '#555',
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: '#888',
+                                            borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
                                         },
                                         '&.Mui-focused fieldset': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
                                         },
                                     },
                                 }}
@@ -463,9 +471,11 @@ export default function AgentCreationWizard({
                                         },
                                         '&:hover .MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
                                         },
                                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
                                         },
                                         '.MuiSvgIcon-root': {
                                             color: '#FFFFFF',
@@ -497,9 +507,11 @@ export default function AgentCreationWizard({
                                                 },
                                                 '&:hover .MuiOutlinedInput-notchedOutline': {
                                                     borderColor: '#00F3FF',
+                                                    boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
                                                 },
                                                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                                                     borderColor: '#00F3FF',
+                                                    boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
                                                 },
                                             },
                                             '.MuiInputLabel-root': {
@@ -566,13 +578,18 @@ export default function AgentCreationWizard({
                                         },
                                         '&:hover .MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
                                         },
                                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
                                         },
                                         '.MuiSvgIcon-root': {
                                             color: '#FFFFFF',
                                         },
+                                        '&:hover': {
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
+                                        }
                                     }}
                                 >
                                     <MenuItem value={AgentMode.TEXT}>Text Only</MenuItem>
@@ -646,13 +663,18 @@ export default function AgentCreationWizard({
                                         },
                                         '&:hover .MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
                                         },
                                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                                             borderColor: '#00F3FF',
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
                                         },
                                         '.MuiSvgIcon-root': {
                                             color: '#FFFFFF',
                                         },
+                                        '&:hover': {
+                                            boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
+                                        }
                                     }}
                                 >
                                     <MenuItem value="en">

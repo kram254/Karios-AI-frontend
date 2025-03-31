@@ -37,15 +37,23 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
     // 3. Fix bullet points with extra asterisks
     fixed = fixed.replace(/[-*]\s+\*\*[-*]\s+\*\*/g, '- **');
     
-    // 4. Remove any visible markdown formatting that shouldn't be visible
+    // 4. Remove visible markdown formatting tags (like **N. ### Title:**)
+    fixed = fixed.replace(/\*\*(\d+)\. ###\s+([^:]+):\*\*/g, '$1. $2:');
+    fixed = fixed.replace(/\*\*(\d+)\. ###\s+([^*]+)\*\*/g, '$1. $2');
+    fixed = fixed.replace(/\*\*(\d+)\.\s+([^\n*:]+):\*\*/g, '$1. $2:');
+
+    // 5. Remove extra asterisks around section numbers
+    fixed = fixed.replace(/^\*\*(\d+)\. ([^*]+)\*\*/gm, '$1. $2');
+    
+    // 6. Remove any visible markdown formatting that shouldn't be visible
     const cleanMarkdown = (text: string): string => {
       let result = text;
       
       // Remove duplicate headers
-      result = result.replace(/(#{1,6})\s+\*\*(\d+)\.\s+(#{1,6})\s+\*\*(\d+)\.\s+([^*]+)\*\*\*\*/g, '$1 **$4. $5**');
+      result = result.replace(/(#{1,6})\s+\*\*(\d+)\.\s+(#{1,6})\s+\*\*(\d+)\.\s+([^*]+)\*\*\*\*/g, '$1 $4. $5');
       
       // Fix bullet points with extra formatting
-      result = result.replace(/^(\s*)[-*]\s+\*\*[-*]\s+\*\*([^:*]+)(\*\*:\*\*|\*\*:|:)*/gm, '$1- **$2:**');
+      result = result.replace(/^(\s*)[-*]\s+\*\*[-*]\s+\*\*([^:*]+)(\*\*:\*\*|\*\*:|:)*/gm, '$1- $2:');
       
       // Fix any duplicate bullets
       result = result.replace(/^(\s*)[-*]\s+[-*]\s+/gm, '$1- ');
@@ -53,13 +61,20 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
       // Fix broken horizontal rules
       result = result.replace(/^\s*[-*]{3,}\s*$/gm, '---');
       
+      // Remove visible heading markdown like **N. ### Title:**
+      result = result.replace(/^(#{1,6})\s+\*\*(\d+)\. ([^\n*]+)\*\*/gm, '$1 $2. $3');
+      
+      // Remove visible header markdown
+      result = result.replace(/^\*\*(\d+)\. ###\s+([^:]+):\*\*/gm, '### $1. $2:');
+      result = result.replace(/^\*\*(\d+)\. ###\s+([^*]+)\*\*/gm, '### $1. $2');
+      
       // Fix inconsistent section numbering
-      result = result.replace(/^(#{1,6})\s+\*\*(\d+)\.\s+([^\n*]+)\*\*[\s\S]*?\1\s+\*\*\2\.\s+(?:#{1,6})?\s*\*\*(\d+)\.\s+/gm, 
-        (match, h, n1, title, n2) => {
-          const firstPart = match.substring(0, match.indexOf(title) + title.length + 2);
+      result = result.replace(/^(#{1,6})\s+\*\*(\d+)\.\s+([^\n*]+)\*\*[\s\S]*?\1\s+\*\*(\d+)\.\s+(?:#{1,6})?\s*\*\*(\d+)\.\s+/gm, 
+        (match, h, _, title, n2, n3) => {
+          const firstPart = match.substring(0, match.indexOf(title) + title.length);
           return firstPart + match.substring(firstPart.length).replace(
-            new RegExp(`${h}\\s+\\*\\*${n1}\\.\\s+(?:#{1,6})?\\s*\\*\\*${n2}\\.\\s+`),
-            `${h} **${n2}. `
+            new RegExp(`${h}\\s+\\*\\*${n2}\\.\\s+(?:#{1,6})?\\s*\\*\\*${n3}\\.\\s+`),
+            `${h} ${n3}. `
           );
         }
       );

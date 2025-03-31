@@ -50,29 +50,45 @@ export const formatMessageContent = (content: string, role: string): string => {
     return content;
   }
 
-  // Fix potential double bullet points
-  // Match patterns like "- •" or "* •" or "• -" or "• *"
-  let fixedContent = content.replace(/^(\s*)[\-\*]\s*[•\-\*]\s+/gm, '$1• ');
+  // Clean up duplicate header patterns like "### **1. ### 1. **Title****"
+  let fixedContent = content.replace(/(#{1,6})\s+\*\*\d+\.\s+(#{1,6})\s+\d+\.\s+\*\*([^*]+)\*\*\*\*/gm, 
+    (_, h1, _h2, title) => `${h1} **${title}**`);
+  
+  // Fix double headers without numbers
+  fixedContent = fixedContent.replace(/(#{1,6})\s+\*\*([^*]+)\s+(#{1,6})\s+([^*]+)\*\*/gm,
+    (_, h1, title1, _h2, title2) => `${h1} **${title1 || title2}**`);
+  
+  // Fix double bullets with asterisks "- **- **Text**"
+  fixedContent = fixedContent.replace(/^(\s*)[-*]\s+\*\*[-*]\s+\*\*([^*]+)\*\*/gm, 
+    (_, space, text) => `${space}- **${text}**`);
+    
+  // Fix any remaining double bullets
+  fixedContent = fixedContent.replace(/^(\s*)[-*]\s+[-*]\s+/gm, 
+    (_, space) => `${space}- `);
   
   // Fix potential double numbered lists 
-  // Match patterns like "1. 1." or "1) 1)" or "1. 1)" or "1) 1."
-  fixedContent = fixedContent.replace(/^(\s*)\d+[.\)]\s*\d+[.\)]\s+/gm, (match) => {
-    // Extract the first number and use only that
+  fixedContent = fixedContent.replace(/^(\s*)\d+[.)]\s*\d+[.)]\s+/gm, (match) => {
     const number = match.match(/(\d+)/)?.[0] || '1';
     return `${match.match(/^(\s*)/)?.[0] || ''}${number}. `;
   });
   
-  // Fix potential issue with nested bullets using the same bullet character
-  fixedContent = fixedContent.replace(/^(\s+)[\-\*]\s+/gm, '$1• ');
+  // Fix inconsistent nested bullets
+  fixedContent = fixedContent.replace(/^(\s{2,})[-*]\s+/gm, '$1- ');
   
-  // Fix potential issue with code blocks that have extra backticks
-  fixedContent = fixedContent.replace(/`````+/g, '```');
+  // Fix extra asterisks (more than 2 on each side)
+  fixedContent = fixedContent.replace(/\*{3,}([^*]+)\*{3,}/g, '**$1**');
   
-  // Fix potential issue with inconsistent heading formatting
-  fixedContent = fixedContent.replace(/^#{3,}\s+/gm, '### ');
+  // Fix potential "***" that should be standard horizontal rules
+  fixedContent = fixedContent.replace(/^\s*[*-]{3,}\s*$/gm, '---');
   
-  // Fix lists that might have inconsistent spacing
-  fixedContent = fixedContent.replace(/^(\s*)[\-\*]\s{2,}/gm, '$1• ');
+  // Clean up any double bolding patterns "****text****"
+  fixedContent = fixedContent.replace(/\*{4,}([^*]+)\*{4,}/g, '**$1**');
+  
+  // Clean up headings with too many #s
+  fixedContent = fixedContent.replace(/^#{7,}\s+/gm, '###### ');
+  
+  // Fix broken code blocks
+  fixedContent = fixedContent.replace(/`{3,}/g, '```');
   
   return fixedContent;
 }

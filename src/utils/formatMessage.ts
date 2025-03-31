@@ -41,6 +41,8 @@ export const stripMarkdown = (text: string): string => {
  * Converts markdown formatting to JSX elements for better presentation.
  * This preserves formatting like bold text, lists, and headings but converts
  * them to proper HTML elements rather than showing markdown syntax.
+ * 
+ * Also prevents double formatting issues like double bullets or double numbering.
  */
 export const formatMessageContent = (content: string, role: string): string => {
   // Only process assistant messages
@@ -48,5 +50,29 @@ export const formatMessageContent = (content: string, role: string): string => {
     return content;
   }
 
-  return content;
+  // Fix potential double bullet points
+  // Match patterns like "- •" or "* •" or "• -" or "• *"
+  let fixedContent = content.replace(/^(\s*)[\-\*]\s*[•\-\*]\s+/gm, '$1• ');
+  
+  // Fix potential double numbered lists 
+  // Match patterns like "1. 1." or "1) 1)" or "1. 1)" or "1) 1."
+  fixedContent = fixedContent.replace(/^(\s*)\d+[.\)]\s*\d+[.\)]\s+/gm, (match) => {
+    // Extract the first number and use only that
+    const number = match.match(/(\d+)/)?.[0] || '1';
+    return `${match.match(/^(\s*)/)?.[0] || ''}${number}. `;
+  });
+  
+  // Fix potential issue with nested bullets using the same bullet character
+  fixedContent = fixedContent.replace(/^(\s+)[\-\*]\s+/gm, '$1• ');
+  
+  // Fix potential issue with code blocks that have extra backticks
+  fixedContent = fixedContent.replace(/`````+/g, '```');
+  
+  // Fix potential issue with inconsistent heading formatting
+  fixedContent = fixedContent.replace(/^#{3,}\s+/gm, '### ');
+  
+  // Fix lists that might have inconsistent spacing
+  fixedContent = fixedContent.replace(/^(\s*)[\-\*]\s{2,}/gm, '$1• ');
+  
+  return fixedContent;
 }

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './messageFormatter.css';
+import { formatMessageContent } from '../utils/formatMessage';
 
 interface MessageFormatterProps {
   content: string;
@@ -11,15 +12,20 @@ interface MessageFormatterProps {
 /**
  * Component to format message content with proper styling
  * Uses React Markdown to render markdown as properly formatted HTML
- * Simplified to avoid over-formatting content that already has structure
+ * Preprocesses content to prevent duplicate formatting
  */
 export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, role }) => {
-  // If content is empty or not from assistant, don't process
+  // If content is empty, don't process
   if (!content) {
     return <>{content}</>;
   }
 
-  // Simply pass the content to ReactMarkdown without additional preprocessing
+  // Preprocess the content to fix any formatting issues
+  const processedContent = useMemo(() => {
+    return formatMessageContent(content, role);
+  }, [content, role]);
+
+  // Pass the processed content to ReactMarkdown
   return (
     <div className="message-content">
       <ReactMarkdown 
@@ -43,7 +49,7 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
             const isInline = !(props.className && /language-/.test(props.className));
             return isInline 
               ? <code className="message-inline-code" {...props}>{children}</code>
-              : <code className="message-block-code" {...props}>{children}</code>;
+              : <pre className="message-code-block"><code className="message-block-code" {...props}>{children}</code></pre>;
           },
           
           // Style tables
@@ -63,7 +69,7 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
           strong: ({children}) => <strong className="message-strong">{children}</strong>,
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

@@ -137,15 +137,18 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
     const handleDeleteCategory = async () => {
         if (!selectedCategory) return;
 
+        const deletedCategoryId = selectedCategory.id;
         setLoading(true);
         setError(null);
         try {
-            await categoryService.deleteCategory(selectedCategory.id);
+            await categoryService.deleteCategory(deletedCategoryId);
             setSuccess('Category deleted successfully!');
             handleCloseDeleteDialog();
             
             // Completely refetch categories instead of filtering locally
-            await fetchCategories();
+            const response = await categoryService.getCategories();
+            const freshCategories = response.data || [];
+            setCategories(freshCategories);
             
             // Reset selection properly
             setSelectedCategory(null);
@@ -153,15 +156,16 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                 onCategorySelect(null);
             }
             
-            // Slight delay before attempting to select a new category (if any)
-            setTimeout(() => {
-                if (categories.length > 0) {
-                    setSelectedCategory(categories[0]);
+            // Only select a new category if there are any left
+            if (freshCategories.length > 0) {
+                const newCategory = freshCategories[0];
+                setTimeout(() => {
+                    setSelectedCategory(newCategory);
                     if (onCategorySelect) {
-                        onCategorySelect(categories[0]);
+                        onCategorySelect(newCategory);
                     }
-                }
-            }, 300);
+                }, 300);
+            }
         } catch (error) {
             console.error('Failed to delete category:', error);
             setError('Failed to delete category. Please try again.');

@@ -79,25 +79,26 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
 
     useEffect(() => {
         if (categoryId) {
-            fetchKnowledgeItems();
+            validateCategoryAndFetchItems();
         }
     }, [categoryId]);
 
-    const fetchKnowledgeItems = async () => {
+    const validateCategoryAndFetchItems = async () => {
         setLoading(true);
         clearMessages();
         
         try {
-            // First check if the category still exists and is not deleted
+            // First verify the category exists and is not deleted
             try {
                 await categoryService.getCategoryById(parseInt(categoryId));
             } catch (categoryError) {
-                console.error('Category may have been deleted:', categoryError);
+                console.error('Category validation failed:', categoryError);
                 setError('This category no longer exists. Please create a new category or select a different one.');
                 setLoading(false);
                 return;
             }
             
+            // Now fetch items
             const response = await categoryService.getCategoryItems(parseInt(categoryId));
             setKnowledgeItems(response.data);
         } catch (error) {
@@ -136,9 +137,32 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         setFileDescription('');
     };
 
+    const checkCategoryExists = async (): Promise<boolean> => {
+        try {
+            // Make a fresh request to check if the category still exists and is not deleted
+            await categoryService.getCategoryById(parseInt(categoryId));
+            return true;
+        } catch (error: any) {
+            console.error('Category check failed:', error);
+            // Set more specific error messages based on the error status
+            if (error.response && error.response.status === 410) {
+                setError('This category has been deleted. Please create a new category or select a different one.');
+            } else {
+                setError('This category is no longer available. Please create a new category or select a different one.');
+            }
+            return false;
+        }
+    };
+
     const handleAddTextContent = async () => {
         setLoading(true);
         clearMessages();
+        
+        // Check if category still exists
+        if (!await checkCategoryExists()) {
+            setLoading(false);
+            return;
+        }
         
         try {
             const response = await categoryService.addTextContent(
@@ -148,7 +172,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 textContent.updateFrequency
             );
             setSuccess('Text content added successfully');
-            fetchKnowledgeItems();
+            validateCategoryAndFetchItems();
             resetForms();
             if (onKnowledgeAdded && response.data) {
                 onKnowledgeAdded(response.data);
@@ -166,6 +190,12 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         setLoading(true);
         clearMessages();
         
+        // Check if category still exists
+        if (!await checkCategoryExists()) {
+            setLoading(false);
+            return;
+        }
+        
         try {
             const response = await categoryService.addUrl(
                 parseInt(categoryId), 
@@ -174,7 +204,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 urlContent.updateFrequency
             );
             setSuccess('URL added successfully');
-            fetchKnowledgeItems();
+            validateCategoryAndFetchItems();
             resetForms();
             if (onKnowledgeAdded && response.data) {
                 onKnowledgeAdded(response.data);
@@ -194,11 +224,17 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         setLoading(true);
         clearMessages();
         
+        // Check if category still exists
+        if (!await checkCategoryExists()) {
+            setLoading(false);
+            return;
+        }
+        
         try {
             const formData = fileDescription ? { description: fileDescription } : undefined;
             const response = await categoryService.uploadFile(parseInt(categoryId), selectedFile, formData);
             setSuccess('File uploaded successfully');
-            fetchKnowledgeItems();
+            validateCategoryAndFetchItems();
             resetForms();
             if (onKnowledgeAdded && response.data) {
                 onKnowledgeAdded(response.data);
@@ -224,7 +260,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             await categoryService.deleteKnowledgeItem(itemToDelete.id);
             setSuccess('Knowledge item deleted successfully');
             setDeleteDialogOpen(false);
-            fetchKnowledgeItems();
+            validateCategoryAndFetchItems();
             if (onKnowledgeDeleted) {
                 onKnowledgeDeleted();
             }
@@ -315,7 +351,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 <Button
                     variant="outlined"
                     startIcon={<RefreshIcon />}
-                    onClick={fetchKnowledgeItems}
+                    onClick={validateCategoryAndFetchItems}
                     disabled={loading}
                     sx={{
                         borderColor: '#00F3FF',

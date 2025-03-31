@@ -50,45 +50,68 @@ export const formatMessageContent = (content: string, role: string): string => {
     return content;
   }
 
-  // Clean up duplicate header patterns like "### **1. ### 1. **Title****"
-  let fixedContent = content.replace(/(#{1,6})\s+\*\*\d+\.\s+(#{1,6})\s+\d+\.\s+\*\*([^*]+)\*\*\*\*/gm, 
-    (_, h1, _h2, title) => `${h1} **${title}**`);
-  
-  // Fix double headers without numbers
-  fixedContent = fixedContent.replace(/(#{1,6})\s+\*\*([^*]+)\s+(#{1,6})\s+([^*]+)\*\*/gm,
-    (_, h1, title1, _h2, title2) => `${h1} **${title1 || title2}**`);
-  
-  // Fix double bullets with asterisks "- **- **Text**"
-  fixedContent = fixedContent.replace(/^(\s*)[-*]\s+\*\*[-*]\s+\*\*([^*]+)\*\*/gm, 
-    (_, space, text) => `${space}- **${text}**`);
-    
+  // First pass: Fix section headers with duplicate numbers and headers
+  // Pattern like: "### **1. ### **1. Title****"
+  let fixedContent = content.replace(
+    /(#{1,6})\s+\*\*\d+\.\s+(?:#{1,6})\s+\*\*\d+\.\s+([^*]+)\*\*(?:\*\*)?/gm,
+    (_, headerLevel, title) => `${headerLevel} **${title.trim()}**`
+  );
+
+  // Fix any remaining double headers with inconsistent patterns
+  fixedContent = fixedContent.replace(
+    /(#{1,6})\s+(?:\*\*)?(?:\d+\.)?\s*(?:#{1,6})\s+(?:\*\*)?(?:\d+\.)?\s*([^*]+)(?:\*\*)?(?:\*\*)?/gm,
+    (_, headerLevel, title) => `${headerLevel} **${title.trim()}**`
+  );
+
+  // Second pass: Fix bullet points with double marks and bolding
+  // Pattern like: "- **- **Text**:**"
+  fixedContent = fixedContent.replace(
+    /^(\s*)[-*]\s+\*\*[-*]\s+\*\*([^:*]+)(?:\*\*:\*\*|\*\*:|\*)*/gm,
+    (_, indent, text) => `${indent}- **${text.trim()}:**`
+  );
+
   // Fix any remaining double bullets
-  fixedContent = fixedContent.replace(/^(\s*)[-*]\s+[-*]\s+/gm, 
-    (_, space) => `${space}- `);
+  fixedContent = fixedContent.replace(
+    /^(\s*)[-*]\s+[-*]\s+/gm,
+    (_, indent) => `${indent}- `
+  );
+
+  // Third pass: Fix numbered sections that have inconsistent numbering
+  fixedContent = fixedContent.replace(
+    /^(#{1,6})\s+\*\*(\d+)\.\s+([^*]+)\*\*/gm,
+    (_, headerLevel, num, title) => `${headerLevel} **${num}. ${title.trim()}**`
+  );
+
+  // Fourth pass: Clean up special markup and ensure consistent formatting
   
-  // Fix potential double numbered lists 
-  fixedContent = fixedContent.replace(/^(\s*)\d+[.)]\s*\d+[.)]\s+/gm, (match) => {
-    const number = match.match(/(\d+)/)?.[0] || '1';
-    return `${match.match(/^(\s*)/)?.[0] || ''}${number}. `;
-  });
+  // Fix triple or more asterisks around text
+  fixedContent = fixedContent.replace(/\*{3,}([^*]*)\*{3,}/g, '**$1**');
   
-  // Fix inconsistent nested bullets
-  fixedContent = fixedContent.replace(/^(\s{2,})[-*]\s+/gm, '$1- ');
+  // Normalize horizontal rules
+  fixedContent = fixedContent.replace(/^\s*[-*]{3,}\s*$/gm, '---');
   
-  // Fix extra asterisks (more than 2 on each side)
-  fixedContent = fixedContent.replace(/\*{3,}([^*]+)\*{3,}/g, '**$1**');
-  
-  // Fix potential "***" that should be standard horizontal rules
-  fixedContent = fixedContent.replace(/^\s*[*-]{3,}\s*$/gm, '---');
-  
-  // Clean up any double bolding patterns "****text****"
-  fixedContent = fixedContent.replace(/\*{4,}([^*]+)\*{4,}/g, '**$1**');
-  
-  // Clean up headings with too many #s
-  fixedContent = fixedContent.replace(/^#{7,}\s+/gm, '###### ');
-  
-  // Fix broken code blocks
+  // Fix code blocks with too many backticks
   fixedContent = fixedContent.replace(/`{3,}/g, '```');
+  
+  // Fix inconsistent spacing in bullet lists
+  fixedContent = fixedContent.replace(/^(\s*)[-*]\s{2,}/gm, '$1- ');
+  
+  // Fix inconsistent bullet point styles in nested lists
+  fixedContent = fixedContent.replace(/^(\s{2,})[-*]\s+/gm, '$1- ');
+
+  // Fifth pass: Fix inconsistent section numbering
+  // Replace "### **3. Market Position" followed by "### **3. ### **4. Competitive Edge****"
+  fixedContent = fixedContent.replace(
+    /(#{1,6})\s+\*\*(\d+)\.\s+([^*\n]+)\*\*[\s\S]*?\1\s+\*\*\2\.\s+(?:#{1,6})?\s*\*\*(\d+)\.\s+([^*\n]+)\*\*/gm,
+    (match, h1, n1, title1, n2, _title2) => {
+      // Keep the first occurrence intact, fix the second one to have the correct number
+      const firstPart = match.substring(0, match.indexOf(title1) + title1.length + 2); // +2 for the '**' at the end
+      return firstPart + match.substring(firstPart.length).replace(
+        new RegExp(`${h1}\\s+\\*\\*${n1}\\.\\s+(?:#{1,6})?\\s*\\*\\*${n2}\\.\\s+`),
+        `${h1} **${n2}. `
+      );
+    }
+  );
   
   return fixedContent;
 }

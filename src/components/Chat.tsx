@@ -5,6 +5,7 @@ import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
+import MessageFormatter from "./MessageFormatter";
 import "../styles/chat.css";
 
 interface Message {
@@ -109,7 +110,9 @@ const Chat: React.FC = () => {
             <div
               className={`message-content ${msg.role}`}
             >
-              <div className="message-text">{msg.content}</div>
+              <div className="message-text">
+                <MessageFormatter content={msg.content} role={msg.role} />
+              </div>
               <div className="message-timestamp">
                 {(() => {
                   try {

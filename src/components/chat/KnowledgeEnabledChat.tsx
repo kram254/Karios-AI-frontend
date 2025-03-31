@@ -33,6 +33,7 @@ import { categoryService } from '../../services/api/category.service';
 import { Category } from '../../types/knowledge';
 import { format } from 'date-fns';
 import { api } from '../../services/api/index'; // Import the api instance
+import MessageFormatter from '../MessageFormatter'; // Import MessageFormatter
 
 interface KnowledgeEnabledChatProps {
   chatId?: string;
@@ -477,7 +478,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
                   </Box>
                   
                   <Box sx={{ whiteSpace: 'pre-wrap' }}>
-                    {message.content}
+                    <MessageFormatter content={message.content} role={message.role} />
                   </Box>
                 </Paper>
               </Box>

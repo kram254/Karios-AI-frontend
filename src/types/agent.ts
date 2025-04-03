@@ -63,6 +63,15 @@ export interface Agent {
     config?: AgentConfig;
     knowledge_items?: KnowledgeItem[];
     actions?: string[];
+    behavior?: {
+        tone: string;
+        personality: string;
+    };
+    role_config?: {
+        custom_fields?: {
+            [key: string]: string;
+        };
+    };
 }
 
 export interface AgentMetrics {

@@ -274,7 +274,8 @@ export const AgentManagement: React.FC = () => {
             console.log('Saving agent role:', roleData);
             const response = await agentService.updateAgent(String(selectedAgent.id), {
                 ai_role: roleData.ai_role,
-                role_description: roleData.role_description
+                // Only include role_description if it exists
+                ...(roleData.role_description ? { role_description: roleData.role_description } : {})
             });
             
             if (response && response.data) {
@@ -284,18 +285,23 @@ export const AgentManagement: React.FC = () => {
                         return {
                             ...agent,
                             ai_role: roleData.ai_role,
-                            role_description: roleData.role_description
+                            role_description: roleData.role_description || agent.role_description
                         };
                     }
                     return agent;
                 });
                 
-                setAgents(updatedAgents);
-                setSelectedAgent(prev => prev ? {
-                    ...prev,
-                    ai_role: roleData.ai_role,
-                    role_description: roleData.role_description
-                } : null);
+                setAgents(updatedAgents as AgentWithMetrics[]);
+                
+                // Update selected agent
+                if (selectedAgent) {
+                    const updatedAgent = {
+                        ...selectedAgent,
+                        ai_role: roleData.ai_role,
+                        role_description: roleData.role_description || selectedAgent.role_description
+                    };
+                    setSelectedAgent(updatedAgent);
+                }
                 
                 setSnackbarMessage('Agent role updated successfully');
                 setSnackbarSeverity('success');
@@ -315,21 +321,27 @@ export const AgentManagement: React.FC = () => {
         response_length: number; 
         language: string;
         model: string;
+        actions?: string[];
     }) => {
         try {
             if (!selectedAgent) return;
             
             console.log('Saving agent behavior:', behaviorData);
             const response = await agentService.updateAgent(String(selectedAgent.id), {
-                // Update both the top-level language property and the config properties
+                // Update top-level properties
                 language: behaviorData.language,
-                // Config will be merged on the backend
+                response_style: behaviorData.response_style,
+                response_length: behaviorData.response_length,
+                actions: behaviorData.actions,
+                
+                // Update config properties
                 config: {
                     model: behaviorData.model,
                     language: behaviorData.language,
                     mode: AgentMode.TEXT, // Include required mode field
                     response_style: behaviorData.response_style,
-                    response_length: behaviorData.response_length
+                    response_length: behaviorData.response_length,
+                    ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
                 }
             });
             
@@ -340,6 +352,9 @@ export const AgentManagement: React.FC = () => {
                         return {
                             ...agent,
                             language: behaviorData.language,
+                            response_style: behaviorData.response_style,
+                            response_length: behaviorData.response_length,
+                            actions: behaviorData.actions,
                             // Update just the specific values that changed
                             config: agent.config ? {
                                 ...agent.config,
@@ -347,14 +362,16 @@ export const AgentManagement: React.FC = () => {
                                 language: behaviorData.language,
                                 mode: AgentMode.TEXT, // Include required mode field
                                 response_style: behaviorData.response_style,
-                                response_length: behaviorData.response_length
+                                response_length: behaviorData.response_length,
+                                ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
                             } : {
                                 // Default values if config doesn't exist
                                 model: behaviorData.model,
                                 language: behaviorData.language,
                                 mode: AgentMode.TEXT, // Include required mode field
                                 response_style: behaviorData.response_style,
-                                response_length: behaviorData.response_length
+                                response_length: behaviorData.response_length,
+                                ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
                             }
                         } as AgentWithMetrics; // Force type with as to help TypeScript
                     }
@@ -368,6 +385,9 @@ export const AgentManagement: React.FC = () => {
                     const updatedAgent = {
                         ...selectedAgent,
                         language: behaviorData.language,
+                        response_style: behaviorData.response_style,
+                        response_length: behaviorData.response_length,
+                        actions: behaviorData.actions,
                         // Update just the specific values that changed
                         config: selectedAgent.config ? {
                             ...selectedAgent.config,
@@ -375,17 +395,18 @@ export const AgentManagement: React.FC = () => {
                             language: behaviorData.language,
                             mode: AgentMode.TEXT, // Include required mode field
                             response_style: behaviorData.response_style,
-                            response_length: behaviorData.response_length
+                            response_length: behaviorData.response_length,
+                            ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
                         } : {
                             // Default values if config doesn't exist
                             model: behaviorData.model,
                             language: behaviorData.language,
                             mode: AgentMode.TEXT, // Include required mode field
                             response_style: behaviorData.response_style,
-                            response_length: behaviorData.response_length
+                            response_length: behaviorData.response_length,
+                            ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
                         }
-                    } as AgentWithMetrics; // Force type assertion
-                    
+                    };
                     setSelectedAgent(updatedAgent);
                 }
                 
@@ -956,6 +977,7 @@ export const AgentManagement: React.FC = () => {
                     response_length: number; 
                     language: string;
                     model: string;
+                    actions?: string[];
                 }) => handleSaveAgentBehavior(behaviorData)}
             />
             

@@ -37,7 +37,7 @@ interface AgentBehaviorDialogProps {
         response_length: number; 
         language: string;
         model: string;
-        actions?: string[];
+        actions: string[];
     }) => Promise<void>;
 }
 

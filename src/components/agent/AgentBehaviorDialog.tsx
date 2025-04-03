@@ -18,6 +18,17 @@ import {
 } from '@mui/material';
 import { Agent } from '../../types/agent';
 
+// Flags for languages
+const languageFlags: Record<string, string> = {
+    en: '🇺🇸',
+    es: '🇪🇸',
+    fr: '🇫🇷',
+    de: '🇩🇪',
+    it: '🇮🇹',
+    pt: '🇵🇹',
+    ru: '🇷🇺',
+};
+
 interface AgentBehaviorDialogProps {
     open: boolean;
     agent: Agent | null;
@@ -40,10 +51,10 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
 
     useEffect(() => {
         if (agent) {
-            setResponseStyle(typeof agent.response_style === 'number' ? agent.response_style : 0.5);
-            setResponseLength(typeof agent.response_length === 'number' ? agent.response_length : 150);
-            setLanguage(agent.language || 'en');
-            setModel(agent.model || 'gpt-4');
+            setResponseStyle(typeof agent.config?.response_style === 'number' ? agent.config.response_style : 0.5);
+            setResponseLength(typeof agent.config?.response_length === 'number' ? agent.config.response_length : 150);
+            setLanguage(agent.config?.language || 'en');
+            setModel(agent.config?.model || 'gpt-4');
         }
     }, [agent]);
 
@@ -70,6 +81,16 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
         if (value < 0.33) return 'Formal';
         if (value < 0.66) return 'Balanced';
         return 'Casual';
+    };
+
+    // Render language with flag
+    const renderLanguageWithFlag = (lang: string, name: string) => {
+        return (
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ mr: 1, fontSize: '1.2rem' }}>{languageFlags[lang]}</Typography>
+                <span>{name}</span>
+            </Box>
+        );
     };
 
     return (
@@ -147,14 +168,26 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                                     color: 'rgba(255, 255, 255, 0.7)'
                                 }
                             }}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Typography sx={{ mr: 1, fontSize: '1.2rem' }}>{languageFlags[selected as string]}</Typography>
+                                    <span>{selected === 'en' ? 'English' :
+                                           selected === 'es' ? 'Spanish (Español)' :
+                                           selected === 'fr' ? 'French (Français)' :
+                                           selected === 'de' ? 'German (Deutsch)' :
+                                           selected === 'it' ? 'Italian (Italiano)' :
+                                           selected === 'pt' ? 'Portuguese (Português)' :
+                                           selected === 'ru' ? 'Russian (Русский)' : selected}</span>
+                                </Box>
+                            )}
                         >
-                            <MenuItem value="en">English</MenuItem>
-                            <MenuItem value="es">Spanish (Español)</MenuItem>
-                            <MenuItem value="fr">French (Français)</MenuItem>
-                            <MenuItem value="de">German (Deutsch)</MenuItem>
-                            <MenuItem value="it">Italian (Italiano)</MenuItem>
-                            <MenuItem value="pt">Portuguese (Português)</MenuItem>
-                            <MenuItem value="ru">Russian (Русский)</MenuItem>
+                            <MenuItem value="en">{renderLanguageWithFlag('en', 'English')}</MenuItem>
+                            <MenuItem value="es">{renderLanguageWithFlag('es', 'Spanish (Español)')}</MenuItem>
+                            <MenuItem value="fr">{renderLanguageWithFlag('fr', 'French (Français)')}</MenuItem>
+                            <MenuItem value="de">{renderLanguageWithFlag('de', 'German (Deutsch)')}</MenuItem>
+                            <MenuItem value="it">{renderLanguageWithFlag('it', 'Italian (Italiano)')}</MenuItem>
+                            <MenuItem value="pt">{renderLanguageWithFlag('pt', 'Portuguese (Português)')}</MenuItem>
+                            <MenuItem value="ru">{renderLanguageWithFlag('ru', 'Russian (Русский)')}</MenuItem>
                         </Select>
                     </FormControl>
                     
@@ -189,37 +222,29 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                         Response Length: {responseLength} words
                     </Typography>
                     <TextField
-                        type="number"
                         fullWidth
+                        type="number"
                         value={responseLength}
-                        onChange={(e) => {
-                            const value = Number(e.target.value);
-                            setResponseLength(Math.max(50, Math.min(500, value)));
+                        onChange={(e) => setResponseLength(parseInt(e.target.value))}
+                        InputProps={{
+                            inputProps: { min: 50, max: 500 }
                         }}
-                        inputProps={{ min: 50, max: 500 }}
                         sx={{
+                            mb: 2,
                             '& .MuiOutlinedInput-root': {
+                                color: '#FFFFFF',
                                 '& fieldset': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)'
                                 },
                                 '&:hover fieldset': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)',
+                                    borderColor: 'rgba(0, 243, 255, 0.5)'
                                 },
                                 '&.Mui-focused fieldset': {
-                                    borderColor: '#00F3FF',
-                                },
-                            },
-                            '& .MuiInputLabel-root': {
-                                color: 'rgba(255, 255, 255, 0.7)',
-                            },
-                            '& .MuiInputBase-input': {
-                                color: '#FFFFFF',
-                            },
+                                    borderColor: '#00F3FF'
+                                }
+                            }
                         }}
                     />
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                        Range: 50-500 words
-                    </Typography>
                 </Box>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>

@@ -48,6 +48,7 @@ export interface Agent {
     id: number;
     name: string;
     description?: string;
+    role_description?: string; // For storing custom role descriptions
     ai_role: AgentRole;
     custom_role?: string;
     owner_id: number;

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Agent, AgentRole } from '../types/agent';
+import { AgentRole } from '../types/agent';
 
 const API_URL = '/api/v1';
 
@@ -7,6 +7,7 @@ export interface AgentCreateRequest {
   name: string;
   ai_role: AgentRole;
   description?: string;
+  role_description?: string;
   model?: string;
   response_style?: number;
   response_length?: number;
@@ -16,6 +17,7 @@ export interface AgentUpdateRequest {
   name?: string;
   description?: string;
   ai_role?: AgentRole;
+  role_description?: string;
   model?: string;
   response_style?: number;
   response_length?: number;

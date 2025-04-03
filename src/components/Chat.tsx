@@ -100,7 +100,24 @@ const Chat: React.FC = () => {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {currentChat.messages.map((msg) => (
+        {currentChat.messages
+          // Filter out duplicate messages (messages with the same content sent within 1 second)
+          .filter((msg, index, array) => {
+            // Always keep the first message
+            if (index === 0) return true;
+            
+            // Check if this message has the same content as the previous one
+            const prevMsg = array[index - 1];
+            if (prevMsg.content !== msg.content || prevMsg.role !== msg.role) return true;
+            
+            // If content is the same, check if the timestamps are within 1 second
+            const currentTime = new Date(msg.timestamp || msg.created_at || Date.now()).getTime();
+            const prevTime = new Date(prevMsg.timestamp || prevMsg.created_at || Date.now()).getTime();
+            
+            // If timestamps are more than 1 second apart, keep both messages
+            return Math.abs(currentTime - prevTime) > 1000;
+          })
+          .map((msg) => (
           <motion.div
             key={msg.id}
             initial={{ opacity: 0, y: 20 }}

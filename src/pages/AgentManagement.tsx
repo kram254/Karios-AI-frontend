@@ -267,13 +267,14 @@ export const AgentManagement: React.FC = () => {
         }
     };
     
-    const handleSaveAgentRole = async (roleData: { ai_role: AgentRole }) => {
+    const handleSaveAgentRole = async (roleData: { ai_role: AgentRole, role_description?: string }) => {
         try {
             if (!selectedAgent) return;
             
             console.log('Saving agent role:', roleData);
             const response = await agentService.updateAgent(String(selectedAgent.id), {
-                ai_role: roleData.ai_role
+                ai_role: roleData.ai_role,
+                role_description: roleData.role_description
             });
             
             if (response && response.data) {
@@ -282,7 +283,8 @@ export const AgentManagement: React.FC = () => {
                     if (agent.id === selectedAgent.id) {
                         return {
                             ...agent,
-                            ai_role: roleData.ai_role
+                            ai_role: roleData.ai_role,
+                            role_description: roleData.role_description
                         };
                     }
                     return agent;
@@ -291,7 +293,8 @@ export const AgentManagement: React.FC = () => {
                 setAgents(updatedAgents);
                 setSelectedAgent(prev => prev ? {
                     ...prev,
-                    ai_role: roleData.ai_role
+                    ai_role: roleData.ai_role,
+                    role_description: roleData.role_description
                 } : null);
                 
                 setSnackbarMessage('Agent role updated successfully');
@@ -310,14 +313,24 @@ export const AgentManagement: React.FC = () => {
     const handleSaveAgentBehavior = async (behaviorData: { 
         response_style: number; 
         response_length: number; 
+        language: string;
+        model: string;
     }) => {
         try {
             if (!selectedAgent) return;
             
             console.log('Saving agent behavior:', behaviorData);
-            const response = await agentService.updateAgentConfig(String(selectedAgent.id), {
-                response_style: behaviorData.response_style,
-                response_length: behaviorData.response_length
+            const response = await agentService.updateAgent(String(selectedAgent.id), {
+                // Update both the top-level language property and the config properties
+                language: behaviorData.language,
+                // Config will be merged on the backend
+                config: {
+                    model: behaviorData.model,
+                    language: behaviorData.language,
+                    mode: AgentMode.TEXT, // Include required mode field
+                    response_style: behaviorData.response_style,
+                    response_length: behaviorData.response_length
+                }
             });
             
             if (response && response.data) {
@@ -326,15 +339,20 @@ export const AgentManagement: React.FC = () => {
                     if (agent.id === selectedAgent.id) {
                         return {
                             ...agent,
+                            language: behaviorData.language,
                             // Update just the specific values that changed
                             config: agent.config ? {
                                 ...agent.config,
+                                model: behaviorData.model,
+                                language: behaviorData.language,
+                                mode: AgentMode.TEXT, // Include required mode field
                                 response_style: behaviorData.response_style,
                                 response_length: behaviorData.response_length
                             } : {
                                 // Default values if config doesn't exist
-                                language: 'en',
-                                mode: AgentMode.TEXT,
+                                model: behaviorData.model,
+                                language: behaviorData.language,
+                                mode: AgentMode.TEXT, // Include required mode field
                                 response_style: behaviorData.response_style,
                                 response_length: behaviorData.response_length
                             }
@@ -349,13 +367,20 @@ export const AgentManagement: React.FC = () => {
                     // Update selected agent with new config
                     const updatedAgent = {
                         ...selectedAgent,
+                        language: behaviorData.language,
+                        // Update just the specific values that changed
                         config: selectedAgent.config ? {
                             ...selectedAgent.config,
+                            model: behaviorData.model,
+                            language: behaviorData.language,
+                            mode: AgentMode.TEXT, // Include required mode field
                             response_style: behaviorData.response_style,
                             response_length: behaviorData.response_length
                         } : {
-                            language: 'en',
-                            mode: AgentMode.TEXT,
+                            // Default values if config doesn't exist
+                            model: behaviorData.model,
+                            language: behaviorData.language,
+                            mode: AgentMode.TEXT, // Include required mode field
                             response_style: behaviorData.response_style,
                             response_length: behaviorData.response_length
                         }
@@ -910,7 +935,7 @@ export const AgentManagement: React.FC = () => {
                 open={editDialogOpen}
                 onClose={() => setEditDialogOpen(false)}
                 agent={selectedAgent}
-                onSave={handleSaveAgentInfo}
+                onSave={(agentData: { name: string; description: string }) => handleSaveAgentInfo(agentData)}
             />
             
             {/* Configure Role Dialog */}
@@ -918,7 +943,7 @@ export const AgentManagement: React.FC = () => {
                 open={roleDialogOpen}
                 onClose={() => setRoleDialogOpen(false)}
                 agent={selectedAgent}
-                onSave={handleSaveAgentRole}
+                onSave={(roleData: { ai_role: AgentRole, role_description?: string }) => handleSaveAgentRole(roleData)}
             />
             
             {/* Configure Behavior Dialog */}
@@ -926,7 +951,12 @@ export const AgentManagement: React.FC = () => {
                 open={behaviorDialogOpen}
                 onClose={() => setBehaviorDialogOpen(false)}
                 agent={selectedAgent}
-                onSave={handleSaveAgentBehavior}
+                onSave={(behaviorData: { 
+                    response_style: number; 
+                    response_length: number; 
+                    language: string;
+                    model: string;
+                }) => handleSaveAgentBehavior(behaviorData)}
             />
             
             {/* Menu for agent actions */}

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AgentRole } from '../types/agent';
+import { AgentRole, AgentConfig } from '../types/agent';
 
 const API_URL = '/api/v1';
 
@@ -8,9 +8,12 @@ export interface AgentCreateRequest {
   ai_role: AgentRole;
   description?: string;
   role_description?: string;
+  language?: string;
   model?: string;
   response_style?: number;
   response_length?: number;
+  config?: Partial<AgentConfig>;
+  actions?: string[];
 }
 
 export interface AgentUpdateRequest {
@@ -18,9 +21,12 @@ export interface AgentUpdateRequest {
   description?: string;
   ai_role?: AgentRole;
   role_description?: string;
+  language?: string;
   model?: string;
   response_style?: number;
   response_length?: number;
+  config?: Partial<AgentConfig>;
+  actions?: string[];
 }
 
 export const agentService = {

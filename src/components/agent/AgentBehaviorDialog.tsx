@@ -12,7 +12,6 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    TextField,
     CircularProgress,
     Alert,
 } from '@mui/material';
@@ -38,14 +37,25 @@ interface AgentBehaviorDialogProps {
         response_length: number; 
         language: string;
         model: string;
+        actions?: string[];
     }) => Promise<void>;
 }
+
+// Available behavior actions
+const availableActions = [
+    { id: 'search_web', name: 'Search Web', description: 'Allow the agent to search the web for information' },
+    { id: 'generate_content', name: 'Generate Content', description: 'Allow the agent to create content like blog posts or emails' },
+    { id: 'answer_faq', name: 'Answer FAQs', description: 'Allow the agent to answer frequently asked questions' },
+    { id: 'schedule_meeting', name: 'Schedule Meetings', description: 'Allow the agent to schedule meetings on your calendar' },
+    { id: 'send_email', name: 'Send Emails', description: 'Allow the agent to draft and send emails on your behalf' },
+];
 
 const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, onClose, onSave }) => {
     const [responseStyle, setResponseStyle] = useState(0.5);
     const [responseLength, setResponseLength] = useState(150);
     const [language, setLanguage] = useState('en');
     const [model, setModel] = useState('gpt-4');
+    const [selectedActions, setSelectedActions] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,8 +63,9 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
         if (agent) {
             setResponseStyle(typeof agent.config?.response_style === 'number' ? agent.config.response_style : 0.5);
             setResponseLength(typeof agent.config?.response_length === 'number' ? agent.config.response_length : 150);
-            setLanguage(agent.config?.language || 'en');
+            setLanguage(agent.config?.language || agent.language || 'en');
             setModel(agent.config?.model || 'gpt-4');
+            setSelectedActions(agent.actions || []);
         }
     }, [agent]);
 
@@ -67,7 +78,8 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                 response_style: responseStyle,
                 response_length: responseLength,
                 language,
-                model
+                model,
+                actions: selectedActions
             });
             onClose();
         } catch (err) {
@@ -91,6 +103,15 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                 <span>{name}</span>
             </Box>
         );
+    };
+    
+    // Toggle action selection
+    const toggleAction = (actionId: string) => {
+        if (selectedActions.includes(actionId)) {
+            setSelectedActions(selectedActions.filter(id => id !== actionId));
+        } else {
+            setSelectedActions([...selectedActions, actionId]);
+        }
     };
 
     return (
@@ -203,15 +224,16 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                             min={0}
                             max={1}
                             sx={{
+                                mx: 1,
                                 color: '#00F3FF',
                                 '& .MuiSlider-thumb': {
-                                    backgroundColor: '#FFFFFF',
-                                },
-                                '& .MuiSlider-track': {
                                     backgroundColor: '#00F3FF',
                                 },
                                 '& .MuiSlider-rail': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                },
+                                '& .MuiSlider-track': {
+                                    backgroundColor: '#00F3FF',
                                 }
                             }}
                         />
@@ -221,30 +243,71 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                     <Typography variant="subtitle2" gutterBottom>
                         Response Length: {responseLength} words
                     </Typography>
-                    <TextField
-                        fullWidth
-                        type="number"
-                        value={responseLength}
-                        onChange={(e) => setResponseLength(parseInt(e.target.value))}
-                        InputProps={{
-                            inputProps: { min: 50, max: 500 }
-                        }}
-                        sx={{
-                            mb: 2,
-                            '& .MuiOutlinedInput-root': {
-                                color: '#FFFFFF',
-                                '& fieldset': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                    <Box sx={{ mb: 3 }}>
+                        <Slider
+                            value={responseLength}
+                            onChange={(_, value) => setResponseLength(value as number)}
+                            step={10}
+                            min={50}
+                            max={500}
+                            marks={[
+                                { value: 50, label: '50' },
+                                { value: 150, label: '150' },
+                                { value: 300, label: '300' },
+                                { value: 500, label: '500' },
+                            ]}
+                            sx={{
+                                color: '#00F3FF',
+                                '& .MuiSlider-thumb': {
+                                    backgroundColor: '#00F3FF',
                                 },
-                                '&:hover fieldset': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)'
+                                '& .MuiSlider-rail': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
                                 },
-                                '&.Mui-focused fieldset': {
-                                    borderColor: '#00F3FF'
+                                '& .MuiSlider-track': {
+                                    backgroundColor: '#00F3FF',
+                                },
+                                '& .MuiSlider-markLabel': {
+                                    color: 'rgba(255, 255, 255, 0.7)',
                                 }
-                            }
-                        }}
-                    />
+                            }}
+                        />
+                    </Box>
+                    
+                    <Typography variant="subtitle2" gutterBottom>
+                        Agent Actions
+                    </Typography>
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
+                            Select the actions this agent can perform:
+                        </Typography>
+                        
+                        {availableActions.map(action => (
+                            <Box 
+                                key={action.id}
+                                onClick={() => toggleAction(action.id)}
+                                sx={{
+                                    p: 1.5,
+                                    mb: 1,
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: selectedActions.includes(action.id) ? '#00F3FF' : 'rgba(255, 255, 255, 0.2)',
+                                    backgroundColor: selectedActions.includes(action.id) ? 'rgba(0, 243, 255, 0.1)' : 'transparent',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        borderColor: '#00F3FF',
+                                        backgroundColor: 'rgba(0, 243, 255, 0.05)'
+                                    }
+                                }}
+                            >
+                                <Typography variant="subtitle2">{action.name}</Typography>
+                                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    {action.description}
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Box>
                 </Box>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>

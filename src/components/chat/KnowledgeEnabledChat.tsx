@@ -550,7 +550,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
               sx={{
                 bgcolor: '#00F3FF',
                 color: '#000000',
-                width: 48,
+                width: loading ? 'auto' : 48,
                 height: 48,
                 '&:hover': {
                   bgcolor: '#00D4E0'
@@ -561,7 +561,12 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
                 }
               }}
             >
-              {loading ? <CircularProgress size={24} /> : <SendIcon />}
+              {loading ? 
+                <Typography variant="body2" sx={{ px: 2, fontWeight: 'medium' }}>
+                  Thinking...
+                </Typography> : 
+                <SendIcon />
+              }
             </IconButton>
           </Grid>
         </Grid>

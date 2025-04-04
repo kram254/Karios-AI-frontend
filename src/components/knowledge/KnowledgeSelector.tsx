@@ -44,12 +44,15 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
             const response = await categoryService.getCategories();
             
             if (response && response.data && response.data.length > 0) {
-                const categories = response.data.map((category: Category) => ({
-                    id: category.id,
-                    name: category.name,
-                    description: category.description || 'No description available',
-                    documentCount: category.knowledge_items?.length || 0
-                }));
+                const categories = response.data.map((category: Category) => {
+                    console.log('Category knowledge items:', category.name, category.knowledge_items);
+                    return {
+                        id: category.id,
+                        name: category.name,
+                        description: category.description || 'No description available',
+                        documentCount: category.knowledge_items?.length || category.item_count || 0
+                    };
+                });
                 setKnowledgeBases(categories);
                 console.log('Fetched knowledge categories:', categories);
             } else {
@@ -133,7 +136,10 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
                                         <div className="knowledge-badges">
                                             <span className="document-count">
                                                 <FileText size={16} />
-                                                {kb.documentCount}
+                                                {(() => {
+                                                    console.log(`Document count for ${kb.name}:`, kb.documentCount);
+                                                    return kb.documentCount;
+                                                })()}
                                             </span>
                                         </div>
                                     </div>

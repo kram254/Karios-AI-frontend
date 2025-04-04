@@ -320,7 +320,6 @@ export const AgentManagement: React.FC = () => {
         response_style: number; 
         response_length: number; 
         language: string;
-        model: string;
         actions?: string[];
     }) => {
         try {
@@ -336,12 +335,11 @@ export const AgentManagement: React.FC = () => {
                 
                 // Update config properties
                 config: {
-                    model: behaviorData.model,
                     language: behaviorData.language,
                     mode: AgentMode.TEXT, // Include required mode field
                     response_style: behaviorData.response_style,
                     response_length: behaviorData.response_length,
-                    ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
+                    ...(behaviorData.actions ? { actions: behaviorData.actions } : {})
                 }
             });
             
@@ -358,20 +356,18 @@ export const AgentManagement: React.FC = () => {
                             // Update just the specific values that changed
                             config: agent.config ? {
                                 ...agent.config,
-                                model: behaviorData.model,
                                 language: behaviorData.language,
                                 mode: AgentMode.TEXT, // Include required mode field
                                 response_style: behaviorData.response_style,
                                 response_length: behaviorData.response_length,
-                                ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
+                                ...(behaviorData.actions ? { actions: behaviorData.actions } : {})
                             } : {
                                 // Default values if config doesn't exist
-                                model: behaviorData.model,
                                 language: behaviorData.language,
                                 mode: AgentMode.TEXT, // Include required mode field
                                 response_style: behaviorData.response_style,
                                 response_length: behaviorData.response_length,
-                                ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
+                                ...(behaviorData.actions ? { actions: behaviorData.actions } : {})
                             }
                         } as AgentWithMetrics; // Force type with as to help TypeScript
                     }
@@ -391,20 +387,18 @@ export const AgentManagement: React.FC = () => {
                         // Update just the specific values that changed
                         config: selectedAgent.config ? {
                             ...selectedAgent.config,
-                            model: behaviorData.model,
                             language: behaviorData.language,
                             mode: AgentMode.TEXT, // Include required mode field
                             response_style: behaviorData.response_style,
                             response_length: behaviorData.response_length,
-                            ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
+                            ...(behaviorData.actions ? { actions: behaviorData.actions } : {})
                         } : {
                             // Default values if config doesn't exist
-                            model: behaviorData.model,
                             language: behaviorData.language,
                             mode: AgentMode.TEXT, // Include required mode field
                             response_style: behaviorData.response_style,
                             response_length: behaviorData.response_length,
-                            ...(behaviorData.actions ? { tools_enabled: behaviorData.actions } : {})
+                            ...(behaviorData.actions ? { actions: behaviorData.actions } : {})
                         }
                     };
                     setSelectedAgent(updatedAgent);
@@ -499,27 +493,7 @@ export const AgentManagement: React.FC = () => {
         }
     };
 
-    // Helper functions for displaying model and role information
-    const getModelDisplayName = (model: string) => {
-        const models: Record<string, string> = {
-            'gpt-3.5-turbo': 'GPT-3.5 Turbo',
-            'gpt-4': 'GPT-4',
-            'claude-instant-1': 'Claude Instant',
-            'claude-2': 'Claude 2'
-        };
-        return models[model] || model;
-    };
-    
-    const getModelDescription = (model: string) => {
-        const descriptions: Record<string, string> = {
-            'gpt-3.5-turbo': 'Fast and efficient, good for most tasks',
-            'gpt-4': 'Most capable model, best for complex tasks',
-            'claude-instant-1': 'Quick and responsive assistant',
-            'claude-2': 'Balanced performance and capabilities'
-        };
-        return descriptions[model] || 'Custom model';
-    };
-    
+    // Helper functions for displaying role information
     const getRoleDescription = (role: AgentRole) => {
         const descriptions: Record<string, string> = {
             [AgentRole.CUSTOMER_SUPPORT]: 'Assists customers with questions and issues',
@@ -689,9 +663,6 @@ export const AgentManagement: React.FC = () => {
                                                 <Typography variant="h6">{agent.name}</Typography>
                                                 <Typography variant="body2" color="textSecondary">
                                                     {getRoleDescription(agent.ai_role)}
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
-                                                    Using {getModelDisplayName(agent.config?.model || 'gpt-4')} - {getModelDescription(agent.config?.model || 'gpt-4')}
                                                 </Typography>
                                             </Box>
                                             <IconButton onClick={(e) => {
@@ -976,7 +947,6 @@ export const AgentManagement: React.FC = () => {
                     response_style: number; 
                     response_length: number; 
                     language: string;
-                    model: string;
                     actions?: string[];
                 }) => handleSaveAgentBehavior(behaviorData)}
             />

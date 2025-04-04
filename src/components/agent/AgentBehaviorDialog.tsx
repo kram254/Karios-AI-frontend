@@ -42,11 +42,8 @@ interface AgentBehaviorDialogProps {
 
 // Available behavior actions
 const availableActions = [
-    { id: 'search_web', name: 'Search Web', description: 'Allow the agent to search the web for information' },
-    { id: 'generate_content', name: 'Generate Content', description: 'Allow the agent to create content like blog posts or emails' },
-    { id: 'answer_faq', name: 'Answer FAQs', description: 'Allow the agent to answer frequently asked questions' },
-    { id: 'schedule_meeting', name: 'Schedule Meetings', description: 'Allow the agent to schedule meetings on your calendar' },
-    { id: 'send_email', name: 'Send Emails', description: 'Allow the agent to draft and send emails on your behalf' },
+    { id: 'send_file', name: 'Send File', description: 'Allow the agent to send files to users' },
+    { id: 'send_link', name: 'Send Link', description: 'Allow the agent to send links to users' },
 ];
 
 const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, onClose, onSave }) => {

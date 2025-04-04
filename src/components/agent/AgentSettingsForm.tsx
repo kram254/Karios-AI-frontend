@@ -14,7 +14,7 @@ import {
     Divider
 } from '@mui/material';
 import { Save as SaveIcon } from '@mui/icons-material';
-import { Agent, AgentConfig } from '../../types/agent';
+import { Agent, AgentConfig, AgentMode } from '../../types/agent';
 import { LoadingSpinner } from '../shared/LoadingSpinner';
 
 interface AgentSettingsFormProps {
@@ -26,13 +26,24 @@ export const AgentSettingsForm: React.FC<AgentSettingsFormProps> = ({
     agent,
     onSave
 }) => {
-    const [config, setConfig] = useState<AgentConfig>(agent.config);
+    // Create a default config if none exists
+    const defaultConfig: AgentConfig = {
+        mode: AgentMode.TEXT,
+        model: 'gpt-4',
+        temperature: 0.7,
+        response_style: 0.5,
+        response_length: 150,
+        language: 'en',
+        actions: []
+    };
+    
+    const [config, setConfig] = useState<AgentConfig>(agent.config || defaultConfig);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isDirty, setIsDirty] = useState(false);
 
     useEffect(() => {
-        setConfig(agent.config);
+        setConfig(agent.config || defaultConfig);
         setIsDirty(false);
     }, [agent]);
 
@@ -91,7 +102,6 @@ export const AgentSettingsForm: React.FC<AgentSettingsFormProps> = ({
                         onChange={(e) => handleChange('model', e.target.value)}
                     >
                         <MenuItem value="gpt-4">GPT-4</MenuItem>
-                        <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
                     </Select>
                 </FormControl>
                 

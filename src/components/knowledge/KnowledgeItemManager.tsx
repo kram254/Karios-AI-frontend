@@ -51,7 +51,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 interface KnowledgeItemManagerProps {
     categoryId: string;
     onKnowledgeAdded?: (knowledgeItem: KnowledgeItem) => void;
-    onKnowledgeDeleted?: () => void;
+    onKnowledgeDeleted?: (knowledgeItem: KnowledgeItem) => void;
 }
 
 export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ categoryId, onKnowledgeAdded, onKnowledgeDeleted }) => {
@@ -98,9 +98,11 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 return;
             }
             
-            // Now fetch items
-            const response = await categoryService.getCategoryItems(parseInt(categoryId));
-            setKnowledgeItems(response.data);
+            // Then fetch the knowledge items
+            const response = await categoryService.getKnowledgeItemsByCategory(parseInt(categoryId));
+            const items = response.data || [];
+            console.log(`KnowledgeItemManager: Fetched ${items.length} items for category ${categoryId}:`, items);
+            setKnowledgeItems(items);
         } catch (error) {
             console.error('Failed to fetch knowledge items:', error);
             setError('Failed to load knowledge items. Please try again.');
@@ -255,15 +257,24 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const handleDeleteItem = async () => {
         if (!itemToDelete) return;
         
+        setDeleteDialogOpen(false);
         setLoading(true);
+        clearMessages();
+        
         try {
             await categoryService.deleteKnowledgeItem(itemToDelete.id);
             setSuccess('Knowledge item deleted successfully');
-            setDeleteDialogOpen(false);
-            validateCategoryAndFetchItems();
+            
+            // Update the local state by removing the deleted item
+            setKnowledgeItems(prevItems => prevItems.filter(item => item.id !== itemToDelete.id));
+            
+            // Important: Notify the parent component to update category counts
             if (onKnowledgeDeleted) {
-                onKnowledgeDeleted();
+                console.log('Notifying parent of knowledge item deletion');
+                onKnowledgeDeleted(itemToDelete);
             }
+            
+            setItemToDelete(null);
         } catch (error) {
             console.error('Failed to delete knowledge item:', error);
             setError('Failed to delete knowledge item. Please try again.');

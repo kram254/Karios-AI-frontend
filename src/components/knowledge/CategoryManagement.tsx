@@ -53,9 +53,27 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
         setLoading(true);
         try {
             const response = await categoryService.getCategories();
-            setCategories(response.data);
-            if (response.data.length > 0 && !selectedCategory) {
-                setSelectedCategory(response.data[0]);
+            console.log('Fetched categories with items:', response.data);
+            
+            // Make sure we have the complete data with knowledge items
+            if (response.data && response.data.length > 0) {
+                const categoriesWithItems = await Promise.all(response.data.map(async (category) => {
+                    try {
+                        // Get detailed category data with knowledge items
+                        const detailedCategory = await categoryService.getCategoryById(category.id);
+                        return detailedCategory.data;
+                    } catch (err) {
+                        console.error(`Failed to fetch detailed data for category ${category.id}:`, err);
+                        return category;
+                    }
+                }));
+                
+                setCategories(categoriesWithItems);
+                if (categoriesWithItems.length > 0 && !selectedCategory) {
+                    setSelectedCategory(categoriesWithItems[0]);
+                }
+            } else {
+                setCategories([]);
             }
         } catch (err) {
             console.error('Failed to fetch categories:', err);
@@ -350,7 +368,13 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                                     mt: 1.5
                                 }}>
                                     <Chip 
-                                        label={`${category.knowledge_items?.length || 0} Items`} 
+                                        label={(() => {
+                                            // Calculate count with detailed logging for debugging
+                                            const itemCount = category.knowledge_items?.length || 0;
+                                            console.log(`Category ${category.name} knowledge_items:`, category.knowledge_items);
+                                            console.log(`Category ${category.name} item count:`, itemCount);
+                                            return `${itemCount} Items`;
+                                        })()} 
                                         size="small"
                                         sx={{ 
                                             bgcolor: 'rgba(0, 243, 255, 0.1)',

@@ -91,11 +91,47 @@ export const KnowledgeManagement: React.FC = () => {
   const handleKnowledgeAdded = async () => {
     // Refresh categories to update item count
     await fetchCategories();
+    
+    // Also refresh the current selected category with latest data
+    if (selectedCategory) {
+      try {
+        const updatedCategory = await categoryService.getCategoryById(selectedCategory.id);
+        console.log('Updated category after adding item:', updatedCategory.data);
+        setSelectedCategory(updatedCategory.data);
+        
+        // Update this category in the categories list
+        setCategories(prevCategories => {
+          return prevCategories.map(cat => 
+            cat.id === updatedCategory.data.id ? updatedCategory.data : cat
+          );
+        });
+      } catch (err) {
+        console.error('Failed to refresh selected category:', err);
+      }
+    }
   };
 
   const handleKnowledgeDeleted = async () => {
     // Refresh categories to update item count
     await fetchCategories();
+    
+    // Also refresh the current selected category with latest data
+    if (selectedCategory) {
+      try {
+        const updatedCategory = await categoryService.getCategoryById(selectedCategory.id);
+        console.log('Updated category after deleting item:', updatedCategory.data);
+        setSelectedCategory(updatedCategory.data);
+        
+        // Update this category in the categories list
+        setCategories(prevCategories => {
+          return prevCategories.map(cat => 
+            cat.id === updatedCategory.data.id ? updatedCategory.data : cat
+          );
+        });
+      } catch (err) {
+        console.error('Failed to refresh selected category:', err);
+      }
+    }
   };
 
   return (

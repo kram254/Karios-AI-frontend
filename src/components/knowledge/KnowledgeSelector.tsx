@@ -44,17 +44,31 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
             const response = await categoryService.getCategories();
             
             if (response && response.data && response.data.length > 0) {
-                const categories = response.data.map((category: Category) => {
-                    console.log('Category knowledge items:', category.name, category.knowledge_items);
+                // For accurate knowledge item counts, fetch each category individually to get full details
+                const detailedCategories = await Promise.all(response.data.map(async (category) => {
+                    try {
+                        const detailedResponse = await categoryService.getCategoryById(category.id);
+                        return detailedResponse.data;
+                    } catch (err) {
+                        console.error(`Failed to fetch detailed data for category ${category.id}:`, err);
+                        return category;
+                    }
+                }));
+                
+                const categories = detailedCategories.map((category: Category) => {
+                    const itemCount = category.knowledge_items?.length || 0;
+                    console.log(`KnowledgeSelector: Category ${category.name} has ${itemCount} items:`, category.knowledge_items);
+                    
                     return {
                         id: category.id,
                         name: category.name,
                         description: category.description || 'No description available',
-                        documentCount: category.knowledge_items?.length || category.item_count || 0
+                        documentCount: itemCount
                     };
                 });
+                
                 setKnowledgeBases(categories);
-                console.log('Fetched knowledge categories:', categories);
+                console.log('Fetched knowledge categories with correct counts:', categories);
             } else {
                 setKnowledgeBases([]);
                 setError('No categories found. Please create some knowledge categories first.');

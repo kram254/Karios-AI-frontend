@@ -17,7 +17,7 @@ import {
     MenuItem,
     Slider
 } from '@mui/material';
-import { Agent, AgentRole } from '../../types/agent';
+import { Agent, AgentRole, AgentMode } from '../../types/agent';
 
 // Tab Panel component
 interface TabPanelProps {
@@ -80,8 +80,19 @@ interface AgentEditDialogProps {
         model?: string;
         response_style?: number;
         response_length?: number;
+        mode?: AgentMode;
+        actions?: string[];
     }) => Promise<void>;
 }
+
+// Available behavior actions
+const availableActions = [
+    { id: 'search_web', name: 'Search Web', description: 'Allow the agent to search the web for information' },
+    { id: 'generate_content', name: 'Generate Content', description: 'Allow the agent to create content like blog posts or emails' },
+    { id: 'answer_faq', name: 'Answer FAQs', description: 'Allow the agent to answer frequently asked questions' },
+    { id: 'schedule_meeting', name: 'Schedule Meetings', description: 'Allow the agent to schedule meetings on your calendar' },
+    { id: 'send_email', name: 'Send Emails', description: 'Allow the agent to draft and send emails on your behalf' },
+];
 
 const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose, onSave }) => {
     // Tab state
@@ -94,12 +105,14 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
     // Role settings
     const [role, setRole] = useState<AgentRole>(AgentRole.CUSTOMER_SUPPORT);
     const [roleDescription, setRoleDescription] = useState<string>('');
+    const [mode, setMode] = useState<AgentMode>(AgentMode.TEXT);
     
     // Behavior settings
     const [responseStyle, setResponseStyle] = useState(0.5);
     const [responseLength, setResponseLength] = useState(150);
     const [language, setLanguage] = useState('en');
-    const [model, setModel] = useState('gpt-4');
+    const [model, setModel] = useState('gpt-3.5-turbo');
+    const [selectedActions, setSelectedActions] = useState<string[]>([]);
     
     // UI state
     const [loading, setLoading] = useState(false);
@@ -114,12 +127,14 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
             // Role settings
             setRole(agent.ai_role || AgentRole.CUSTOMER_SUPPORT);
             setRoleDescription(agent.role_description || '');
+            setMode(agent.mode || AgentMode.TEXT);
             
             // Behavior settings
-            setResponseStyle(agent.config?.response_style ?? 0.5);
-            setResponseLength(agent.config?.response_length ?? 150);
-            setLanguage(agent.config?.language || agent.language || 'en');
-            setModel(agent.config?.model || 'gpt-4');
+            setResponseStyle(agent.response_style ?? 0.5);
+            setResponseLength(agent.response_length ?? 150);
+            setLanguage(agent.language || 'en');
+            setModel(agent.config?.model || 'gpt-3.5-turbo');
+            setSelectedActions(agent.actions || []);
         }
     }, [agent]);
 
@@ -144,7 +159,9 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 language: language,
                 model: model,
                 response_style: responseStyle,
-                response_length: responseLength
+                response_length: responseLength,
+                mode: mode,
+                actions: selectedActions
             } as {
                 name: string;
                 description: string;
@@ -154,6 +171,8 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 model: string;
                 response_style: number;
                 response_length: number;
+                mode: AgentMode;
+                actions: string[];
             };
             
             // Add role_description only if custom role is selected
@@ -186,6 +205,15 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
         );
     };
 
+    // Toggle action selection
+    const toggleAction = (actionId: string) => {
+        if (selectedActions.includes(actionId)) {
+            setSelectedActions(selectedActions.filter(id => id !== actionId));
+        } else {
+            setSelectedActions([...selectedActions, actionId]);
+        }
+    };
+
     return (
         <Dialog 
             open={open} 
@@ -205,82 +233,83 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 <Tabs 
                     value={currentTab} 
                     onChange={handleTabChange} 
-                    variant="fullWidth"
+                    aria-label="agent edit tabs"
                     sx={{
-                        '& .MuiTab-root': {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                        },
-                        '& .Mui-selected': {
-                            color: '#00F3FF !important',
-                        },
                         '& .MuiTabs-indicator': {
                             backgroundColor: '#00F3FF',
-                        }
+                        },
+                        '& .MuiTab-root': {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&.Mui-selected': {
+                                color: '#00F3FF',
+                            },
+                        },
                     }}
                 >
-                    <Tab label="Basic Info" />
-                    <Tab label="Role" />
-                    <Tab label="Behavior" />
+                    <Tab label="BASIC INFO" />
+                    <Tab label="ROLE" />
+                    <Tab label="BEHAVIOR" />
                 </Tabs>
             </Box>
+            
             <DialogContent>
+                {error && (
+                    <Box sx={{ mb: 2 }}>
+                        <Typography color="error">{error}</Typography>
+                    </Box>
+                )}
+                
                 <TabPanel value={currentTab} index={0}>
                     <TextField
-                        label="Agent Name"
                         fullWidth
+                        label="Agent Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         margin="normal"
-                        variant="outlined"
-                        error={!!error && !name.trim()}
-                        helperText={error && !name.trim() ? 'Name is required' : ''}
+                        required
                         sx={{
                             '& .MuiOutlinedInput-root': {
+                                color: '#FFFFFF',
                                 '& fieldset': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)'
                                 },
                                 '&:hover fieldset': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)',
+                                    borderColor: 'rgba(0, 243, 255, 0.5)'
                                 },
                                 '&.Mui-focused fieldset': {
-                                    borderColor: '#00F3FF',
-                                },
+                                    borderColor: '#00F3FF'
+                                }
                             },
                             '& .MuiInputLabel-root': {
-                                color: 'rgba(255, 255, 255, 0.7)',
-                            },
-                            '& .MuiInputBase-input': {
-                                color: '#FFFFFF',
-                            },
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
                         }}
                     />
+                    
                     <TextField
-                        label="Description"
                         fullWidth
-                        multiline
-                        rows={4}
+                        label="Description"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         margin="normal"
-                        variant="outlined"
+                        multiline
+                        rows={3}
                         sx={{
                             '& .MuiOutlinedInput-root': {
+                                color: '#FFFFFF',
                                 '& fieldset': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)'
                                 },
                                 '&:hover fieldset': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)',
+                                    borderColor: 'rgba(0, 243, 255, 0.5)'
                                 },
                                 '&.Mui-focused fieldset': {
-                                    borderColor: '#00F3FF',
-                                },
+                                    borderColor: '#00F3FF'
+                                }
                             },
                             '& .MuiInputLabel-root': {
-                                color: 'rgba(255, 255, 255, 0.7)',
-                            },
-                            '& .MuiInputBase-input': {
-                                color: '#FFFFFF',
-                            },
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
                         }}
                     />
                 </TabPanel>
@@ -316,10 +345,6 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                         </Select>
                     </FormControl>
                     
-                    <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
-                        {roleDescriptions[role]}
-                    </Typography>
-                    
                     {role === AgentRole.CUSTOM && (
                         <Box sx={{ mb: 3 }}>
                             <Typography variant="subtitle2" sx={{ mb: 1, color: '#00F3FF' }}>
@@ -338,174 +363,260 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                                     '& .MuiOutlinedInput-root': {
                                         color: '#FFFFFF',
                                         '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                                            borderColor: 'rgba(255, 255, 255, 0.2)'
                                         },
                                         '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)',
+                                            borderColor: 'rgba(0, 243, 255, 0.5)'
                                         },
                                         '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF',
-                                        },
-                                    },
-                                    '& .MuiInputLabel-root': {
-                                        color: 'rgba(255, 255, 255, 0.7)',
+                                            borderColor: '#00F3FF'
+                                        }
                                     },
                                     '& .MuiFormHelperText-root': {
-                                        color: 'rgba(255, 255, 255, 0.5)',
+                                        color: 'rgba(255, 255, 255, 0.7)'
                                     }
                                 }}
                             />
                         </Box>
                     )}
+                    
+                    <FormControl fullWidth sx={{ mb: 3 }}>
+                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Interaction Mode</InputLabel>
+                        <Select
+                            value={mode}
+                            onChange={(e) => setMode(e.target.value as AgentMode)}
+                            sx={{
+                                color: '#FFFFFF',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(0, 243, 255, 0.5)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#00F3FF'
+                                },
+                                '& .MuiSvgIcon-root': {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
+                            }}
+                        >
+                            <MenuItem value={AgentMode.TEXT}>Text Only</MenuItem>
+                            <MenuItem value={AgentMode.AUDIO}>Voice</MenuItem>
+                            <MenuItem value={AgentMode.VIDEO}>Multimodal</MenuItem>
+                        </Select>
+                    </FormControl>
+                    
+                    <Box sx={{ p: 2, bgcolor: 'rgba(0, 243, 255, 0.05)', borderRadius: 1 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: '#00F3FF' }}>
+                            Role Description
+                        </Typography>
+                        <Typography variant="body2">
+                            {roleDescriptions[role]}
+                        </Typography>
+                    </Box>
                 </TabPanel>
                 
                 <TabPanel value={currentTab} index={2}>
-                    <Typography variant="subtitle2" gutterBottom>
-                        AI Model
-                    </Typography>
-                    <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Model</InputLabel>
-                        <Select
-                            value={model}
-                            onChange={(e) => setModel(e.target.value)}
-                            sx={{
-                                color: '#FFFFFF',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#00F3FF'
-                                },
-                                '& .MuiSvgIcon-root': {
-                                    color: 'rgba(255, 255, 255, 0.7)'
-                                }
-                            }}
-                        >
-                            <MenuItem value="gpt-4">GPT-4</MenuItem>
-                            <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
-                        </Select>
-                    </FormControl>
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                            AI Model
+                        </Typography>
+                        <FormControl fullWidth>
+                            <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Model</InputLabel>
+                            <Select
+                                value={model}
+                                onChange={(e) => setModel(e.target.value)}
+                                sx={{
+                                    color: '#FFFFFF',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#00F3FF'
+                                    },
+                                    '& .MuiSvgIcon-root': {
+                                        color: 'rgba(255, 255, 255, 0.7)'
+                                    }
+                                }}
+                            >
+                                <MenuItem value="gpt-4">GPT-4</MenuItem>
+                                <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
 
-                    <Typography variant="subtitle2" gutterBottom>
-                        Language
-                    </Typography>
-                    <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Language</InputLabel>
-                        <Select
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                            sx={{
-                                color: '#FFFFFF',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#00F3FF'
-                                },
-                                '& .MuiSvgIcon-root': {
-                                    color: 'rgba(255, 255, 255, 0.7)'
-                                }
-                            }}
-                            renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Typography sx={{ mr: 1, fontSize: '1.2rem' }}>{languageFlags[selected as string]}</Typography>
-                                    <span>{selected === 'en' ? 'English' :
-                                           selected === 'es' ? 'Spanish (Español)' :
-                                           selected === 'fr' ? 'French (Français)' :
-                                           selected === 'de' ? 'German (Deutsch)' :
-                                           selected === 'it' ? 'Italian (Italiano)' :
-                                           selected === 'pt' ? 'Portuguese (Português)' :
-                                           selected === 'ru' ? 'Russian (Русский)' : selected}</span>
-                                </Box>
-                            )}
-                        >
-                            <MenuItem value="en">{renderLanguageWithFlag('en', 'English')}</MenuItem>
-                            <MenuItem value="es">{renderLanguageWithFlag('es', 'Spanish (Español)')}</MenuItem>
-                            <MenuItem value="fr">{renderLanguageWithFlag('fr', 'French (Français)')}</MenuItem>
-                            <MenuItem value="de">{renderLanguageWithFlag('de', 'German (Deutsch)')}</MenuItem>
-                            <MenuItem value="it">{renderLanguageWithFlag('it', 'Italian (Italiano)')}</MenuItem>
-                            <MenuItem value="pt">{renderLanguageWithFlag('pt', 'Portuguese (Português)')}</MenuItem>
-                            <MenuItem value="ru">{renderLanguageWithFlag('ru', 'Russian (Русский)')}</MenuItem>
-                        </Select>
-                    </FormControl>
-                    
-                    <Typography variant="subtitle2" gutterBottom>
-                        Response Style: {getResponseStyleLabel(responseStyle)}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                        <Typography variant="body2" sx={{ mr: 1 }}>Formal</Typography>
-                        <Slider
-                            value={responseStyle}
-                            onChange={(_, value) => setResponseStyle(value as number)}
-                            step={0.01}
-                            min={0}
-                            max={1}
-                            sx={{
-                                mx: 1,
-                                color: '#00F3FF',
-                                '& .MuiSlider-thumb': {
-                                    backgroundColor: '#00F3FF',
-                                },
-                                '& .MuiSlider-rail': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                                },
-                                '& .MuiSlider-track': {
-                                    backgroundColor: '#00F3FF',
-                                }
-                            }}
-                        />
-                        <Typography variant="body2" sx={{ ml: 1 }}>Casual</Typography>
+                    <Box sx={{ mb: 3 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                            Language
+                        </Typography>
+                        <FormControl fullWidth>
+                            <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Language</InputLabel>
+                            <Select
+                                value={language}
+                                onChange={(e) => setLanguage(e.target.value)}
+                                sx={{
+                                    color: '#FFFFFF',
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(0, 243, 255, 0.5)'
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#00F3FF'
+                                    },
+                                    '& .MuiSvgIcon-root': {
+                                        color: 'rgba(255, 255, 255, 0.7)'
+                                    }
+                                }}
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Typography sx={{ mr: 1, fontSize: '1.2rem' }}>{languageFlags[selected as string]}</Typography>
+                                        <span>{selected === 'en' ? 'English' :
+                                               selected === 'es' ? 'Spanish (Español)' :
+                                               selected === 'fr' ? 'French (Français)' :
+                                               selected === 'de' ? 'German (Deutsch)' :
+                                               selected === 'it' ? 'Italian (Italiano)' :
+                                               selected === 'pt' ? 'Portuguese (Português)' :
+                                               selected === 'ru' ? 'Russian (Русский)' : selected}</span>
+                                    </Box>
+                                )}
+                            >
+                                <MenuItem value="en">{renderLanguageWithFlag('en', 'English')}</MenuItem>
+                                <MenuItem value="es">{renderLanguageWithFlag('es', 'Spanish (Español)')}</MenuItem>
+                                <MenuItem value="fr">{renderLanguageWithFlag('fr', 'French (Français)')}</MenuItem>
+                                <MenuItem value="de">{renderLanguageWithFlag('de', 'German (Deutsch)')}</MenuItem>
+                                <MenuItem value="it">{renderLanguageWithFlag('it', 'Italian (Italiano)')}</MenuItem>
+                                <MenuItem value="pt">{renderLanguageWithFlag('pt', 'Portuguese (Português)')}</MenuItem>
+                                <MenuItem value="ru">{renderLanguageWithFlag('ru', 'Russian (Русский)')}</MenuItem>
+                            </Select>
+                        </FormControl>
                     </Box>
                     
-                    <Typography variant="subtitle2" gutterBottom>
-                        Response Length: {responseLength} words
-                    </Typography>
+                    <Box sx={{ mb: 4 }}>
+                        <Typography id="response-style-slider" gutterBottom>
+                            Response Style: {getResponseStyleLabel(responseStyle)}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Typography sx={{ minWidth: 60 }}>Formal</Typography>
+                            <Slider
+                                value={responseStyle}
+                                onChange={(_e, val) => setResponseStyle(val as number)}
+                                aria-labelledby="response-style-slider"
+                                step={0.01}
+                                min={0}
+                                max={1}
+                                sx={{
+                                    mx: 2,
+                                    color: '#00F3FF',
+                                    '& .MuiSlider-thumb': {
+                                        width: 20,
+                                        height: 20,
+                                        backgroundColor: '#00F3FF',
+                                    },
+                                    '& .MuiSlider-rail': {
+                                        opacity: 0.5,
+                                        backgroundColor: '#888',
+                                    },
+                                }}
+                            />
+                            <Typography sx={{ minWidth: 60 }}>Casual</Typography>
+                        </Box>
+                    </Box>
+                    
+                    <Box sx={{ mb: 4 }}>
+                        <Typography id="response-length-slider" gutterBottom>
+                            Response Length: {responseLength} words
+                        </Typography>
+                        <Box sx={{ px: 1 }}>
+                            <Slider
+                                value={responseLength}
+                                onChange={(_e, val) => setResponseLength(val as number)}
+                                aria-labelledby="response-length-slider"
+                                step={50}
+                                marks={[
+                                    { value: 50, label: '50' },
+                                    { value: 150, label: '150' },
+                                    { value: 300, label: '300' },
+                                    { value: 500, label: '500' },
+                                ]}
+                                min={50}
+                                max={500}
+                                sx={{
+                                    color: '#00F3FF',
+                                    '& .MuiSlider-thumb': {
+                                        width: 20,
+                                        height: 20,
+                                        backgroundColor: '#00F3FF',
+                                    },
+                                    '& .MuiSlider-rail': {
+                                        opacity: 0.5,
+                                        backgroundColor: '#888',
+                                    },
+                                    '& .MuiSlider-mark': {
+                                        backgroundColor: '#bbb',
+                                        height: 8,
+                                        width: 1,
+                                        marginTop: -3,
+                                    },
+                                    '& .MuiSlider-markLabel': {
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                    },
+                                }}
+                            />
+                        </Box>
+                    </Box>
+                    
                     <Box sx={{ mb: 3 }}>
-                        <Slider
-                            value={responseLength}
-                            onChange={(_, value) => setResponseLength(value as number)}
-                            step={10}
-                            min={50}
-                            max={500}
-                            marks={[
-                                { value: 50, label: '50' },
-                                { value: 150, label: '150' },
-                                { value: 300, label: '300' },
-                                { value: 500, label: '500' },
-                            ]}
-                            sx={{
-                                color: '#00F3FF',
-                                '& .MuiSlider-thumb': {
-                                    backgroundColor: '#00F3FF',
-                                },
-                                '& .MuiSlider-rail': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                                },
-                                '& .MuiSlider-track': {
-                                    backgroundColor: '#00F3FF',
-                                },
-                                '& .MuiSlider-markLabel': {
-                                    color: 'rgba(255, 255, 255, 0.7)',
-                                }
-                            }}
-                        />
+                        <Typography variant="subtitle2" gutterBottom>
+                            Agent Actions
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
+                            Select which actions this agent can perform:
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {availableActions.map(action => (
+                                <Box
+                                    key={action.id}
+                                    onClick={() => toggleAction(action.id)}
+                                    sx={{
+                                        border: '1px solid',
+                                        borderColor: selectedActions.includes(action.id) ? '#00F3FF' : 'rgba(255, 255, 255, 0.2)',
+                                        borderRadius: 1,
+                                        p: 1,
+                                        cursor: 'pointer',
+                                        backgroundColor: selectedActions.includes(action.id) ? 'rgba(0, 243, 255, 0.1)' : 'transparent',
+                                        ':hover': {
+                                            borderColor: 'rgba(0, 243, 255, 0.5)',
+                                        },
+                                        transition: 'all 0.2s',
+                                    }}
+                                >
+                                    <Typography variant="body2" sx={{ fontWeight: selectedActions.includes(action.id) ? 'bold' : 'normal' }}>
+                                        {action.name}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Box>
                     </Box>
                 </TabPanel>
             </DialogContent>
+            
             <DialogActions sx={{ p: 2 }}>
-                <Button onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                    Cancel
+                <Button
+                    onClick={onClose}
+                    sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                >
+                    CANCEL
                 </Button>
                 <Button
                     onClick={handleSubmit}
                     variant="contained"
-                    disabled={loading}
+                    disabled={loading || !name}
                     startIcon={loading ? <CircularProgress size={20} /> : null}
                     sx={{
                         bgcolor: '#00F3FF',
@@ -513,13 +624,13 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                         '&:hover': {
                             bgcolor: '#00D4E0'
                         },
-                        '&:disabled': {
+                        '&.Mui-disabled': {
                             bgcolor: 'rgba(0, 243, 255, 0.3)',
-                            color: 'rgba(0, 0, 0, 0.3)'
+                            color: 'rgba(0, 0, 0, 0.5)'
                         }
                     }}
                 >
-                    Save
+                    SAVE
                 </Button>
             </DialogActions>
         </Dialog>

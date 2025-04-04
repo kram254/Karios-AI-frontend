@@ -87,11 +87,8 @@ interface AgentEditDialogProps {
 
 // Available behavior actions
 const availableActions = [
-    { id: 'search_web', name: 'Search Web', description: 'Allow the agent to search the web for information' },
-    { id: 'generate_content', name: 'Generate Content', description: 'Allow the agent to create content like blog posts or emails' },
-    { id: 'answer_faq', name: 'Answer FAQs', description: 'Allow the agent to answer frequently asked questions' },
-    { id: 'schedule_meeting', name: 'Schedule Meetings', description: 'Allow the agent to schedule meetings on your calendar' },
-    { id: 'send_email', name: 'Send Emails', description: 'Allow the agent to draft and send emails on your behalf' },
+    { id: 'send_file', name: 'Send File', description: 'Allow the agent to send files to users' },
+    { id: 'send_link', name: 'Send Link', description: 'Allow the agent to send links to users' },
 ];
 
 const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose, onSave }) => {
@@ -111,7 +108,6 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
     const [responseStyle, setResponseStyle] = useState(0.5);
     const [responseLength, setResponseLength] = useState(150);
     const [language, setLanguage] = useState('en');
-    const [model, setModel] = useState('gpt-3.5-turbo');
     const [selectedActions, setSelectedActions] = useState<string[]>([]);
     
     // UI state
@@ -133,7 +129,6 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
             setResponseStyle(agent.response_style ?? 0.5);
             setResponseLength(agent.response_length ?? 150);
             setLanguage(agent.language || 'en');
-            setModel(agent.config?.model || 'gpt-3.5-turbo');
             setSelectedActions(agent.actions || []);
         }
     }, [agent]);
@@ -157,7 +152,6 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 description: description,
                 ai_role: role,
                 language: language,
-                model: model,
                 response_style: responseStyle,
                 response_length: responseLength,
                 mode: mode,
@@ -168,7 +162,6 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 ai_role: AgentRole;
                 role_description?: string;
                 language: string;
-                model: string;
                 response_style: number;
                 response_length: number;
                 mode: AgentMode;
@@ -430,41 +423,6 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 </TabPanel>
                 
                 <TabPanel value={currentTab} index={2}>
-                    <Box sx={{ mb: 3 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                            AI Model
-                        </Typography>
-                        <FormControl fullWidth>
-                            <InputLabel sx={{ 
-                                color: 'rgba(255, 255, 255, 0.7)',
-                                bgcolor: '#1A1A1A',
-                                px: 1
-                            }}>Model</InputLabel>
-                            <Select
-                                value={model}
-                                onChange={(e) => setModel(e.target.value)}
-                                sx={{
-                                    color: '#FFFFFF',
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: 'rgba(0, 243, 255, 0.5)'
-                                    },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: '#00F3FF'
-                                    },
-                                    '& .MuiSvgIcon-root': {
-                                        color: 'rgba(255, 255, 255, 0.7)'
-                                    }
-                                }}
-                            >
-                                <MenuItem value="gpt-4">GPT-4</MenuItem>
-                                <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Box>
-
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle2" gutterBottom>
                             Language

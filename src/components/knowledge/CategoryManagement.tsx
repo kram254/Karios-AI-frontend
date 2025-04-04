@@ -53,15 +53,29 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
         setLoading(true);
         try {
             const response = await categoryService.getCategories();
-            console.log('Fetched categories with items:', response.data);
+            console.log('Fetched categories:', response.data);
             
             // Make sure we have the complete data with knowledge items
             if (response.data && response.data.length > 0) {
                 const categoriesWithItems = await Promise.all(response.data.map(async (category) => {
                     try {
                         // Get detailed category data with knowledge items
-                        const detailedCategory = await categoryService.getCategoryById(category.id);
-                        return detailedCategory.data;
+                        const detailedResponse = await categoryService.getCategoryById(category.id);
+                        console.log(`Detailed category ${category.id}:`, detailedResponse.data);
+                        
+                        // If the detailed response doesn't have knowledge_items, try the specialized endpoint
+                        if (!detailedResponse.data.knowledge_items || detailedResponse.data.knowledge_items.length === 0) {
+                            const itemsResponse = await categoryService.getKnowledgeItemsByCategory(category.id);
+                            console.log(`Items for category ${category.id}:`, itemsResponse.data);
+                            
+                            // Merge the items with the category
+                            return {
+                                ...detailedResponse.data,
+                                knowledge_items: itemsResponse.data || [],
+                            };
+                        }
+                        
+                        return detailedResponse.data;
                     } catch (err) {
                         console.error(`Failed to fetch detailed data for category ${category.id}:`, err);
                         return category;

@@ -71,6 +71,7 @@ interface AgentEditDialogProps {
     open: boolean;
     agent: Agent | null;
     onClose: () => void;
+    onDelete?: () => void;
     onSave: (agentData: {
         name: string;
         description: string;
@@ -91,7 +92,7 @@ const availableActions = [
     { id: 'send_link', name: 'Send Link', description: 'Allow the agent to send links to users' },
 ];
 
-const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose, onSave }) => {
+const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose, onDelete, onSave }) => {
     // Tab state
     const [currentTab, setCurrentTab] = useState(0);
     
@@ -591,6 +592,20 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 >
                     CANCEL
                 </Button>
+                {onDelete && (
+                    <Button
+                        onClick={onDelete}
+                        variant="contained"
+                        color="error"
+                        sx={{
+                            '&:hover': {
+                                bgcolor: '#FF1744'
+                            }
+                        }}
+                    >
+                        DELETE
+                    </Button>
+                )}
                 <Button
                     onClick={handleSubmit}
                     variant="contained"

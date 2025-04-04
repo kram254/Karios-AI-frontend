@@ -927,6 +927,10 @@ export const AgentManagement: React.FC = () => {
                 open={editDialogOpen}
                 onClose={() => setEditDialogOpen(false)}
                 agent={selectedAgent}
+                onDelete={() => {
+                    setEditDialogOpen(false);
+                    setConfirmDeleteDialogOpen(true);
+                }}
                 onSave={(agentData: { name: string; description: string }) => handleSaveAgentInfo(agentData)}
             />
             

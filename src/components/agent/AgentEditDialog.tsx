@@ -281,7 +281,9 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                                 }
                             },
                             '& .MuiInputLabel-root': {
-                                color: 'rgba(255, 255, 255, 0.7)'
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                bgcolor: '#1A1A1A',
+                                px: 1
                             }
                         }}
                     />
@@ -308,7 +310,9 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                                 }
                             },
                             '& .MuiInputLabel-root': {
-                                color: 'rgba(255, 255, 255, 0.7)'
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                bgcolor: '#1A1A1A',
+                                px: 1
                             }
                         }}
                     />
@@ -316,7 +320,11 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 
                 <TabPanel value={currentTab} index={1}>
                     <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Agent Role</InputLabel>
+                        <InputLabel sx={{ 
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            bgcolor: '#1A1A1A',
+                            px: 1
+                        }}>Agent Role</InputLabel>
                         <Select
                             value={role}
                             onChange={(e) => setRole(e.target.value as AgentRole)}
@@ -381,7 +389,11 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                     )}
                     
                     <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Interaction Mode</InputLabel>
+                        <InputLabel sx={{ 
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            bgcolor: '#1A1A1A',
+                            px: 1
+                        }}>Interaction Mode</InputLabel>
                         <Select
                             value={mode}
                             onChange={(e) => setMode(e.target.value as AgentMode)}
@@ -423,7 +435,11 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                             AI Model
                         </Typography>
                         <FormControl fullWidth>
-                            <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Model</InputLabel>
+                            <InputLabel sx={{ 
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                bgcolor: '#1A1A1A',
+                                px: 1
+                            }}>Model</InputLabel>
                             <Select
                                 value={model}
                                 onChange={(e) => setModel(e.target.value)}
@@ -454,7 +470,11 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                             Language
                         </Typography>
                         <FormControl fullWidth>
-                            <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Language</InputLabel>
+                            <InputLabel sx={{ 
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                bgcolor: '#1A1A1A',
+                                px: 1
+                            }}>Language</InputLabel>
                             <Select
                                 value={language}
                                 onChange={(e) => setLanguage(e.target.value)}

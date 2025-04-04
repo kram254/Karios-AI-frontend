@@ -523,7 +523,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
               fullWidth
               multiline
               maxRows={4}
-              placeholder="Type your message here..."
+              placeholder={loading ? "Thinking..." : "Type your message here..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}

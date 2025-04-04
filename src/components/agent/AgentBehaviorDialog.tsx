@@ -36,7 +36,6 @@ interface AgentBehaviorDialogProps {
         response_style: number; 
         response_length: number; 
         language: string;
-        model: string;
         actions: string[];
     }) => Promise<void>;
 }
@@ -54,7 +53,6 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
     const [responseStyle, setResponseStyle] = useState(0.5);
     const [responseLength, setResponseLength] = useState(150);
     const [language, setLanguage] = useState('en');
-    const [model, setModel] = useState('gpt-4');
     const [selectedActions, setSelectedActions] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -64,7 +62,6 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
             setResponseStyle(typeof agent.config?.response_style === 'number' ? agent.config.response_style : 0.5);
             setResponseLength(typeof agent.config?.response_length === 'number' ? agent.config.response_length : 150);
             setLanguage(agent.config?.language || agent.language || 'en');
-            setModel(agent.config?.model || 'gpt-4');
             setSelectedActions(agent.actions || []);
         }
     }, [agent]);
@@ -78,7 +75,6 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                 response_style: responseStyle,
                 response_length: responseLength,
                 language,
-                model,
                 actions: selectedActions
             });
             onClose();
@@ -138,39 +134,14 @@ const AgentBehaviorDialog: React.FC<AgentBehaviorDialogProps> = ({ open, agent, 
                 
                 <Box sx={{ mt: 2 }}>
                     <Typography variant="subtitle2" gutterBottom>
-                        AI Model
-                    </Typography>
-                    <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Model</InputLabel>
-                        <Select
-                            value={model}
-                            onChange={(e) => setModel(e.target.value)}
-                            sx={{
-                                color: '#FFFFFF',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.2)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(0, 243, 255, 0.5)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#00F3FF'
-                                },
-                                '& .MuiSvgIcon-root': {
-                                    color: 'rgba(255, 255, 255, 0.7)'
-                                }
-                            }}
-                        >
-                            <MenuItem value="gpt-4">GPT-4</MenuItem>
-                            <MenuItem value="gpt-3.5-turbo">GPT-3.5 Turbo</MenuItem>
-                        </Select>
-                    </FormControl>
-
-                    <Typography variant="subtitle2" gutterBottom>
                         Language
                     </Typography>
                     <FormControl fullWidth sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Language</InputLabel>
+                        <InputLabel sx={{ 
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            bgcolor: '#1A1A1A',
+                            px: 1
+                        }}>Language</InputLabel>
                         <Select
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}

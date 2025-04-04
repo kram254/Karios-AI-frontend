@@ -350,7 +350,7 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                                     mt: 1.5
                                 }}>
                                     <Chip 
-                                        label={`${category.item_count || 0} Items`} 
+                                        label={`${category.knowledge_items?.length || 0} Items`} 
                                         size="small"
                                         sx={{ 
                                             bgcolor: 'rgba(0, 243, 255, 0.1)',

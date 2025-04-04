@@ -48,6 +48,25 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
                 const detailedCategories = await Promise.all(response.data.map(async (category) => {
                     try {
                         const detailedResponse = await categoryService.getCategoryById(category.id);
+                        console.log(`Detailed data for category ${category.id}:`, detailedResponse.data);
+                        
+                        // If the detailed response doesn't have knowledge_items or it's empty, try the specialized endpoint
+                        if (!detailedResponse.data.knowledge_items || detailedResponse.data.knowledge_items.length === 0) {
+                            try {
+                                const itemsResponse = await categoryService.getKnowledgeItemsByCategory(category.id);
+                                console.log(`Additional items for category ${category.id}:`, itemsResponse.data);
+                                
+                                // Return category with items added
+                                return {
+                                    ...detailedResponse.data,
+                                    knowledge_items: itemsResponse.data || []
+                                };
+                            } catch (itemErr) {
+                                console.error(`Failed to fetch knowledge items for category ${category.id}:`, itemErr);
+                                return detailedResponse.data;
+                            }
+                        }
+                        
                         return detailedResponse.data;
                     } catch (err) {
                         console.error(`Failed to fetch detailed data for category ${category.id}:`, err);

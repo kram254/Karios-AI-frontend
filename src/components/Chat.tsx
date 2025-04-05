@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, Plus, Loader2 } from "lucide-react";
+import { MessageSquare, Send, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
@@ -170,7 +170,7 @@ const Chat: React.FC = () => {
           />
           {isProcessing && (
             <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              <span className="text-sm font-medium text-cyan-500">Thinking...</span>
             </div>
           )}
         </div>

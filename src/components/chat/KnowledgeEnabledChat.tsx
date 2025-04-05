@@ -489,7 +489,9 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
         
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <CircularProgress size={40} sx={{ color: '#00F3FF' }} />
+            <Typography variant="body2" sx={{ color: '#00F3FF' }}>
+              Thinking...
+            </Typography>
           </Box>
         )}
         

@@ -83,7 +83,23 @@ export default function AgentCreationWizard({
     // Function to handle opening the modal
     useEffect(() => {
         console.log('Modal open state:', open);
-    }, [open]);
+        // Reset the wizard to step 1 whenever it's opened
+        if (open) {
+            setCurrentStep(1);
+            // Reset form data to initial state
+            setFormData(initialData || {
+                actions: [],
+                ai_role: AgentRole.CUSTOMER_SUPPORT, 
+                language: 'en',
+                mode: AgentMode.TEXT,
+                response_style: 0.5,
+                response_length: 150
+            });
+            setSelectedKnowledgeIds([]);
+            setCustomRole(false);
+            setIsLoading(false);
+        }
+    }, [open, initialData]);
 
     // Update form data when initialData changes
     useEffect(() => {

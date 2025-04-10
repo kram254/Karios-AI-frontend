@@ -263,7 +263,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       visibility: 'visible', 
                       opacity: 1,
                       zIndex: 50,
-                      position: 'relative',
+                      position: 'fixed',
+                      right: isCollapsed ? '10px' : '15px',
                       backgroundColor: '#2A2A2A'
                     }}
                     aria-label="Chat options"

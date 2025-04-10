@@ -60,13 +60,15 @@ const AgentConfigDashboard: React.FC = () => {
         <DashboardLayout role={user.role}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Typography variant="h4" component="h1" gutterBottom>
-                        module: agentando chat
-                    </Typography>
-                    <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#888' }}>
-                        DASHBOARD
-                    </Typography>
+                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <div>
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#00F3FF', textTransform: 'uppercase' }}>
+                            Agent Config
+                        </Typography>
+                        <Typography variant="subtitle1" component="h2" sx={{ color: '#888' }}>
+                            DASHBOARD
+                        </Typography>
+                    </div>
                 </Grid>
                 
                 <Grid item xs={12}>
@@ -75,19 +77,33 @@ const AgentConfigDashboard: React.FC = () => {
                             p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            mb: 3
                         }}
                     >
-                        <Typography variant="h5" gutterBottom align="center" sx={{ mb: 3 }}>
+                        <Typography variant="h5" gutterBottom align="center" sx={{ mb: 4, color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.3)', pb: 2 }}>
                             Chat AI - Configuration Dashboard
                         </Typography>
 
                         <Grid container spacing={4}>
                             {/* Agent Type Configuration */}
                             <Grid item xs={12} md={6}>
-                                <Card sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', height: '100%' }}>
+                                <Card sx={{ 
+                                    bgcolor: 'rgba(0, 243, 255, 0.05)', 
+                                    height: '100%',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                                    border: '1px solid rgba(0, 243, 255, 0.1)',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
+                                        transform: 'translateY(-2px)'
+                                    }
+                                }}>
                                     <CardContent>
-                                        <Typography variant="h6" gutterBottom>
+                                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.2)', pb: 1, mb: 2 }}>
                                             0. Agent Type Configuration
                                         </Typography>
                                         <Typography variant="body2" gutterBottom>
@@ -159,9 +175,20 @@ const AgentConfigDashboard: React.FC = () => {
 
                             {/* Generation Parameters */}
                             <Grid item xs={12} md={6}>
-                                <Card sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', height: '100%' }}>
+                                <Card sx={{ 
+                                    bgcolor: 'rgba(0, 243, 255, 0.05)', 
+                                    height: '100%',
+                                    borderRadius: '10px',
+                                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                                    border: '1px solid rgba(0, 243, 255, 0.1)',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
+                                        transform: 'translateY(-2px)'
+                                    }
+                                }}>
                                     <CardContent>
-                                        <Typography variant="h6" gutterBottom>
+                                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.2)', pb: 1, mb: 2 }}>
                                             1. Generation Parameters
                                         </Typography>
                                         

@@ -8,7 +8,7 @@ export const SuperAdminDashboard: React.FC = () => {
         <DashboardLayout role={UserRole.SUPER_ADMIN}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <div>
                         <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#00F3FF' }}>
                             SUPER ADMIN
@@ -34,7 +34,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             flexDirection: 'column'
                         }}
                     >
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.3)', pb: 1, mb: 2 }}>
                             Total Users
                         </Typography>
                         <Typography variant="h4">
@@ -80,7 +80,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             flexDirection: 'column'
                         }}
                     >
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.3)', pb: 1, mb: 2 }}>
                             System Health
                         </Typography>
                         <Typography variant="h4" sx={{ color: '#00F3FF' }}>

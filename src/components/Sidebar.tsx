@@ -173,15 +173,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Dashboard - Only for SUPER_ADMIN, RESELLER or CUSTOMER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER, UserRole.CUSTOMER].includes(user.role) && (
-          <button
-            onClick={() => navigate('/dashboard')}
-            className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-              isActive('/dashboard') ? 'bg-[#2A2A2A]' : ''
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5 text-cyan-500" />
-            {!isCollapsed && <span className="ml-3">Dashboard</span>}
-          </button>
+          <div>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+                isActive('/dashboard') ? 'bg-[#2A2A2A]' : ''
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5 text-cyan-500" />
+              {!isCollapsed && <span className="ml-3">Main Dashboard</span>}
+            </button>
+            {!isCollapsed && (
+              <button
+                onClick={() => navigate('/agent-config')}
+                className={`w-full flex items-center p-3 pl-8 hover:bg-[#2A2A2A] transition-colors ${
+                  isActive('/agent-config') ? 'bg-[#2A2A2A]' : ''
+                }`}
+              >
+                <Bot className="w-4 h-4 text-cyan-500" />
+                <span className="ml-3 text-sm">Agent Config</span>
+              </button>
+            )}
+          </div>
         )}
 
         {/* Divider */}
@@ -238,13 +251,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               
               {!isCollapsed && (
-                <div className="relative flex-shrink-0">
+                <div className="relative flex-shrink-0 ml-2">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuAnchorEl({ id: chat.id, element: e.currentTarget as HTMLElement });
                     }}
-                    className="p-1 hover:bg-[#3A3A3A] rounded-full transition-colors"
+                    className="p-1 hover:bg-[#3A3A3A] rounded-full transition-colors flex items-center justify-center"
+                    style={{ 
+                      display: 'flex', 
+                      visibility: 'visible', 
+                      opacity: 1,
+                      zIndex: 10,
+                      position: 'relative'
+                    }}
+                    aria-label="Chat options"
                   >
                     <MoreVertical className="w-4 h-4 text-gray-400" />
                   </button>

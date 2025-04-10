@@ -8,6 +8,7 @@ import { AgentManagement } from './pages/AgentManagement';
 import { SuperAdminDashboard } from './components/dashboard/SuperAdminDashboard';
 import { ResellerDashboard } from './components/dashboard/ResellerDashboard';
 import { CustomerDashboard } from './components/dashboard/CustomerDashboard';
+import AgentConfigDashboard from './components/dashboard/AgentConfigDashboard';
 import { KnowledgeManagement } from './pages/KnowledgeManagement';
 import { UserManagement } from './pages/UserManagement';
 import { UserProfile } from './pages/UserProfile';
@@ -97,6 +98,12 @@ function App() {
     }
   };
 
+  // For agent configuration dashboard access
+  const AgentConfigDashboardComponent = () => {
+    if (!user) return <Navigate to="/chat" replace />;
+    return <AgentConfigDashboard />;
+  };
+
   // Check if user has permission to access route
   const canAccessRoute = (requiredRoles: UserRole[]) => {
     if (!user) return false;
@@ -175,6 +182,9 @@ function App() {
                   
                   {/* Dashboard - Access based on role */}
                   <Route path="/dashboard" element={<DashboardComponent />} />
+                  
+                  {/* Agent Config Dashboard - For all roles with dashboard access */}
+                  <Route path="/agent-config" element={<AgentConfigDashboardComponent />} />
                   
                   {/* User Profile */}
                   <Route path="/profile" element={<UserProfile />} />

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { 
     Grid, 
     Paper, 
@@ -24,7 +25,9 @@ import {
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
 
-export const AgentConfigDashboard: React.FC = () => {
+const AgentConfigDashboard: React.FC = () => {
+    // Get user role from auth context
+    const { user } = useAuth();
     // Agent Type Configuration state
     const [agentRole, setAgentRole] = useState<string>('customer_support');
     
@@ -53,8 +56,8 @@ export const AgentConfigDashboard: React.FC = () => {
     // Logs state
     const [loggingActive, setLoggingActive] = useState<boolean>(true);
 
-    return (
-        <DashboardLayout role={UserRole.SUPER_ADMIN}>
+    return user ? (
+        <DashboardLayout role={user.role}>
             <Grid container spacing={3}>
                 <Grid item xs={12}>
                     <Typography variant="h4" component="h1" gutterBottom>
@@ -298,7 +301,7 @@ export const AgentConfigDashboard: React.FC = () => {
                 </Grid>
             </Grid>
         </DashboardLayout>
-    );
+    ) : null;
 };
 
 export default AgentConfigDashboard;

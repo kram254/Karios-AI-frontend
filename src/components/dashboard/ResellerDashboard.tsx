@@ -8,29 +8,37 @@ export const ResellerDashboard: React.FC = () => {
         <DashboardLayout role={UserRole.RESELLER}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Typography variant="h4" component="h1" gutterBottom>
-                        RESELLER
-                    </Typography>
-                    <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#888' }}>
-                        DASHBOARD
-                    </Typography>
+                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <div>
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#00F3FF' }}>
+                            RESELLER
+                        </Typography>
+                        <Typography variant="subtitle1" component="h2" sx={{ color: '#888' }}>
+                            DASHBOARD
+                        </Typography>
+                    </div>
                 </Grid>
                 
                 {/* Quick Stats */}
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1rem' }}>
                             Customers
                         </Typography>
-                        <Typography variant="h4">
+                        <Typography variant="h4" sx={{ color: '#00F3FF', fontWeight: 'bold', fontSize: '2.5rem', mt: 1 }}>
                             0
                         </Typography>
                     </Paper>
@@ -39,10 +47,16 @@ export const ResellerDashboard: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>
@@ -57,10 +71,16 @@ export const ResellerDashboard: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>
@@ -79,10 +99,13 @@ export const ResellerDashboard: React.FC = () => {
                             p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            mb: 3
                         }}
                     >
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.3)', pb: 1, mb: 2 }}>
                             Administrative Functions
                         </Typography>
                         <List>
@@ -324,10 +347,16 @@ export const ResellerDashboard: React.FC = () => {
                 <Grid item xs={12} md={6}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>

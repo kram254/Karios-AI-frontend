@@ -68,27 +68,33 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role, children
     return (
         <div className="dashboard-container">
             <nav className="dashboard-nav">
-                <button 
-                    className="menu-button"
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                >
-                    <Menu size={24} />
-                </button>
-                <h1 className="nav-title">Agentando AI</h1>
-                <button 
-                    className="logout-button"
-                    onClick={handleLogout}
-                >
-                    <LogOut size={24} />
-                    <span>Logout</span>
-                </button>
+                <div className="nav-left">
+                    <button 
+                        className="menu-button"
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        aria-label="Toggle menu"
+                    >
+                        <Menu size={20} />
+                    </button>
+                    <h1 className="nav-title">Agentando AI</h1>
+                </div>
+                <div className="nav-right">
+                    <button 
+                        className="logout-button"
+                        onClick={handleLogout}
+                    >
+                        <LogOut size={20} />
+                        <span>Logout</span>
+                    </button>
+                </div>
             </nav>
 
             <div className="dashboard-content">
                 <aside className={`dashboard-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                     <div className="sidebar-content">
-                        {getMenuItems().map((item) => (
-                            (!item.roles || item.roles.includes(role)) && (
+                        {getMenuItems()
+                            .filter(item => !item.roles || item.roles.includes(role))
+                            .map((item) => (
                                 <button 
                                     key={item.text}
                                     className="sidebar-item"
@@ -97,7 +103,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role, children
                                     {item.text}
                                 </button>
                             )
-                        ))}
+                        )}
                     </div>
                 </aside>
 

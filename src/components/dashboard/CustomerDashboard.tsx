@@ -9,22 +9,31 @@ export const CustomerDashboard: React.FC = () => {
         <DashboardLayout role={UserRole.CUSTOMER}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
-                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h4" component="h1" gutterBottom>
-                        CUSTOMER
-                    </Typography>
-                    <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#888' }}>
-                        DASHBOARD
-                    </Typography>
+                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <div>
+                        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#00F3FF' }}>
+                            CUSTOMER
+                        </Typography>
+                        <Typography variant="subtitle1" component="h2" sx={{ color: '#888' }}>
+                            DASHBOARD
+                        </Typography>
+                    </div>
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
                         sx={{
                             bgcolor: '#00F3FF',
                             color: '#000000',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 10px rgba(0, 243, 255, 0.3)',
+                            padding: '8px 16px',
                             '&:hover': {
-                                bgcolor: '#00D4E0'
-                            }
+                                bgcolor: '#00D4E0',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
+                            },
+                            transition: 'all 0.2s ease'
                         }}
                     >
                         New Chat
@@ -35,16 +44,22 @@ export const CustomerDashboard: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1rem' }}>
                             Available Credits
                         </Typography>
-                        <Typography variant="h4">
+                        <Typography variant="h4" sx={{ color: '#00F3FF', fontWeight: 'bold', fontSize: '2.5rem', mt: 1 }}>
                             0
                         </Typography>
                     </Paper>
@@ -53,10 +68,16 @@ export const CustomerDashboard: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>
@@ -71,10 +92,16 @@ export const CustomerDashboard: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>
@@ -93,10 +120,13 @@ export const CustomerDashboard: React.FC = () => {
                             p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            mb: 3
                         }}
                     >
-                        <Typography variant="h6" gutterBottom>
+                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.3)', pb: 1 }}>
                             Administrative Functions
                         </Typography>
                         <List>
@@ -228,10 +258,16 @@ export const CustomerDashboard: React.FC = () => {
                 <Grid item xs={12} md={4}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            borderRadius: '10px',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>

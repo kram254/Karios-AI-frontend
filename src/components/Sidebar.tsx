@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot } from 'lucide-react';
+import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -19,12 +19,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCollapse,
   onSettingsClick,
 }) => {
-  const { chats, currentChat, createNewChat, setCurrentChat, createAgentChat, setSelectedAgent } = useChat();
+  const { chats, currentChat, createNewChat, setCurrentChat, createAgentChat, setSelectedAgent, deleteChat, updateChatTitle } = useChat();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [creatingChat, setCreatingChat] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<{ id: string, element: HTMLElement } | null>(null);
 
   const handleCreateNewChat = async () => {
     if (creatingChat) return;
@@ -213,25 +214,94 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 overflow-y-auto">
         {chats && chats.length > 0 ? (
           chats.map((chat) => (
-            <button
+            <div 
               key={chat.id}
-              onClick={() => handleChatSelect(chat)}
-              className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+              className={`relative w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
                 currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : ''
               }`}
             >
-              <MessageSquare className="w-5 h-5 text-cyan-500 flex-shrink-0" />
-              {!isCollapsed && (
-                <div className="ml-3 text-left overflow-hidden">
-                  <div className="font-medium truncate">{chat.title}</div>
-                  <div className="text-sm text-gray-400 truncate">
-                    {chat.messages && chat.messages.length > 0
-                      ? chat.messages[chat.messages.length - 1]?.content.substring(0, 30) + '...'
-                      : 'No messages yet'}
+              <div 
+                className="flex-1 flex items-center cursor-pointer" 
+                onClick={() => handleChatSelect(chat)}
+              >
+                <MessageSquare className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                {!isCollapsed && (
+                  <div className="ml-3 text-left overflow-hidden">
+                    <div className="font-medium truncate">{chat.title}</div>
+                    <div className="text-sm text-gray-400 truncate">
+                      {chat.messages && chat.messages.length > 0
+                        ? chat.messages[chat.messages.length - 1]?.content.substring(0, 30) + '...'
+                        : 'No messages yet'}
+                    </div>
                   </div>
+                )}
+              </div>
+              
+              {!isCollapsed && (
+                <div className="relative flex-shrink-0">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuAnchorEl({ id: chat.id, element: e.currentTarget as HTMLElement });
+                    }}
+                    className="p-1 hover:bg-[#3A3A3A] rounded-full transition-colors"
+                  >
+                    <MoreVertical className="w-4 h-4 text-gray-400" />
+                  </button>
+                  
+                  {menuAnchorEl?.id === chat.id && (
+                    <div className="absolute right-0 top-8 bg-[#292929] shadow-lg rounded-md overflow-hidden z-10 w-36 border border-[#3A3A3A]">
+                      <button 
+                        className="w-full flex items-center px-3 py-2 hover:bg-[#3A3A3A] text-left"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Share chat:', chat.id);
+                          // Implement share functionality here
+                          toast.success('Chat sharing feature coming soon');
+                          setMenuAnchorEl(null);
+                        }}
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        <span>Share</span>
+                      </button>
+                      
+                      <button 
+                        className="w-full flex items-center px-3 py-2 hover:bg-[#3A3A3A] text-left"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Rename chat:', chat.id);
+                          const newTitle = prompt('Enter a new name for this chat:', chat.title);
+                          if (newTitle && newTitle.trim() !== '') {
+                            // Call the updateChatTitle function from context
+                            updateChatTitle(chat.id, newTitle);
+                          }
+                          setMenuAnchorEl(null);
+                        }}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        <span>Rename</span>
+                      </button>
+                      
+                      <button 
+                        className="w-full flex items-center px-3 py-2 hover:bg-[#3A3A3A] text-left text-red-500"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log('Delete chat:', chat.id);
+                          if (confirm('Are you sure you want to delete this chat?')) {
+                            // Call the deleteChat function from context
+                            deleteChat(chat.id);
+                          }
+                          setMenuAnchorEl(null);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </button>
+            </div>
           ))
         ) : (
           !isCollapsed && (
@@ -239,6 +309,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )
         )}
       </div>
+      
+      {/* Click outside to close menu */}
+      {menuAnchorEl && (
+        <div 
+          className="fixed inset-0 z-0" 
+          onClick={() => setMenuAnchorEl(null)}
+        />
+      )}
 
       {/* Footer Navigation */}
       <div className="border-t border-[#2A2A2A]">

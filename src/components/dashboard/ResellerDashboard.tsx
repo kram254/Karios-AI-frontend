@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Paper, Typography, Box } from '@mui/material';
+import { Grid, Paper, Typography, Box, List, ListItem, ListItemIcon, ListItemText, Button, Card, CardContent, CircularProgress } from '@mui/material';
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
 
@@ -9,7 +9,10 @@ export const ResellerDashboard: React.FC = () => {
             <Grid container spacing={3}>
                 <Grid item xs={12}>
                     <Typography variant="h4" component="h1" gutterBottom>
-                        Reseller Dashboard
+                        RESELLER
+                    </Typography>
+                    <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#888' }}>
+                        DASHBOARD
                     </Typography>
                 </Grid>
                 
@@ -68,28 +71,255 @@ export const ResellerDashboard: React.FC = () => {
                     </Paper>
                 </Grid>
 
-                {/* Customer Activity */}
-                <Grid item xs={12} md={6}>
+                {/* Reseller Administrative Functions */}
+                <Grid item xs={12}>
                     <Paper 
                         sx={{ 
-                            p: 2, 
+                            p: 3, 
                             bgcolor: '#1A1A1A',
                             color: '#FFFFFF',
                             border: '1px solid rgba(0, 243, 255, 0.2)'
                         }}
                     >
                         <Typography variant="h6" gutterBottom>
-                            Customer Activity
+                            Administrative Functions
                         </Typography>
-                        <Box sx={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="body1" color="text.secondary">
-                                No recent activity
-                            </Typography>
+                        <List>
+                            {/* System Setup Management */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            System setup management
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    Manage
+                                </Button>
+                            </ListItem>
+                            
+                            {/* Consumption Monitoring */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            Check Consumption: token/$ (minutes ot text) per customer
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    View
+                                </Button>
+                            </ListItem>
+
+                            {/* System Health Check */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            Check system health
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    Check
+                                </Button>
+                            </ListItem>
+
+                            {/* Customer Management */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            Add/suspend/close/delete customers
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    Manage
+                                </Button>
+                            </ListItem>
+
+                            {/* Operator Management */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            Add/suspend/close/delete operators
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    Manage
+                                </Button>
+                            </ListItem>
+
+                            {/* Credit Management */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            Credit customer management
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    Manage
+                                </Button>
+                            </ListItem>
+
+                            {/* Module Configuration */}
+                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
+                                <ListItemIcon sx={{ minWidth: '30px' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={
+                                        <Typography variant="body1" fontWeight="bold">
+                                            Module configuration for its use by the customer
+                                        </Typography>
+                                    } 
+                                />
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        '&:hover': { bgcolor: '#00D4E0' } 
+                                    }}
+                                >
+                                    Configure
+                                </Button>
+                            </ListItem>
+                        </List>
+                    </Paper>
+                </Grid>
+                
+                {/* System Status */}
+                <Grid item xs={12} md={6}>
+                    <Paper 
+                        sx={{ 
+                            p: 3, 
+                            bgcolor: '#1A1A1A',
+                            color: '#FFFFFF',
+                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                            height: '100%'
+                        }}
+                    >
+                        <Typography variant="h6" gutterBottom>
+                            System Status
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Card sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)' }}>
+                                <CardContent>
+                                    <Typography variant="subtitle1" gutterBottom>
+                                        API Health
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <CircularProgress 
+                                            variant="determinate" 
+                                            value={100} 
+                                            size={30} 
+                                            sx={{ color: '#00F3FF' }} 
+                                        />
+                                        <Typography variant="body1" sx={{ ml: 2 }}>
+                                            Connected
+                                        </Typography>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                            
+                            <Card sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)' }}>
+                                <CardContent>
+                                    <Typography variant="subtitle1" gutterBottom>
+                                        Customer Credits
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <CircularProgress 
+                                            variant="determinate" 
+                                            value={85} 
+                                            size={30} 
+                                            sx={{ color: '#00F3FF' }} 
+                                        />
+                                        <Typography variant="body1" sx={{ ml: 2 }}>
+                                            85% Available
+                                        </Typography>
+                                    </Box>
+                                </CardContent>
+                            </Card>
                         </Box>
                     </Paper>
                 </Grid>
 
-                {/* Credit Usage */}
+                {/* Customer Statistics */}
                 <Grid item xs={12} md={6}>
                     <Paper 
                         sx={{ 

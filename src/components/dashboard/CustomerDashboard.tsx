@@ -7,6 +7,7 @@ import { UserRole } from '../../types/user';
 export const CustomerDashboard: React.FC = () => {
     return (
         <DashboardLayout role={UserRole.CUSTOMER}>
+            <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
                 <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h4" component="h1" gutterBottom>
@@ -244,6 +245,7 @@ export const CustomerDashboard: React.FC = () => {
                     </Paper>
                 </Grid>
             </Grid>
+            </div>
         </DashboardLayout>
     );
 };

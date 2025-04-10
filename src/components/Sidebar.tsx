@@ -251,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               
               {!isCollapsed && (
-                <div className="relative flex-shrink-0 ml-2">
+                <div className="absolute right-0 mr-1" style={{ right: '5px' }}>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -262,8 +262,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       display: 'flex', 
                       visibility: 'visible', 
                       opacity: 1,
-                      zIndex: 10,
-                      position: 'relative'
+                      zIndex: 50,
+                      position: 'relative',
+                      backgroundColor: '#2A2A2A'
                     }}
                     aria-label="Chat options"
                   >

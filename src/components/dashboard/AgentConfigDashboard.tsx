@@ -58,6 +58,7 @@ const AgentConfigDashboard: React.FC = () => {
 
     return user ? (
         <DashboardLayout role={user.role}>
+            <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
                 <Grid item xs={12}>
                     <Typography variant="h4" component="h1" gutterBottom>
@@ -300,6 +301,7 @@ const AgentConfigDashboard: React.FC = () => {
                     </Paper>
                 </Grid>
             </Grid>
+            </div>
         </DashboardLayout>
     ) : null;
 };

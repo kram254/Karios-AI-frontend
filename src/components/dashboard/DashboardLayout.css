@@ -88,6 +88,8 @@
     margin-left: 240px;
     padding: 2rem;
     transition: margin-left 0.3s ease;
+    overflow-y: auto;
+    max-height: calc(100vh - 64px);
 }
 
 .dashboard-sidebar.closed + .main-content {

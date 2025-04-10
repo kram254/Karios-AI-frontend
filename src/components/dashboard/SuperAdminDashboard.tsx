@@ -6,6 +6,7 @@ import { UserRole } from '../../types/user';
 export const SuperAdminDashboard: React.FC = () => {
     return (
         <DashboardLayout role={UserRole.SUPER_ADMIN}>
+            <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
             <Grid container spacing={3}>
                 <Grid item xs={12}>
                     <Typography variant="h4" component="h1" gutterBottom>
@@ -391,6 +392,7 @@ export const SuperAdminDashboard: React.FC = () => {
                     </Paper>
                 </Grid>
             </Grid>
+            </div>
         </DashboardLayout>
     );
 };

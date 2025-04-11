@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
     Grid, 
@@ -28,11 +28,22 @@ import { Add as AddIcon } from '@mui/icons-material';
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
 import { useNavigate } from 'react-router-dom';
+import { monitoringService } from '../../services/api/monitoring.service';
+import { userService } from '../../services/api/user.service';
 
-const AgentConfigDashboard: React.FC = () => {
+// Using ReactElement | null return type to properly handle conditional rendering
+const AgentConfigDashboard = (): React.ReactElement | null => {
     // Get user role from auth context
     const { user } = useAuth();
     const navigate = useNavigate();
+    
+    // Loading and metrics state
+    const [loading, setLoading] = useState(true);
+    const [agentMetrics, setAgentMetrics] = useState({
+        activeAgents: 0,
+        successRate: 0,
+        averageResponseTime: 0
+    });
     
     // Notification state
     const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -49,6 +60,63 @@ const AgentConfigDashboard: React.FC = () => {
     
     // Knowledge Access state
     const [respondOnlyIfFound, setRespondOnlyIfFound] = useState<boolean>(true);
+    
+    // Fetch agent metrics when component mounts
+    useEffect(() => {
+        const fetchAgentMetrics = async () => {
+            try {
+                setLoading(true);
+                
+                // Get current user
+                const userResponse = await userService.getCurrentUser();
+                const userId = userResponse.data.id;
+                
+                // Fetch agent performance metrics
+                const currentDate = new Date();
+                const pastDate = new Date();
+                pastDate.setMonth(pastDate.getMonth() - 1);
+                
+                const startDate = pastDate.toISOString().split('T')[0];
+                const endDate = currentDate.toISOString().split('T')[0];
+                
+                const performanceResponse = await monitoringService.getPerformanceMetrics({
+                    startDate,
+                    endDate,
+                    userId
+                });
+                
+                const metrics = performanceResponse.data;
+                setAgentMetrics({
+                    activeAgents: metrics.active_agents || 0,
+                    successRate: metrics.success_rate || 0,
+                    averageResponseTime: metrics.avg_response_time || 0
+                });
+                
+                // Fetch existing agent configuration
+                try {
+                    const agentConfigResponse = await fetch(`/api/v1/agents/config?userId=${userId}`);
+                    const agentConfig = await agentConfigResponse.json();
+                    
+                    if (agentConfig) {
+                        setAgentRole(agentConfig.role || 'customer_support');
+                        setTemperature(agentConfig.temperature || 0.7);
+                        setMaxTokens(agentConfig.max_tokens || 200);
+                        setTopP(agentConfig.top_p || 0.3);
+                        setRespondOnlyIfFound(agentConfig.respond_only_if_found || true);
+                    }
+                } catch (error) {
+                    console.error('Error fetching agent configuration:', error);
+                }
+                
+            } catch (error) {
+                console.error('Error fetching agent metrics:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchAgentMetrics();
+    }, []);
     
     // Voice and Restrictions state
     const [toneOfVoice, setToneOfVoice] = useState<string>('professional');
@@ -73,29 +141,78 @@ const AgentConfigDashboard: React.FC = () => {
     };
     
     // Function to handle save configuration
-    const handleSaveConfig = () => {
-        // Here you would typically save the configuration to your backend
-        // For demonstration purposes, we're just showing a success message
+    const handleSaveConfig = async () => {
+        try {
+            setLoading(true);
+            
+            // Get current user
+            const userResponse = await userService.getCurrentUser();
+            const userId = userResponse.data.id;
+            
+            // Create config object
+            const agentConfig = {
+                userId,
+                role: agentRole,
+                temperature,
+                max_tokens: maxTokens,
+                top_p: topP,
+                respond_only_if_found: respondOnlyIfFound,
+                tone_of_voice: toneOfVoice,
+                context_window: contextWindow,
+                session_persistence: sessionPersistence,
+                moderation_active: moderationActive,
+                max_input_length: maxInputLength,
+                response_style: responseStyle,
+                logging_active: loggingActive
+            };
+            
+            console.log('Saving agent configuration:', agentConfig);
+            
+            // Send configuration to backend
+            const response = await fetch('/api/v1/agents/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(agentConfig)
+            });
+            
+            if (response.ok) {
+                // Display success notification
+                setSnackbarMessage('Agent configuration saved successfully!');
+                setSnackbarSeverity('success');
+            } else {
+                // Display error notification
+                setSnackbarMessage('Failed to save configuration. Please try again.');
+                setSnackbarSeverity('error');
+            }
+        } catch (error) {
+            console.error('Error saving agent configuration:', error);
+            setSnackbarMessage('Error saving configuration. Please try again.');
+            setSnackbarSeverity('error');
+        } finally {
+            setLoading(false);
+            setOpenSnackbar(true);
+        }
+    };
+    
+    // Function to reset configuration to defaults
+    const handleResetConfig = () => {
+        setAgentRole('customer_support');
+        setTemperature(0.7);
+        setMaxTokens(200);
+        setTopP(0.3);
+        setRespondOnlyIfFound(true);
+        setToneOfVoice('professional');
+        setContextWindow('8k');
+        setSessionPersistence('enabled');
+        setModerationActive(true);
+        setMaxInputLength(500);
+        setResponseStyle('formatted');
+        setLoggingActive(true);
         
-        const agentConfig = {
-            agentRole,
-            temperature,
-            maxTokens,
-            topP,
-            respondOnlyIfFound,
-            toneOfVoice,
-            contextWindow,
-            sessionPersistence,
-            moderationActive,
-            maxInputLength,
-            responseStyle,
-            loggingActive
-        };
-        
-        console.log('Saving agent configuration:', agentConfig);
-        
-        // Show success notification
-        setSnackbarMessage('Agent configuration saved successfully!');
+        // Display success notification
+        setSnackbarMessage('Configuration reset to defaults');
         setSnackbarSeverity('success');
         setOpenSnackbar(true);
     };
@@ -108,7 +225,7 @@ const AgentConfigDashboard: React.FC = () => {
     return user ? (
         <DashboardLayout role={user.role}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
-            <Grid container spacing={3}>
+            <Grid container spacing={3} sx={{ mb: 3 }}>
                 <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <div>
                         <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#00F3FF', textTransform: 'uppercase' }}>
@@ -379,27 +496,50 @@ const AgentConfigDashboard: React.FC = () => {
                             </Grid>
                         </Grid>
                         
-                        {/* Save Button */}
+                        {/* Config Action Buttons */}
                         <Grid item xs={12} sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                            <Button 
-                                variant="contained" 
-                                size="large"
-                                onClick={handleSaveConfig}
-                                sx={{ 
-                                    bgcolor: '#00F3FF', 
-                                    color: '#000', 
-                                    px: 4,
-                                    py: 1,
-                                    '&:hover': { 
-                                        bgcolor: '#00D4E0',
-                                        transform: 'translateY(-2px)',
-                                        boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
-                                    },
-                                    transition: 'all 0.2s ease'
-                                }}
-                            >
-                                SAVE CONFIGURATION
-                            </Button>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <Button 
+                                    variant="outlined"
+                                    size="large"
+                                    onClick={handleResetConfig}
+                                    disabled={loading}
+                                    sx={{ 
+                                        color: '#00F3FF',
+                                        borderColor: '#00F3FF',
+                                        px: 3,
+                                        py: 1,
+                                        '&:hover': { 
+                                            borderColor: '#00D4E0', 
+                                            backgroundColor: 'rgba(0, 243, 255, 0.1)'
+                                        },
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    RESET DEFAULTS
+                                </Button>
+                                <Button 
+                                    variant="contained" 
+                                    size="large"
+                                    onClick={handleSaveConfig}
+                                    disabled={loading}
+                                    sx={{ 
+                                        bgcolor: '#00F3FF', 
+                                        color: '#000', 
+                                        px: 4,
+                                        py: 1,
+                                        '&:hover': { 
+                                            bgcolor: '#00D4E0',
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
+                                        },
+                                        transition: 'all 0.2s ease',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    {loading ? 'SAVING...' : 'SAVE CONFIGURATION'}
+                                </Button>
+                            </Box>
                         </Grid>
                     </Paper>
                 </Grid>

@@ -6,6 +6,8 @@
     color: #FFFFFF;
     width: 100%;
     overflow-x: hidden;
+    padding: 0;
+    margin: 0;
 }
 
 .dashboard-nav {
@@ -116,7 +118,7 @@
 .main-content {
     flex-grow: 1;
     margin-left: 250px;
-    padding: 1.5rem;
+    padding: 1rem 0.5rem 1.5rem 0.5rem;
     transition: margin-left 0.3s ease, padding 0.3s ease;
     overflow-y: auto;
     max-height: calc(100vh - 60px);
@@ -130,10 +132,10 @@
 }
 
 .dashboard-scroll-container {
-    width: 100%;
+    width: 98%;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0.5rem;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;

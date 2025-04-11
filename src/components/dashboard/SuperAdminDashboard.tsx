@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
 import { Grid, Paper, Typography, Box, List, ListItem, ListItemIcon, ListItemText, Button, Divider, Card, CardContent, CircularProgress } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
+import { useNavigate } from 'react-router-dom';
 
 export const SuperAdminDashboard: React.FC = () => {
+    const navigate = useNavigate();
+    
+    // Function to handle creating a new chat
+    const handleNewChat = () => {
+        navigate('/chat');
+    };
+    
+    // Function to handle admin functions
+    const handleAdminAction = (action: string) => {
+        console.log(`Admin action: ${action}`);
+        // Here you would implement the actual admin functionality
+        // For demonstration purposes, we're just logging the action
+    };
     return (
         <DashboardLayout role={UserRole.SUPER_ADMIN}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
@@ -17,6 +32,27 @@ export const SuperAdminDashboard: React.FC = () => {
                             DASHBOARD
                         </Typography>
                     </div>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleNewChat}
+                        sx={{
+                            bgcolor: '#00F3FF',
+                            color: '#000000',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 10px rgba(0, 243, 255, 0.3)',
+                            padding: '8px 16px',
+                            '&:hover': {
+                                bgcolor: '#00D4E0',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
+                            },
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        New Chat
+                    </Button>
                 </Grid>
                 
                 {/* Quick Stats */}
@@ -121,6 +157,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 <Button 
                                     variant="contained" 
                                     size="small" 
+                                    onClick={() => handleAdminAction('system_setup')}
                                     sx={{ 
                                         bgcolor: '#00F3FF', 
                                         color: '#000', 
@@ -221,6 +258,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 <Button 
                                     variant="contained" 
                                     size="small" 
+                                    onClick={() => handleAdminAction('system_setup')}
                                     sx={{ 
                                         bgcolor: '#00F3FF', 
                                         color: '#000', 
@@ -246,6 +284,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 <Button 
                                     variant="contained" 
                                     size="small" 
+                                    onClick={() => handleAdminAction('system_setup')}
                                     sx={{ 
                                         bgcolor: '#00F3FF', 
                                         color: '#000', 
@@ -271,6 +310,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 <Button 
                                     variant="contained" 
                                     size="small" 
+                                    onClick={() => handleAdminAction('system_setup')}
                                     sx={{ 
                                         bgcolor: '#00F3FF', 
                                         color: '#000', 
@@ -296,6 +336,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 <Button 
                                     variant="contained" 
                                     size="small" 
+                                    onClick={() => handleAdminAction('system_setup')}
                                     sx={{ 
                                         bgcolor: '#00F3FF', 
                                         color: '#000', 

@@ -20,14 +20,25 @@ import {
     ListItemIcon,
     ListItemText,
     Checkbox,
-    Divider
+    Divider,
+    Snackbar,
+    Alert
 } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
+import { useNavigate } from 'react-router-dom';
 
 const AgentConfigDashboard: React.FC = () => {
     // Get user role from auth context
     const { user } = useAuth();
+    const navigate = useNavigate();
+    
+    // Notification state
+    const [openSnackbar, setOpenSnackbar] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+    
     // Agent Type Configuration state
     const [agentRole, setAgentRole] = useState<string>('customer_support');
     
@@ -55,6 +66,44 @@ const AgentConfigDashboard: React.FC = () => {
     
     // Logs state
     const [loggingActive, setLoggingActive] = useState<boolean>(true);
+    
+    // Function to handle creating a new chat
+    const handleNewChat = () => {
+        navigate('/chat');
+    };
+    
+    // Function to handle save configuration
+    const handleSaveConfig = () => {
+        // Here you would typically save the configuration to your backend
+        // For demonstration purposes, we're just showing a success message
+        
+        const agentConfig = {
+            agentRole,
+            temperature,
+            maxTokens,
+            topP,
+            respondOnlyIfFound,
+            toneOfVoice,
+            contextWindow,
+            sessionPersistence,
+            moderationActive,
+            maxInputLength,
+            responseStyle,
+            loggingActive
+        };
+        
+        console.log('Saving agent configuration:', agentConfig);
+        
+        // Show success notification
+        setSnackbarMessage('Agent configuration saved successfully!');
+        setSnackbarSeverity('success');
+        setOpenSnackbar(true);
+    };
+    
+    // Function to handle closing the snackbar
+    const handleCloseSnackbar = () => {
+        setOpenSnackbar(false);
+    };
 
     return user ? (
         <DashboardLayout role={user.role}>
@@ -69,6 +118,27 @@ const AgentConfigDashboard: React.FC = () => {
                             DASHBOARD
                         </Typography>
                     </div>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleNewChat}
+                        sx={{
+                            bgcolor: '#00F3FF',
+                            color: '#000000',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 10px rgba(0, 243, 255, 0.3)',
+                            padding: '8px 16px',
+                            '&:hover': {
+                                bgcolor: '#00D4E0',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
+                            },
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        New Chat
+                    </Button>
                 </Grid>
                 
                 <Grid item xs={12}>
@@ -313,13 +383,19 @@ const AgentConfigDashboard: React.FC = () => {
                         <Grid item xs={12} sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                             <Button 
                                 variant="contained" 
-                                size="large" 
+                                size="large"
+                                onClick={handleSaveConfig}
                                 sx={{ 
                                     bgcolor: '#00F3FF', 
                                     color: '#000', 
                                     px: 4,
                                     py: 1,
-                                    '&:hover': { bgcolor: '#00D4E0' } 
+                                    '&:hover': { 
+                                        bgcolor: '#00D4E0',
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
+                                    },
+                                    transition: 'all 0.2s ease'
                                 }}
                             >
                                 SAVE CONFIGURATION
@@ -329,6 +405,22 @@ const AgentConfigDashboard: React.FC = () => {
                 </Grid>
             </Grid>
             </div>
+            
+            {/* Success/Error Notification */}
+            <Snackbar 
+                open={openSnackbar} 
+                autoHideDuration={6000} 
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={handleCloseSnackbar} 
+                    severity={snackbarSeverity} 
+                    sx={{ width: '100%', bgcolor: snackbarSeverity === 'success' ? 'rgba(0, 243, 255, 0.2)' : undefined }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </DashboardLayout>
     ) : null;
 };

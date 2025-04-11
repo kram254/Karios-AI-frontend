@@ -3,8 +3,15 @@ import { Grid, Paper, Typography, Box, Button, List, ListItem, ListItemIcon, Lis
 import { Add as AddIcon } from '@mui/icons-material';
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
+import { useNavigate } from 'react-router-dom';
 
 export const CustomerDashboard: React.FC = () => {
+    const navigate = useNavigate();
+    
+    // Function to handle creating a new chat
+    const handleNewChat = () => {
+        navigate('/chat');
+    };
     return (
         <DashboardLayout role={UserRole.CUSTOMER}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
@@ -21,6 +28,7 @@ export const CustomerDashboard: React.FC = () => {
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
+                        onClick={handleNewChat}
                         sx={{
                             bgcolor: '#00F3FF',
                             color: '#000000',

@@ -1,9 +1,17 @@
 import React from 'react';
 import { Grid, Paper, Typography, Box, List, ListItem, ListItemIcon, ListItemText, Button, Card, CardContent, CircularProgress } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { DashboardLayout } from './DashboardLayout';
 import { UserRole } from '../../types/user';
+import { useNavigate } from 'react-router-dom';
 
 export const ResellerDashboard: React.FC = () => {
+    const navigate = useNavigate();
+    
+    // Function to handle creating a new chat
+    const handleNewChat = () => {
+        navigate('/chat');
+    };
     return (
         <DashboardLayout role={UserRole.RESELLER}>
             <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
@@ -17,6 +25,27 @@ export const ResellerDashboard: React.FC = () => {
                             DASHBOARD
                         </Typography>
                     </div>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleNewChat}
+                        sx={{
+                            bgcolor: '#00F3FF',
+                            color: '#000000',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 10px rgba(0, 243, 255, 0.3)',
+                            padding: '8px 16px',
+                            '&:hover': {
+                                bgcolor: '#00D4E0',
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
+                            },
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        New Chat
+                    </Button>
                 </Grid>
                 
                 {/* Quick Stats */}

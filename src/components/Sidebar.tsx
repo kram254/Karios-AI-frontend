@@ -229,9 +229,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           chats.map((chat) => (
             <div 
               key={chat.id}
-              className={`relative w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+              className={`relative w-full flex items-center p-4 hover:bg-[#2A2A2A] group transition-colors ${
                 currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : ''
               }`}
+              style={{ position: 'relative' }}
             >
               <div 
                 className="flex-1 flex items-center cursor-pointer" 
@@ -251,21 +252,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               
               {!isCollapsed && (
-                <div className="absolute right-0 mr-1" style={{ right: '5px' }}>
+                <div className="absolute right-0 mr-2" style={{ top: '50%', transform: 'translateY(-50%)', zIndex: 10 }}>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       setMenuAnchorEl({ id: chat.id, element: e.currentTarget as HTMLElement });
                     }}
-                    className="p-1 hover:bg-[#3A3A3A] rounded-full transition-colors flex items-center justify-center"
+                    className="p-1 hover:bg-[#3A3A3A] rounded-full transition-colors flex items-center justify-center group-hover:bg-[#3A3A3A]"
                     style={{ 
                       display: 'flex', 
                       visibility: 'visible', 
                       opacity: 1,
                       zIndex: 50,
-                      position: 'fixed',
-                      right: isCollapsed ? '10px' : '15px',
-                      backgroundColor: '#2A2A2A'
+                      backgroundColor: '#2A2A2A',
+                      width: '24px',
+                      height: '24px'
                     }}
                     aria-label="Chat options"
                   >

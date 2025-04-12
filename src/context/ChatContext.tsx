@@ -60,9 +60,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Chats loaded:', response.data);
       setChats(response.data);
       
-      if (response.data.length > 0 && !currentChat) {
-        setCurrentChat(response.data[0]);
-      }
+      // Don't automatically set the first chat as current to allow welcome screen to show
+      // Only uncomment this if you want to auto-load the first chat
+      // if (response.data.length > 0 && !currentChat) {
+      //   setCurrentChat(response.data[0]);
+      // }
       
       setError(null);
     } catch (err: unknown) {

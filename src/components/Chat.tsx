@@ -68,20 +68,62 @@ const Chat: React.FC = () => {
     }
   };
 
-  // *Modizx* Added welcome screen when no chat is selected
+  // Modern welcome screen inspired by DeepSeek
   if (!currentChat) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-[#0A0A0A] text-white p-8">
-        <MessageSquare className="w-16 h-16 mb-4 text-cyan-500" />
-        <h1 className="text-2xl font-bold mb-2">Welcome to Agentando AI</h1>
-        <p className="text-gray-400 text-center mb-6">Start a new conversation or select an existing chat</p>
-        <button
-          onClick={() => createNewChat()}
-          className="flex items-center gap-2 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-black rounded-lg transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>New Chat</span>
-        </button>
+      <div className="flex flex-col items-center justify-center h-full bg-[#0A0A0A] text-white relative overflow-hidden">
+        {/* Center content area with improved responsiveness */}
+        <div className="flex flex-col items-center justify-center w-full mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-12 md:py-16 relative z-10">
+          {/* AI Avatar with enhanced glow */}
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#00F3FF] to-[#0077B6] flex items-center justify-center mb-6 sm:mb-8 shadow-lg shadow-[#00F3FF]/30 pulse-glow">
+            <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-black" />
+          </div>
+          
+          {/* Welcome Message with enhanced typography */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-[#00F3FF] to-[#00D4E0] bg-clip-text text-transparent neon-text">
+            Hi, I'm Agentando AI.
+          </h1>
+          <p className="text-gray-400 text-center text-sm sm:text-base mb-8 sm:mb-10 max-w-md">How can I help you today?</p>
+          
+          {/* Message Input Area with glowing border */}
+          <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#1A1A1A] rounded-xl shadow-lg overflow-hidden border border-[#00F3FF]/20 glow-border transition-all duration-300 hover:border-[#00F3FF]/40 hover:shadow-[#00F3FF]/20 hover:shadow-xl">
+            <form onSubmit={handleSubmit} className="relative">
+              <textarea
+                placeholder="Message Agentando AI..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full bg-[#1A1A1A] text-white outline-none border-none py-3 px-4 resize-none h-[56px] sm:h-[64px] placeholder-gray-500 focus:placeholder-[#00F3FF]/50 transition-all"
+                disabled={isProcessing}
+              />
+              <div className="absolute bottom-0 right-0 flex items-center p-2">
+                {/* New chat button with enhanced hover effect */}
+                <button 
+                  type="button" 
+                  className="text-gray-400 hover:text-[#00F3FF] p-2 rounded-full transition-all duration-300 hover:bg-[#00F3FF]/10 hover:shadow-inner"
+                  onClick={() => createNewChat()}
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+                {/* Send button with glowing effect when active */}
+                <button 
+                  type="submit" 
+                  disabled={!message.trim() || isProcessing}
+                  className={`p-2 rounded-full transition-all duration-300 ${!message.trim() || isProcessing ? 'text-gray-500' : 'text-[#00F3FF] hover:bg-[#00F3FF]/10 hover:shadow-sm hover:shadow-[#00F3FF]/20 active:bg-[#00F3FF]/20'}`}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          {/* Small caption */}
+          <p className="text-gray-600 text-xs mt-4 text-center animate-pulse">Type your message and press Enter</p>
+        </div>
+        
+        {/* Enhanced background effects */}
+        <div className="absolute inset-0 bg-gradient-radial from-[#00F3FF]/10 to-transparent opacity-20 pointer-events-none animate-pulse-slow" style={{ width: '100%', height: '100%' }}></div>
+        <div className="absolute inset-0 starry-background pointer-events-none"></div>
       </div>
     );
   }

@@ -46,11 +46,33 @@ const Chat: React.FC = () => {
 
     setIsProcessing(true);
     try {
-      await addMessage({
-        role: "user",
-        content: message.trim()
-      });
-      setMessage("");
+      // If no current chat, create a new one first and then send the message
+      if (!currentChat) {
+        console.log('Creating new chat before sending message');
+        // We'll handle the message sending after chat creation to ensure proper sequencing
+        const newChat = await createNewChat();
+        
+        if (newChat) {
+          // Short delay to ensure chat is properly registered
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          console.log('New chat created, now sending initial message');
+          await addMessage({
+            role: "user",
+            content: message.trim()
+          });
+          setMessage("");
+        } else {
+          throw new Error('Failed to create new chat');
+        }
+      } else {
+        // Normal flow when chat already exists
+        await addMessage({
+          role: "user",
+          content: message.trim()
+        });
+        setMessage("");
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
@@ -97,11 +119,23 @@ const Chat: React.FC = () => {
                 disabled={isProcessing}
               />
               <div className="absolute bottom-0 right-0 flex items-center p-2">
-                {/* New chat button with enhanced hover effect */}
+                {/* New chat button with enhanced hover effect - just creates a new chat without sending a message */}
                 <button 
                   type="button" 
                   className="text-gray-400 hover:text-[#00F3FF] p-2 rounded-full transition-all duration-300 hover:bg-[#00F3FF]/10 hover:shadow-inner"
-                  onClick={() => createNewChat()}
+                  onClick={async () => {
+                    setIsProcessing(true);
+                    try {
+                      await createNewChat();
+                      // Clear any message in the input field after creating a new chat
+                      setMessage("");
+                    } catch (error) {
+                      console.error("Error creating new chat:", error);
+                      toast.error("Failed to create new chat");
+                    } finally {
+                      setIsProcessing(false);
+                    }
+                  }}
                 >
                   <Plus className="w-5 h-5" />
                 </button>

@@ -29,7 +29,7 @@ interface ChatContextType {
   chats: Chat[];
   loading: boolean;
   error: string | null;
-  createNewChat: () => Promise<Chat | null>;
+  createNewChat: (customTitle?: string) => Promise<Chat | null>;
   createAgentChat: () => Promise<Chat | null>; // Update createAgentChat method
   setCurrentChat: (chat: Chat) => void;
   addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string }) => Promise<void>;
@@ -77,12 +77,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const createNewChat = async () => {
+  const createNewChat = async (customTitle?: string) => {
     try {
       setLoading(true);
       console.log('Attempting to create a new chat...');
       const response = await chatService.createChat({
-        title: 'New Chat',
+        title: customTitle || 'New Conversation',
         chat_type: 'default',
         language: language.code // Include the selected language
       });

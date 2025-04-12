@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
 import MessageFormatter from "./MessageFormatter";
 import { chatService } from "../services/api/chat.service";
+import { generateTitleFromMessage } from "../utils/titleGenerator";
 import "../styles/chat.css";
 
 interface Message {
@@ -55,13 +56,17 @@ const Chat: React.FC = () => {
       // Clear the input field immediately for better UX
       setMessage("");
       
-      // If no current chat, create a new one first
+      // If no current chat, create a new one first with a descriptive title
       if (!currentChat) {
         console.log('Creating new chat before sending message');
         
         try {
-          // Create a new chat and wait for it to complete
-          const newChat = await createNewChat();
+          // Generate a descriptive title from the user's message
+          const chatTitle = generateTitleFromMessage(userMessage);
+          console.log('Generated chat title:', chatTitle);
+          
+          // Create a new chat with the generated title
+          const newChat = await createNewChat(chatTitle);
           console.log('New chat created with ID:', newChat?.id);
           
           // Wait for the chat to be fully created and registered

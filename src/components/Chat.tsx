@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
 import MessageFormatter from "./MessageFormatter";
+import { chatService } from "../services/api/chat.service";
 import "../styles/chat.css";
 
 interface Message {
@@ -27,7 +28,7 @@ interface Chat {
 }
 
 const Chat: React.FC = () => {
-  const { currentChat, addMessage, createNewChat } = useChat();
+  const { currentChat, setCurrentChat, addMessage, createNewChat } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -44,34 +45,56 @@ const Chat: React.FC = () => {
     e.preventDefault();
     if (!message.trim() || isProcessing) return;
 
+    const messageContent = message.trim();
     setIsProcessing(true);
+    
     try {
-      // If no current chat, create a new one first and then send the message
+      // Store the message content before any async operations
+      const userMessage = messageContent;
+      
+      // Clear the input field immediately for better UX
+      setMessage("");
+      
+      // If no current chat, create a new one first
       if (!currentChat) {
         console.log('Creating new chat before sending message');
-        // We'll handle the message sending after chat creation to ensure proper sequencing
-        const newChat = await createNewChat();
         
-        if (newChat) {
-          // Short delay to ensure chat is properly registered
-          await new Promise(resolve => setTimeout(resolve, 100));
+        try {
+          // Create a new chat and wait for it to complete
+          const newChat = await createNewChat();
+          console.log('New chat created with ID:', newChat?.id);
           
-          console.log('New chat created, now sending initial message');
-          await addMessage({
-            role: "user",
-            content: message.trim()
-          });
-          setMessage("");
-        } else {
-          throw new Error('Failed to create new chat');
+          // Wait for the chat to be fully created and registered
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Now send the message to the newly created chat
+          if (newChat && newChat.id) {
+            console.log('Sending initial message to chat ID:', newChat.id);
+            // Fix: Pass only the content string instead of an object with role
+            await chatService.addMessage(newChat.id, userMessage);
+            
+            console.log('Message sent successfully to new chat');
+            
+            // Refresh the chat to get the AI response
+            const updatedChatResponse = await chatService.getChat(newChat.id);
+            if (updatedChatResponse && updatedChatResponse.data) {
+              console.log('Updated chat with messages:', updatedChatResponse.data);
+              setCurrentChat(updatedChatResponse.data);
+            }
+          } else {
+            throw new Error('New chat creation failed or returned invalid data');
+          }
+        } catch (chatError) {
+          console.error('Error in chat creation flow:', chatError);
+          throw chatError;
         }
       } else {
         // Normal flow when chat already exists
+        console.log('Sending message to existing chat:', currentChat.id);
         await addMessage({
           role: "user",
-          content: message.trim()
+          content: userMessage
         });
-        setMessage("");
       }
     } catch (error) {
       console.error("Error sending message:", error);

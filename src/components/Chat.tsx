@@ -165,7 +165,7 @@ const Chat: React.FC = () => {
                     }
                   }}
                 >
-                  <Plus className="w-5 h-5" />
+                  {/* <Plus className="w-5 h-5" /> */}
                 </button>
                 {/* Send button with glowing effect when active */}
                 <button 

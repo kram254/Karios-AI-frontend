@@ -68,7 +68,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         description: '', 
         updateFrequency: UpdateFrequency.NEVER 
     });
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [fileDescription, setFileDescription] = useState('');
     
     // Dialog states
@@ -117,7 +117,9 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files.length > 0) {
-            setSelectedFile(event.target.files[0]);
+            // Convert FileList to Array
+            const filesArray = Array.from(event.target.files);
+            setSelectedFiles(filesArray);
         }
     };
 
@@ -135,7 +137,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const resetForms = () => {
         setTextContent({ title: '', content: '', updateFrequency: UpdateFrequency.NEVER });
         setUrlContent({ url: '', description: '', updateFrequency: UpdateFrequency.NEVER });
-        setSelectedFile(null);
+        setSelectedFiles([]);
         setFileDescription('');
     };
 
@@ -221,7 +223,10 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
 
     const handleUploadFile = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedFile) return;
+        if (selectedFiles.length === 0) {
+            setError('Please select at least one file to upload');
+            return;
+        }
         
         setLoading(true);
         clearMessages();
@@ -234,16 +239,50 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         
         try {
             const formData = fileDescription ? { description: fileDescription } : undefined;
-            const response = await categoryService.uploadFile(parseInt(categoryId), selectedFile, formData);
-            setSuccess('File uploaded successfully');
+            const uploadResults = [];
+            
+            // Upload each file sequentially
+            for (const file of selectedFiles) {
+                try {
+                    const response = await categoryService.uploadFile(parseInt(categoryId), file, formData);
+                    uploadResults.push({
+                        success: true,
+                        fileName: file.name,
+                        response: response.data
+                    });
+                    
+                    // Notify parent if callback exists and response has data
+                    if (onKnowledgeAdded && response.data) {
+                        onKnowledgeAdded(response.data);
+                    }
+                } catch (err) {
+                    console.error(`Failed to upload file ${file.name}:`, err);
+                    uploadResults.push({
+                        success: false,
+                        fileName: file.name,
+                        error: err
+                    });
+                }
+            }
+            
+            // Count successes and failures
+            const successCount = uploadResults.filter(r => r.success).length;
+            const failureCount = uploadResults.length - successCount;
+            
+            // Create appropriate success message
+            if (successCount === uploadResults.length) {
+                setSuccess(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
+            } else if (successCount > 0) {
+                setSuccess(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}, but ${failureCount} failed`);
+            } else {
+                setError('Failed to upload files. Please try again.');
+            }
+            
             validateCategoryAndFetchItems();
             resetForms();
-            if (onKnowledgeAdded && response.data) {
-                onKnowledgeAdded(response.data);
-            }
         } catch (error) {
-            console.error('Failed to upload file:', error);
-            setError('Failed to upload file. Please try again.');
+            console.error('Failed to upload files:', error);
+            setError('Failed to upload files. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -693,6 +732,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 ref={fileInputRef}
                                 style={{ display: 'none' }}
                                 onChange={handleFileSelect}
+                                multiple
                             />
                             <Box 
                                 sx={{ 
@@ -709,24 +749,32 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 }}
                                 onClick={triggerFileInput}
                             >
-                                {selectedFile ? (
+                                {selectedFiles.length > 0 ? (
                                     <>
                                         <FileIcon sx={{ fontSize: 40, color: '#00F3FF', mb: 1 }} />
                                         <Typography variant="body1" gutterBottom>
-                                            {selectedFile.name}
+                                            {selectedFiles.length === 1 
+                                                ? selectedFiles[0].name 
+                                                : `${selectedFiles.length} files selected`}
                                         </Typography>
-                                        <Typography variant="body2" color="textSecondary">
-                                            {(selectedFile.size / 1024).toFixed(2)} KB
-                                        </Typography>
+                                        {selectedFiles.length === 1 ? (
+                                            <Typography variant="body2" color="textSecondary">
+                                                {(selectedFiles[0].size / 1024).toFixed(2)} KB
+                                            </Typography>
+                                        ) : (
+                                            <Typography variant="body2" color="textSecondary">
+                                                {selectedFiles.map(f => f.name).join(', ')}
+                                            </Typography>
+                                        )}
                                     </>
                                 ) : (
                                     <>
                                         <UploadIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.5)', mb: 1 }} />
                                         <Typography variant="body1" gutterBottom>
-                                            Click to select a file
+                                            Click to select files
                                         </Typography>
                                         <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                                            Supports PDF, DOCX, TXT, and more
+                                            Supports PDF, DOCX, TXT, and more. Select multiple files by holding Ctrl/Cmd.
                                         </Typography>
                                     </>
                                 )}
@@ -761,7 +809,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                             <Button
                                 variant="contained"
                                 onClick={handleUploadFile}
-                                disabled={loading || !selectedFile}
+                                disabled={loading || selectedFiles.length === 0}
                                 startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
                                 sx={{
                                     bgcolor: '#00F3FF',
@@ -771,7 +819,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                     }
                                 }}
                             >
-                                Upload File
+                                Upload {selectedFiles.length > 1 ? `${selectedFiles.length} Files` : 'File'}
                             </Button>
                         </div>
                     </TabPanel>

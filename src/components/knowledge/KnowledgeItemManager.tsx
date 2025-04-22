@@ -217,8 +217,16 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             const response = await categoryService.getKnowledgeItem(itemId);
             const item = response.data;
             
-            if (item && item.content_metadata) {
-                const metadata = item.content_metadata;
+            // Parse metadata from content field (JSON string)
+            let metadata = {};
+            if (item && item.content) {
+                try {
+                    metadata = JSON.parse(item.content);
+                } catch (e) {
+                    console.error('Error parsing content as JSON:', e);
+                    metadata = {};
+                }
+                
                 const status = metadata.processing_status || '';
                 const progress = metadata.processing_progress || 0;
                 const statusMessage = metadata.status_message || '';

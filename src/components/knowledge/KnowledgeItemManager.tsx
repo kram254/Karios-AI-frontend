@@ -196,7 +196,20 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         itemId: number | null;
         progress: number;
         status: string;
-    }>({ isProcessing: false, itemId: null, progress: 0, status: '' });
+        statusMessage: string;
+        currentPage: string | null;
+        pagesProcessed: number;
+        error: string | null;
+    }>({ 
+        isProcessing: false, 
+        itemId: null, 
+        progress: 0, 
+        status: '', 
+        statusMessage: '',
+        currentPage: null,
+        pagesProcessed: 0,
+        error: null
+    });
 
     // Function to check URL processing status
     const checkUrlProcessingStatus = async (itemId: number) => {
@@ -205,37 +218,66 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             const item = response.data;
             
             if (item && item.content_metadata) {
-                const status = item.content_metadata.processing_status || '';
-                const progress = item.content_metadata.processing_progress || 0;
+                const metadata = item.content_metadata;
+                const status = metadata.processing_status || '';
+                const progress = metadata.processing_progress || 0;
+                const statusMessage = metadata.status_message || '';
+                const currentPage = metadata.current_page || null;
+                const pagesProcessed = metadata.pages_processed || 0;
+                const processingError = metadata.processing_error || null;
                 
                 setUrlProcessingStatus(prev => ({
                     ...prev,
                     progress: progress,
-                    status: status
+                    status: status,
+                    statusMessage: statusMessage,
+                    currentPage: currentPage,
+                    pagesProcessed: pagesProcessed,
+                    error: processingError
                 }));
                 
                 // Continue polling if still processing
                 if (status === 'processing' || status === '') {
-                    setTimeout(() => checkUrlProcessingStatus(itemId), 2000); // Poll every 2 seconds
+                    setTimeout(() => checkUrlProcessingStatus(itemId), 1500); // Poll every 1.5 seconds for more responsive updates
                 } else {
                     // Processing complete
                     if (status === 'completed') {
-                        setSuccess('URL successfully processed and added to knowledge base!');
-                    } else if (status === 'failed') {
-                        setError(`URL processing failed: ${item.content_metadata.error || 'Unknown error'}`); 
+                        setSuccess('Knowledge base updated with URL content successfully!');
+                    } else if (status === 'error' || status === 'failed') {
+                        setError(`URL processing failed: ${processingError || 'Unknown error'}`);
+                    } else if (status === 'limited') {
+                        setSuccess('URL processed with limited capability (basic extraction)');
                     }
                     
-                    // Reset processing state after 2 seconds
+                    // Reset processing state after showing the result for 3 seconds
                     setTimeout(() => {
-                        setUrlProcessingStatus({ isProcessing: false, itemId: null, progress: 0, status: '' });
+                        setUrlProcessingStatus({ 
+                            isProcessing: false, 
+                            itemId: null, 
+                            progress: 0, 
+                            status: '',
+                            statusMessage: '',
+                            currentPage: null,
+                            pagesProcessed: 0,
+                            error: null
+                        });
                         validateCategoryAndFetchItems(); // Refresh items
-                    }, 2000);
+                    }, 3000);
                 }
             }
         } catch (error) {
             console.error('Error checking URL processing status:', error);
             // Stop checking after error
-            setUrlProcessingStatus({ isProcessing: false, itemId: null, progress: 0, status: '' });
+            setUrlProcessingStatus({ 
+                isProcessing: false, 
+                itemId: null, 
+                progress: 0, 
+                status: '',
+                statusMessage: '',
+                currentPage: null,
+                pagesProcessed: 0,
+                error: 'Failed to check processing status'
+            });
         }
     };
 
@@ -770,9 +812,25 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                             </TextField>
                             {urlProcessingStatus.isProcessing ? (
                                 <Box sx={{ width: '100%', mt: 2, mb: 2 }}>
-                                    <Typography variant="body2">
-                                        Processing URL: {urlProcessingStatus.status}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                        <CircularProgress size={20} sx={{ color: '#00F3FF', mr: 1 }} />
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                            Processing URL{urlProcessingStatus.status === 'processing' ? '...' : ''}
+                                        </Typography>
+                                    </Box>
+                                    
+                                    {urlProcessingStatus.statusMessage && (
+                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 1 }}>
+                                            {urlProcessingStatus.statusMessage}
+                                        </Typography>
+                                    )}
+                                    
+                                    {urlProcessingStatus.currentPage && (
+                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1, display: 'block' }}>
+                                            Currently processing: {urlProcessingStatus.currentPage}
+                                        </Typography>
+                                    )}
+                                    
                                     <LinearProgress 
                                         variant="determinate" 
                                         value={urlProcessingStatus.progress}
@@ -782,12 +840,21 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                             backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                             '& .MuiLinearProgress-bar': {
                                                 backgroundColor: '#00F3FF',
+                                                transition: 'transform 0.4s linear'
                                             }
                                         }}
                                     />
-                                    <Typography variant="caption" sx={{ mt: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
-                                        {urlProcessingStatus.progress}% complete - Scraping and processing URL content
-                                    </Typography>
+                                    
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                            {urlProcessingStatus.progress}% complete
+                                        </Typography>
+                                        {urlProcessingStatus.pagesProcessed > 0 && (
+                                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                                {urlProcessingStatus.pagesProcessed} page(s) processed
+                                            </Typography>
+                                        )}
+                                    </Box>
                                 </Box>
                             ) : (
                                 <Button

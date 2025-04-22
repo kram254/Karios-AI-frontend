@@ -21,6 +21,7 @@ import {
     DialogActions,
     Alert,
     CircularProgress,
+    LinearProgress,
     Tooltip
 } from '@mui/material';
 import {
@@ -189,16 +190,65 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         }
     };
 
+    // Track URL processing status
+    const [urlProcessingStatus, setUrlProcessingStatus] = useState<{
+        isProcessing: boolean;
+        itemId: number | null;
+        progress: number;
+        status: string;
+    }>({ isProcessing: false, itemId: null, progress: 0, status: '' });
+
+    // Function to check URL processing status
+    const checkUrlProcessingStatus = async (itemId: number) => {
+        try {
+            const response = await categoryService.getKnowledgeItem(itemId);
+            const item = response.data;
+            
+            if (item && item.content_metadata) {
+                const status = item.content_metadata.processing_status || '';
+                const progress = item.content_metadata.processing_progress || 0;
+                
+                setUrlProcessingStatus(prev => ({
+                    ...prev,
+                    progress: progress,
+                    status: status
+                }));
+                
+                // Continue polling if still processing
+                if (status === 'processing' || status === '') {
+                    setTimeout(() => checkUrlProcessingStatus(itemId), 2000); // Poll every 2 seconds
+                } else {
+                    // Processing complete
+                    if (status === 'completed') {
+                        setSuccess('URL successfully processed and added to knowledge base!');
+                    } else if (status === 'failed') {
+                        setError(`URL processing failed: ${item.content_metadata.error || 'Unknown error'}`); 
+                    }
+                    
+                    // Reset processing state after 2 seconds
+                    setTimeout(() => {
+                        setUrlProcessingStatus({ isProcessing: false, itemId: null, progress: 0, status: '' });
+                        validateCategoryAndFetchItems(); // Refresh items
+                    }, 2000);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking URL processing status:', error);
+            // Stop checking after error
+            setUrlProcessingStatus({ isProcessing: false, itemId: null, progress: 0, status: '' });
+        }
+    };
+
     const handleAddUrl = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        clearMessages();
-        
-        // Check if category still exists
-        if (!await checkCategoryExists()) {
-            setLoading(false);
+        if (!urlContent.url) {
+            setError('URL is required');
             return;
         }
+        
+        setLoading(true);
+        setSuccess(''); // Clear any previous success message
+        setError(''); // Clear any previous error message
         
         try {
             const response = await categoryService.addUrl(
@@ -207,16 +257,30 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 urlContent.description,
                 urlContent.updateFrequency
             );
-            setSuccess('URL added successfully');
-            validateCategoryAndFetchItems();
-            resetForms();
-            if (onKnowledgeAdded && response.data) {
-                onKnowledgeAdded(response.data);
+            
+            // Start tracking the processing status
+            if (response.data && response.data.id) {
+                resetForms();
+                setLoading(false);
+                
+                // Set processing status to start polling
+                setUrlProcessingStatus({
+                    isProcessing: true,
+                    itemId: response.data.id,
+                    progress: 0,
+                    status: 'processing'
+                });
+                
+                // Start polling for status updates
+                checkUrlProcessingStatus(response.data.id);
+                
+                if (onKnowledgeAdded) {
+                    onKnowledgeAdded(response.data);
+                }
             }
         } catch (error) {
             console.error('Failed to add URL:', error);
             setError('Failed to add URL. Please try again.');
-        } finally {
             setLoading(false);
         }
     };
@@ -704,21 +768,44 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
                                 <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
                             </TextField>
-                            <Button
-                                variant="contained"
-                                onClick={handleAddUrl}
-                                disabled={loading}
-                                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
-                                sx={{
-                                    bgcolor: '#00F3FF',
-                                    color: '#000000',
-                                    '&:hover': {
-                                        bgcolor: '#00D4E0'
-                                    }
-                                }}
-                            >
-                                Add URL
-                            </Button>
+                            {urlProcessingStatus.isProcessing ? (
+                                <Box sx={{ width: '100%', mt: 2, mb: 2 }}>
+                                    <Typography variant="body2">
+                                        Processing URL: {urlProcessingStatus.status}
+                                    </Typography>
+                                    <LinearProgress 
+                                        variant="determinate" 
+                                        value={urlProcessingStatus.progress}
+                                        sx={{
+                                            height: 10,
+                                            borderRadius: 5,
+                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                            '& .MuiLinearProgress-bar': {
+                                                backgroundColor: '#00F3FF',
+                                            }
+                                        }}
+                                    />
+                                    <Typography variant="caption" sx={{ mt: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
+                                        {urlProcessingStatus.progress}% complete - Scraping and processing URL content
+                                    </Typography>
+                                </Box>
+                            ) : (
+                                <Button
+                                    variant="contained"
+                                    onClick={handleAddUrl}
+                                    disabled={loading}
+                                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
+                                    sx={{
+                                        bgcolor: '#00F3FF',
+                                        color: '#000000',
+                                        '&:hover': {
+                                            bgcolor: '#00D4E0'
+                                        }
+                                    }}
+                                >
+                                    Add URL
+                                </Button>
+                            )}
                         </div>
                     </TabPanel>
                     

@@ -100,4 +100,7 @@ export const categoryService = {
         }),
 
     deleteKnowledgeItem: (id: number) => api.delete(`/api/v1/knowledge/items/${id}`),
+    
+    // Get a specific knowledge item by ID
+    getKnowledgeItem: (id: number) => api.get(`/api/v1/knowledge/item/${id}`),
 };

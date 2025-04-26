@@ -211,6 +211,16 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         error: null
     });
 
+    // Define interface for metadata structure
+    interface ProcessingMetadata {
+        processing_status?: string;
+        processing_progress?: number;
+        status_message?: string;
+        current_page?: string | null;
+        pages_processed?: number;
+        processing_error?: string | null;
+    }
+    
     // Function to check URL processing status
     const checkUrlProcessingStatus = async (itemId: number) => {
         try {
@@ -218,10 +228,10 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             const item = response.data;
             
             // Parse metadata from content field (JSON string)
-            let metadata = {};
+            let metadata: ProcessingMetadata = {};
             if (item && item.content) {
                 try {
-                    metadata = JSON.parse(item.content);
+                    metadata = JSON.parse(item.content) as ProcessingMetadata;
                 } catch (e) {
                     console.error('Error parsing content as JSON:', e);
                     metadata = {};
@@ -318,7 +328,11 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                     isProcessing: true,
                     itemId: response.data.id,
                     progress: 0,
-                    status: 'processing'
+                    status: 'processing',
+                    statusMessage: '',
+                    currentPage: null,
+                    pagesProcessed: 0,
+                    error: null
                 });
                 
                 // Start polling for status updates

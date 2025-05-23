@@ -1241,7 +1241,7 @@ export default function AgentCreationWizard({
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ color: "#FFFFFF", width: "70%" }}
+                      sx={{ color: "#FFFFFF", width: "40%" }}
                     >
                       {formData.response_style === 0
                         ? "Very Formal"

@@ -741,11 +741,11 @@ export default function AgentCreationWizard({
                                 </FormHelperText>
                             </FormControl>
 
-                            <Box sx={{ mt: 4 }}>
+                            <Box sx={{ mt: 4, width: '100%' }}>
                                 <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Style
                                 </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, width: '100%' }}>
                                     <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Formal</Typography>
                                     <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Casual</Typography>
                                 </Box>
@@ -765,6 +765,7 @@ export default function AgentCreationWizard({
                                         value === 0.75 ? 'Casual' : 'Very Casual'
                                     }
                                     sx={{
+                                        width: '100%',
                                         color: '#00F3FF',
                                         '& .MuiSlider-rail': {
                                             opacity: 0.5,
@@ -795,11 +796,11 @@ export default function AgentCreationWizard({
                                 />
                             </Box>
 
-                            <Box sx={{ mt: 4 }}>
+                            <Box sx={{ mt: 4, width: '100%' }}>
                                 <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Length (words)
                                 </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, width: '100%' }}>
                                     <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Short</Typography>
                                     <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Long</Typography>
                                 </Box>
@@ -813,6 +814,7 @@ export default function AgentCreationWizard({
                                     max={350}
                                     valueLabelDisplay="auto"
                                     sx={{
+                                        width: '100%',
                                         color: '#00F3FF',
                                         '& .MuiSlider-rail': {
                                             opacity: 0.5,

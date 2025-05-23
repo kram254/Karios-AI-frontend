@@ -868,7 +868,7 @@ export default function AgentCreationWizard({
                   Response Style
                 </Typography>
 
-                <Box
+                {/* <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
@@ -883,7 +883,7 @@ export default function AgentCreationWizard({
                   <Typography variant="caption" sx={{ color: "#AAAAAA" }}>
                     Casual
                   </Typography>
-                </Box>
+                </Box> */}
 
                 <Slider
                   aria-labelledby="response-style-slider-label"

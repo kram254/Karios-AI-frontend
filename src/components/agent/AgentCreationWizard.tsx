@@ -873,8 +873,8 @@ export default function AgentCreationWizard({
                     display: "flex",
                     justifyContent: "space-between",
                     mb: 1,
-                    px: "11px", // ✅ Changed from `mx` to `px` to apply equal horizontal padding
-                    width: "100%", // ✅ Let it inherit the full width but respect internal padding
+                    px: "6px", // ✅ Changed from `mx` to `px` to apply equal horizontal padding
+                    width: "60%", // ✅ Let it inherit the full width but respect internal padding
                   }}
                 >
                   <Typography variant="caption" sx={{ color: "#AAAAAA" }}>

@@ -707,31 +707,31 @@ export default function AgentCreationWizard({
                                     </MenuItem>
                                     <MenuItem value="fr">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/fr.png" alt="French" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/fr.png" alt="French" width={20} height={15} style={{ marginRight: 8 }} />
                                             French
                                         </Box>
                                     </MenuItem>
                                     <MenuItem value="de">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/de.png" alt="German" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/de.png" alt="German" width={20} height={15} style={{ marginRight: 8 }} />
                                             German
                                         </Box>
                                     </MenuItem>
                                     <MenuItem value="it">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/it.png" alt="Italian" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/it.png" alt="Italian" width={20} height={15} style={{ marginRight: 8 }} />
                                             Italian
                                         </Box>
                                     </MenuItem>
                                     <MenuItem value="pt">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/pt.png" alt="Portuguese" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/pt.png" alt="Portuguese" width={20} height={15} style={{ marginRight: 8 }} />
                                             Portuguese
                                         </Box>
                                     </MenuItem>
                                     <MenuItem value="ru">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/ru.png" alt="Russian" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/ru.png" alt="Russian" width={20} height={15} style={{ marginRight: 8 }} />
                                             Russian
                                         </Box>
                                     </MenuItem>

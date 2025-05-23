@@ -695,13 +695,13 @@ export default function AgentCreationWizard({
                                 >
                                     <MenuItem value="en">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/en.png" alt="English" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/en.png" alt="English" width={20} height={15} style={{ marginRight: 8 }} />
                                             English
                                         </Box>
                                     </MenuItem>
                                     <MenuItem value="es">
                                         <Box display="flex" alignItems="center" gap={1}>
-                                            <img src="/flags/es.png" alt="Spanish" width={20} height={15} style={{ marginRight: 8 }} />
+                                            <img src="frontend/flags/es.png" alt="Spanish" width={20} height={15} style={{ marginRight: 8 }} />
                                             Spanish
                                         </Box>
                                     </MenuItem>

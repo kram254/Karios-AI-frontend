@@ -868,24 +868,8 @@ export default function AgentCreationWizard({
                   Response Style
                 </Typography>
 
-                {/* <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    mb: 1,
-                    px: "6px", // ✅ Changed from `mx` to `px` to apply equal horizontal padding
-                    width: "60%", // ✅ Let it inherit the full width but respect internal padding
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: "#AAAAAA" }}>
-                    Formal
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: "#AAAAAA" }}>
-                    Casual
-                  </Typography>
-                </Box> */}
-
                 <Slider
+                
                   aria-labelledby="response-style-slider-label"
                   value={formData.response_style || 0.5}
                   onChange={(_, value) =>
@@ -1241,7 +1225,7 @@ export default function AgentCreationWizard({
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ color: "#FFFFFF", width: "40%" }}
+                      sx={{ color: "#FFFFFF", width: "70%" }}
                     >
                       {formData.response_style === 0
                         ? "Very Formal"

@@ -765,7 +765,7 @@ export default function AgentCreationWizard({
                                         color: '#00F3FF',
                                         '& .MuiSlider-rail': {
                                             opacity: 0.5,
-                                            backgroundColor: '#333',
+                                            backgroundColor: 'red',
                                         },
                                         '& .MuiSlider-mark': {
                                             backgroundColor: '#555',
@@ -827,7 +827,7 @@ export default function AgentCreationWizard({
                                         color: '#00F3FF',
                                         '& .MuiSlider-rail': {
                                             opacity: 0.5,
-                                            backgroundColor: '#333',
+                                            backgroundColor: 'red',
                                         },
                                         '& .MuiSlider-mark': {
                                             backgroundColor: '#555',

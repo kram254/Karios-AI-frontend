@@ -745,10 +745,15 @@ export default function AgentCreationWizard({
                                 <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Style
                                 </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, width: '100%' }}>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Formal</Typography>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Casual</Typography>
-                                </Box>
+                                <Box sx={{ mt: 4, width: '100%' }}>
+    <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
+        Response Style
+    </Typography>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, width: '100%', px: 1 }}>
+        <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Formal</Typography>
+        <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Casual</Typography>
+    </Box>
+</Box>
                                 <Slider
                                     aria-labelledby="response-style-slider-label"
                                     value={formData.response_style || 0.5}

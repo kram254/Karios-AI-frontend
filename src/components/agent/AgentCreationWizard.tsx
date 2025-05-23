@@ -803,6 +803,16 @@ export default function AgentCreationWizard({
                                 <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Length (words)
                                 </Typography>
+                                <Box sx={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    mb: 1, 
+                                    mx: 1.4, // Add margin to match slider track exactly
+                                    width: 'calc(100% - 22px)' // Subtract thumb width to align with slider track
+                                }}>
+                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Short</Typography>
+                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Long</Typography>
+                                </Box>
                                 <Slider
                                     aria-labelledby="response-length-slider-label"
                                     value={formData.response_length || 150}

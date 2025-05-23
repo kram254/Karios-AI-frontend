@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, Plus } from "lucide-react";
+import { MessageSquare, Send, Plus, Paperclip, Search } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
@@ -260,32 +260,50 @@ const Chat: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form - Using new chat.css classes */}
-      <form onSubmit={handleSubmit} className="chat-input-container">
-        <div className="relative flex-1">
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
-            className="chat-textarea w-full"
-            rows={1}
-            disabled={isProcessing}
-          />
-          {isProcessing && (
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-              <span className="text-sm font-medium text-cyan-500">Thinking...</span>
-            </div>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={!message.trim() || isProcessing}
-          className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </form>
+      {/* Input Form - Using updated chat.css classes */}
+      <div className="chat-input-wrapper">
+        <form onSubmit={handleSubmit} className="chat-input-container">
+          <div className="chat-input-actions">
+            <button type="button" className="chat-action-button">
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="relative flex-1">
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Message DeepSeek..."
+              className="chat-textarea"
+              rows={1}
+              disabled={isProcessing}
+            />
+            {isProcessing && (
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                <span className="text-sm font-medium text-cyan-500">AI generating...</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="chat-input-actions">
+            <button type="button" className="chat-action-button">
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <button type="button" className="chat-action-button">
+              <Search className="w-5 h-5" />
+            </button>
+            <button 
+              type="submit"
+              disabled={!message.trim() || isProcessing}
+              className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
+        </form>
+        <div className="chat-ai-notice">AI-generated. For reference only.</div>
+      </div>
     </div>
   );
 };

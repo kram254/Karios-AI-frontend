@@ -745,6 +745,18 @@ export default function AgentCreationWizard({
                                 <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Style
                                 </Typography>
+
+                                <Box sx= {{ 
+                                    display: 'flex',
+                                    width: '100%',
+                                    justifyContent: 'space-between', 
+                                    mb: 1,
+                                    padding: '4px 8px',
+                                    borderRadius: '4px'
+                                }} >
+                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Formal</Typography>
+                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Casual</Typography>
+                                </Box>
                                 
                                 
 
@@ -796,16 +808,16 @@ export default function AgentCreationWizard({
                             </Box>
                             
 
-                            <Box sx={{ mt: 4, width: '60%', backgroundColor: 'red', }}>
+                            <Box sx={{ mt: 4, width: '100%' }}>
                                 <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Length (words)
                                 </Typography>
-
+                                
                                 <Box sx= {{ 
-                                    display: 'flex', 
+                                    display: 'flex',
+                                    width: '100%', 
                                     justifyContent: 'space-between', 
-                                    mb: 1, 
-                                    backgroundColor: 'red',
+                                    mb: 1,
                                     padding: '4px 8px',
                                     borderRadius: '4px'
                                 }} >

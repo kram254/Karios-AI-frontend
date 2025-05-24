@@ -747,15 +747,13 @@ export default function AgentCreationWizard({
                                 </Typography>
 
                                 <Box sx= {{ 
-                                    display: 'flex',
+                                    
                                     width: '100%',
-                                    justifyContent: 'space-between', 
                                     mb: 1,
                                     padding: '4px 8px',
                                     borderRadius: '4px'
                                 }} >
-                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Formal</Typography>
-                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Casual</Typography>
+                                    
                                 </Box>
                                 
                                 

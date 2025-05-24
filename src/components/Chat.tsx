@@ -444,6 +444,13 @@ const Chat: React.FC = () => {
                 <span className="text-sm font-medium text-cyan-500">Thinking...</span>
               </div>
             )}
+            
+            {/* Search button - moved inside input area and highlighted */}
+            <div className="absolute right-14 top-1/2 transform -translate-y-1/2">
+              <button type="button" className="search-button-highlighted">
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <div className="chat-input-actions">
@@ -457,12 +464,6 @@ const Chat: React.FC = () => {
             </button>
           </div>
         </form>
-        
-        {/* Search button - moved below input field */}
-        <button type="button" className="search-text-button">
-          <Search className="w-4 h-4 mr-2" />
-          Search
-        </button>
         
         {/* Image upload progress indicator */}
         {isUploading && (

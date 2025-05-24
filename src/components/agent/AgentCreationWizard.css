@@ -394,6 +394,12 @@
     color: #AAAAAA !important;
 }
 
+/* Custom slider styling */
+.MuiSlider-track {
+    background-color: red !important;
+    opacity: 0.8 !important;
+}
+
 .MuiSelect-icon {
     color: #FFFFFF !important;
 }

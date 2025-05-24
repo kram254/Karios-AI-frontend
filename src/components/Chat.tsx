@@ -412,31 +412,29 @@ const Chat: React.FC = () => {
       {/* Input Form - Using updated chat.css classes */}
       <div className="chat-input-wrapper">
         <form onSubmit={handleSubmit} className="chat-input-container">
-          <div className="chat-input-actions">
-            <button 
-              type="button" 
-              className="chat-action-button" 
-              onClick={handlePlusButtonClick}
-              disabled={isProcessing}
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              multiple 
-              onChange={handleFileChange} 
-            />
-          </div>
+          <button 
+            type="button" 
+            className="chat-action-button" 
+            onClick={handlePlusButtonClick}
+            disabled={isProcessing}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            className="hidden" 
+            accept="image/*" 
+            multiple 
+            onChange={handleFileChange} 
+          />
           
           <div className="relative flex-1">
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Message DeepSeek..."
+              placeholder="Ask Agentando AI"
               className="chat-textarea"
               rows={1}
               disabled={isProcessing}
@@ -449,19 +447,17 @@ const Chat: React.FC = () => {
           </div>
           
           <div className="chat-input-actions">
-            {/* Paperclip button (commented out until we implement this functionality) */}
-            {/* <button type="button" className="chat-action-button">
-              <Paperclip className="w-5 h-5" />
-            </button> */}
+            {/* Search button */}
             <button type="button" className="chat-action-button">
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
             </button>
+            {/* Send button */}
             <button 
               type="submit"
               disabled={(!message.trim() && uploadedImages.length === 0) || isProcessing}
               className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4" />
             </button>
           </div>
         </form>

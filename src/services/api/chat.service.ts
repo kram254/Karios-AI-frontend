@@ -1,11 +1,21 @@
 import { api } from './index';
 
 // Define interfaces for chat-related data
+export interface Attachment {
+  id?: string;
+  type: string;
+  url: string;
+  name: string;
+  content_type?: string;
+  preview_url?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   created_at: string;
+  attachments?: Attachment[];
 }
 
 export interface Chat {
@@ -124,7 +134,7 @@ export const chatService = {
       // If a ChatMessage object is passed, extract the content
       payload = {
         content: content.content,
-        attachments: [],
+        attachments: content.attachments || [],
         // Optionally preserve role if backend API supports it
         role: content.role
       };
@@ -132,6 +142,20 @@ export const chatService = {
     
     console.log('Message payload:', payload);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
+  },
+  
+  // Upload and send message with image attachments
+  addMessageWithAttachments: (chatId: string, content: string, attachments: Attachment[]) => {
+    console.log(`Adding message with ${attachments.length} attachments to chat ${chatId}`);
+    
+    // Create a payload with the message content and attachments
+    const payload = {
+      content: content,
+      attachments: attachments
+    };
+    
+    console.log('Message with attachments payload:', payload);
+    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
   // Chat Actions

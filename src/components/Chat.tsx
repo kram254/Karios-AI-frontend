@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, Plus, Paperclip, Search } from "lucide-react";
+import React, { useState, useEffect, useRef, ChangeEvent } from "react";
+import { MessageSquare, Send, Plus, Search, X } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
 import MessageFormatter from "./MessageFormatter";
-import { chatService } from "../services/api/chat.service";
+import { chatService, Attachment } from "../services/api/chat.service";
 import { generateTitleFromMessage } from "../utils/titleGenerator";
 import "../styles/chat.css";
 
+// Use our local Message interface that extends the API ChatMessage properties
 interface Message {
   id: string;
   content: string;
@@ -17,7 +18,10 @@ interface Message {
   timestamp?: Date | string;
   created_at?: string;
   chat_id?: string;
+  attachments?: Attachment[];
 }
+
+// Moved Attachment interface to chat.service.ts
 
 interface Chat {
   id: string;
@@ -32,7 +36,11 @@ const Chat: React.FC = () => {
   const { currentChat, setCurrentChat, addMessage, createNewChat } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<Attachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,7 +52,7 @@ const Chat: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || isProcessing) return;
+    if ((!message.trim() && uploadedImages.length === 0) || isProcessing) return;
 
     const messageContent = message.trim();
     setIsProcessing(true);
@@ -53,8 +61,10 @@ const Chat: React.FC = () => {
       // Store the message content before any async operations
       const userMessage = messageContent;
       
-      // Clear the input field immediately for better UX
+      // Clear the input field and uploaded images immediately for better UX
       setMessage("");
+      const imagesToSend = [...uploadedImages];
+      setUploadedImages([]);
       
       // If no current chat, create a new one first with a descriptive title
       if (!currentChat) {
@@ -75,8 +85,12 @@ const Chat: React.FC = () => {
           // Now send the message to the newly created chat
           if (newChat && newChat.id) {
             console.log('Sending initial message to chat ID:', newChat.id);
-            // Fix: Pass only the content string instead of an object with role
-            await chatService.addMessage(newChat.id, userMessage);
+            // Send message with any attachments
+            if (imagesToSend.length > 0) {
+              await chatService.addMessageWithAttachments(newChat.id, userMessage, imagesToSend);
+            } else {
+              await chatService.addMessage(newChat.id, userMessage);
+            }
             
             console.log('Message sent successfully to new chat');
             
@@ -96,10 +110,30 @@ const Chat: React.FC = () => {
       } else {
         // Normal flow when chat already exists
         console.log('Sending message to existing chat:', currentChat.id);
-        await addMessage({
-          role: "user",
-          content: userMessage
-        });
+        
+        if (imagesToSend.length > 0) {
+          // If we have images, use the special method to send them with the message
+          try {
+            const updatedChat = await chatService.addMessageWithAttachments(
+              currentChat.id, 
+              userMessage, 
+              imagesToSend
+            );
+            if (updatedChat && updatedChat.data) {
+              setCurrentChat(updatedChat.data);
+            }
+          } catch (err) {
+            console.error("Error sending message with attachments:", err);
+            toast.error("Failed to send message with images");
+            throw err;
+          }
+        } else {
+          // Normal message without attachments
+          await addMessage({
+            role: "user",
+            content: userMessage
+          });
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -107,6 +141,101 @@ const Chat: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Handle file upload when the Plus button is clicked
+  const handlePlusButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Handle file selection
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    // Filter for image files only
+    const imageFiles = Array.from(files).filter(file => 
+      file.type.startsWith('image/')
+    );
+    
+    if (imageFiles.length === 0) {
+      toast.error("Please select image files only");
+      return;
+    }
+    
+    // Upload each image
+    imageFiles.forEach(file => uploadImage(file));
+    
+    // Reset the file input
+    e.target.value = '';
+  };
+
+  // Upload image to server
+  const uploadImage = async (file: File) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      // Create a FormData object
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Create an image URL for preview
+      const previewUrl = URL.createObjectURL(file);
+      
+      // Create a temporary attachment for preview
+      const tempAttachment: Attachment = {
+        type: 'image',
+        url: previewUrl,
+        name: file.name,
+        content_type: file.type,
+        preview_url: previewUrl
+      };
+      
+      // Add to displayed images
+      setUploadedImages(prev => [...prev, tempAttachment]);
+      
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const newProgress = prev + Math.random() * 15;
+          return newProgress >= 100 ? 100 : newProgress;
+        });
+      }, 200);
+      
+      // TODO: Replace with actual API upload once backend is ready
+      // For now, we'll just simulate the upload process
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      // In a real implementation, update the attachment with the server response
+      // const response = await api.post('/api/upload', formData);
+      // const uploadedAttachment = response.data;
+      
+      toast.success(`Image ${file.name} uploaded successfully`);
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error(`Failed to upload ${file.name}`);
+      
+      // Remove the failed upload from preview
+      setUploadedImages(prev => 
+        prev.filter(img => img.name !== file.name)
+      );
+      
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Remove an uploaded image
+  const removeUploadedImage = (imageName: string) => {
+    setUploadedImages(prev => 
+      prev.filter(img => img.name !== imageName)
+    );
   };
 
   // Handle key press in the textarea (Ctrl+Enter or Enter to send)
@@ -232,7 +361,27 @@ const Chat: React.FC = () => {
               className={`message-content ${msg.role}`}
             >
               <div className="message-text">
-                <MessageFormatter content={msg.content} role={msg.role} />
+                <>
+                  <MessageFormatter content={msg.content} role={msg.role} />
+                  
+                  {/* Display message attachments if any */}
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <div className="message-attachments">
+                      {msg.attachments.map((attachment: Attachment, index: number) => (
+                        <div key={index} className="message-attachment">
+                          {attachment.type === 'image' && (
+                            <img 
+                              src={attachment.url || attachment.preview_url} 
+                              alt={attachment.name} 
+                              className="message-image"
+                              onClick={() => window.open(attachment.url || attachment.preview_url, '_blank')}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               </div>
               <div className="message-timestamp">
                 {(() => {
@@ -264,9 +413,22 @@ const Chat: React.FC = () => {
       <div className="chat-input-wrapper">
         <form onSubmit={handleSubmit} className="chat-input-container">
           <div className="chat-input-actions">
-            <button type="button" className="chat-action-button">
+            <button 
+              type="button" 
+              className="chat-action-button" 
+              onClick={handlePlusButtonClick}
+              disabled={isProcessing}
+            >
               <Plus className="w-5 h-5" />
             </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              multiple 
+              onChange={handleFileChange} 
+            />
           </div>
           
           <div className="relative flex-1">
@@ -281,27 +443,60 @@ const Chat: React.FC = () => {
             />
             {isProcessing && (
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <span className="text-sm font-medium text-cyan-500">AI generating...</span>
+                <span className="text-sm font-medium text-cyan-500">Thinking...</span>
               </div>
             )}
           </div>
           
           <div className="chat-input-actions">
-            <button type="button" className="chat-action-button">
+            {/* Paperclip button (commented out until we implement this functionality) */}
+            {/* <button type="button" className="chat-action-button">
               <Paperclip className="w-5 h-5" />
-            </button>
+            </button> */}
             <button type="button" className="chat-action-button">
               <Search className="w-5 h-5" />
             </button>
             <button 
               type="submit"
-              disabled={!message.trim() || isProcessing}
+              disabled={(!message.trim() && uploadedImages.length === 0) || isProcessing}
               className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-5 h-5" />
             </button>
           </div>
         </form>
+        
+        {/* Image upload progress indicator */}
+        {isUploading && (
+          <div className="upload-progress-container">
+            <div className="upload-progress-bar" style={{ width: `${uploadProgress}%` }}></div>
+            <div className="upload-progress-text">
+              Uploading... {Math.round(uploadProgress)}%
+            </div>
+          </div>
+        )}
+        
+        {/* Uploaded images preview */}
+        {uploadedImages.length > 0 && (
+          <div className="uploaded-images-container">
+            {uploadedImages.map((img, index) => (
+              <div key={index} className="uploaded-image-preview">
+                <img 
+                  src={img.preview_url || img.url} 
+                  alt={img.name} 
+                  className="uploaded-image"
+                />
+                <button 
+                  className="remove-image-button" 
+                  onClick={() => removeUploadedImage(img.name)}
+                  type="button"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="chat-ai-notice">AI-generated. For reference only.</div>
       </div>
     </div>

@@ -746,17 +746,7 @@ export default function AgentCreationWizard({
                                     Response Style
                                 </Typography>
 
-                                <Box sx= {{ 
-                                    
-                                    width: '100%',
-                                    mb: 1,
-                                    padding: '4px 8px',
-                                    borderRadius: '4px'
-                                }} >
-                                    
-                                </Box>
-                                
-                                
+
 
                                 <Slider
                                     aria-labelledby="response-style-slider-label"
@@ -811,17 +801,6 @@ export default function AgentCreationWizard({
                                     Response Length (words)
                                 </Typography>
                                 
-                                <Box sx= {{ 
-                                    display: 'flex',
-                                    width: '100%', 
-                                    justifyContent: 'space-between', 
-                                    mb: 1,
-                                    padding: '4px 8px',
-                                    borderRadius: '4px'
-                                }} >
-                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Short</Typography>
-                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Long</Typography>
-                                </Box>
 
                                 <Slider
                                     aria-labelledby="response-length-slider-label"

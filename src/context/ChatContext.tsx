@@ -5,6 +5,15 @@ import { generateTitleFromMessage } from '../utils/titleGenerator';
 import { Agent } from '../types/agent';
 import { useLanguage } from './LanguageContext';
 
+interface Attachment {
+  id?: string;
+  type: string;
+  url: string;
+  name: string;
+  content_type?: string;
+  preview_url?: string;
+}
+
 interface Message {
   id: string;
   content: string;
@@ -12,6 +21,7 @@ interface Message {
   timestamp?: Date | string;
   created_at?: string;
   chat_id?: string;
+  attachments?: Attachment[];
 }
 
 interface Chat {
@@ -108,8 +118,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createAgentChat = async () => {
     if (!selectedAgent) {
-      console.error('No agent selected');
-      toast.error('No agent selected');
+      console.error('Select agent again');
+      toast.error('Select agent again');
       return null;
     }
 

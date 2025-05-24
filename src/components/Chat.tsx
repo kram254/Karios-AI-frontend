@@ -445,12 +445,13 @@ const Chat: React.FC = () => {
               </div>
             )}
             
-            {/* Search button - moved inside input area and highlighted */}
+            {/* Search button - temporarily disabled
             <div className="absolute right-14 top-1/2 transform -translate-y-1/2">
               <button type="button" className="search-button-highlighted">
                 <Search className="w-4 h-4" />
               </button>
             </div>
+            */}
           </div>
           
           <div className="chat-input-actions">

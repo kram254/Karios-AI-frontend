@@ -745,6 +745,11 @@ export default function AgentCreationWizard({
                                 <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Style
                                 </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, backgroundColor: 'red', padding: '4px 8px', borderRadius: '4px' }}>
+                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Formal</Typography>
+                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Casual</Typography>
+                                </Box>
+
                                 <Slider
                                     aria-labelledby="response-style-slider-label"
                                     value={formData.response_style || 0.5}
@@ -807,11 +812,12 @@ export default function AgentCreationWizard({
                                     display: 'flex', 
                                     justifyContent: 'space-between', 
                                     mb: 1, 
-                                    mx: 1.4, // Add margin to match slider track exactly
-                                    width: 'calc(100% - 22px)' // Subtract thumb width to align with slider track
+                                    backgroundColor: 'red',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px'
                                 }}>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Short</Typography>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Long</Typography>
+                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Short</Typography>
+                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Long</Typography>
                                 </Box>
                                 <Slider
                                     aria-labelledby="response-length-slider-label"

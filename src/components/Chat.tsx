@@ -447,10 +447,6 @@ const Chat: React.FC = () => {
           </div>
           
           <div className="chat-input-actions">
-            {/* Search button */}
-            <button type="button" className="chat-action-button">
-              <Search className="w-4 h-4" />
-            </button>
             {/* Send button */}
             <button 
               type="submit"
@@ -461,6 +457,12 @@ const Chat: React.FC = () => {
             </button>
           </div>
         </form>
+        
+        {/* Search button - moved below input field */}
+        <button type="button" className="search-text-button">
+          <Search className="w-4 h-4 mr-2" />
+          Search
+        </button>
         
         {/* Image upload progress indicator */}
         {isUploading && (

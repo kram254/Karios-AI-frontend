@@ -745,10 +745,8 @@ export default function AgentCreationWizard({
                                 <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Style
                                 </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, backgroundColor: 'green', padding: '4px 8px', borderRadius: '4px' }}>
-                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Formal</Typography>
-                                    <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Casual</Typography>
-                                </Box>
+                                
+                                
 
                                 <Slider
                                     aria-labelledby="response-style-slider-label"
@@ -796,29 +794,25 @@ export default function AgentCreationWizard({
                                     }}
                                 />
                             </Box>
-
-
-
-
-
-
                             
 
-                            <Box sx={{ mt: 4, width: '100%' }}>
+                            <Box sx={{ mt: 4, width: '60%', backgroundColor: 'red', }}>
                                 <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
                                     Response Length (words)
                                 </Typography>
-                                <Box sx={{ 
+
+                                <Box sx= {{ 
                                     display: 'flex', 
                                     justifyContent: 'space-between', 
                                     mb: 1, 
                                     backgroundColor: 'red',
                                     padding: '4px 8px',
                                     borderRadius: '4px'
-                                }}>
+                                }} >
                                     <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Short</Typography>
                                     <Typography variant="caption" sx={{ color: '#FFFFFF' }}>Long</Typography>
                                 </Box>
+
                                 <Slider
                                     aria-labelledby="response-length-slider-label"
                                     value={formData.response_length || 150}
@@ -826,7 +820,7 @@ export default function AgentCreationWizard({
                                     step={50}
                                     marks
                                     min={50}
-                                    max={350}
+                                    max={500}
                                     valueLabelDisplay="auto"
                                     sx={{
                                         width: '100%',

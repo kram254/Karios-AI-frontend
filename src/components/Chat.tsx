@@ -411,57 +411,58 @@ const Chat: React.FC = () => {
 
       {/* Input Form - Using updated chat.css classes */}
       <div className="chat-input-wrapper">
-        <form onSubmit={handleSubmit} className="chat-input-container">
-          <button 
-            type="button" 
-            className="chat-action-button" 
-            onClick={handlePlusButtonClick}
-            disabled={isProcessing}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept="image/*" 
-            multiple 
-            onChange={handleFileChange} 
-          />
-          
-          <div className="relative flex-1">
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask Agentando AI"
-              className="chat-textarea"
-              rows={1}
+        <form onSubmit={handleSubmit} className="chat-input-container-expanded">
+          <div className="chat-input-top-section">
+            <button 
+              type="button" 
+              className="chat-action-button" 
+              onClick={handlePlusButtonClick}
               disabled={isProcessing}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              multiple 
+              onChange={handleFileChange} 
             />
-            {isProcessing && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <span className="text-sm font-medium text-cyan-500">Thinking...</span>
-              </div>
-            )}
             
-            {/* Search button - temporarily disabled
-            <div className="absolute right-14 top-1/2 transform -translate-y-1/2">
-              <button type="button" className="search-button-highlighted">
-                <Search className="w-4 h-4" />
+            <div className="relative flex-1">
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask Agentando AI"
+                className="chat-textarea"
+                rows={1}
+                disabled={isProcessing}
+              />
+              {isProcessing && (
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                  <span className="text-sm font-medium text-cyan-500">Thinking...</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="chat-input-actions">
+              {/* Send button */}
+              <button 
+                type="submit"
+                disabled={(!message.trim() && uploadedImages.length === 0) || isProcessing}
+                className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
               </button>
             </div>
-            */}
           </div>
           
-          <div className="chat-input-actions">
-            {/* Send button */}
-            <button 
-              type="submit"
-              disabled={(!message.trim() && uploadedImages.length === 0) || isProcessing}
-              className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
+          <div className="chat-input-bottom-section">
+            <button type="button" className="search-text-button">
+              <Search className="w-4 h-4 mr-2" />
+              Search
             </button>
           </div>
         </form>

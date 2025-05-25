@@ -118,8 +118,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createAgentChat = async () => {
     if (!selectedAgent) {
-      console.error('Select agent again');
-      toast.error('Select agent again');
+      console.error('');
+      toast.error('');
       return null;
     }
 
@@ -130,7 +130,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         agent_id: selectedAgent.id.toString(),
         title: `Chat with ${selectedAgent.name}`,
         chat_type: 'sales_agent',
-        language: selectedAgent.language || language.code // Use agent's language if available, otherwise use app language
+        language: selectedAgent.language || language.code
       });
       console.log('Agent chat created response:', response);
       

@@ -33,7 +33,17 @@ interface Chat {
 }
 
 const Chat: React.FC = () => {
-  const { currentChat, setCurrentChat, addMessage, createNewChat } = useChat();
+  const { 
+    currentChat, 
+    setCurrentChat, 
+    addMessage, 
+    createNewChat,
+    isSearchMode,
+    toggleSearchMode,
+    searchResults,
+    performSearch,
+    isSearching 
+  } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<Attachment[]>([]);
@@ -434,8 +444,15 @@ const Chat: React.FC = () => {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask Agentando AI"
+                onKeyDown={(e) => {
+                  if (isSearchMode && e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    performSearch(message);
+                  } else {
+                    handleKeyDown(e);
+                  }
+                }}
+                placeholder={isSearchMode ? "Search the web..." : "Ask Agentando AI"}
                 className="chat-textarea"
                 rows={1}
                 disabled={isProcessing}
@@ -460,11 +477,40 @@ const Chat: React.FC = () => {
           </div>
           
           <div className="chat-input-bottom-section">
-            <button type="button" className="search-text-button">
+            <button 
+              type="button" 
+              className={`search-text-button ${isSearchMode ? 'search-active' : ''}`}
+              onClick={toggleSearchMode}
+            >
               <Search className="w-4 h-4 mr-2" />
               Search
             </button>
           </div>
+          
+          {/* Search results display */}
+          {isSearchMode && (
+            <div className="search-results-container">
+              {isSearching ? (
+                <div className="search-loading">Searching...</div>
+              ) : searchResults.length > 0 ? (
+                <div className="search-results-list">
+                  {searchResults.map((result, index) => (
+                    <div key={index} className="search-result-item">
+                      <h4 className="search-result-title">{result.title}</h4>
+                      <p className="search-result-snippet">{result.snippet}</p>
+                      <a href={result.url} target="_blank" rel="noopener noreferrer" className="search-result-url">
+                        {result.url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : message.trim() ? (
+                <div className="search-empty">Press Enter to search</div>
+              ) : (
+                <div className="search-empty">Type a search query</div>
+              )}
+            </div>
+          )}
         </form>
         
         {/* Image upload progress indicator */}
@@ -498,7 +544,7 @@ const Chat: React.FC = () => {
             ))}
           </div>
         )}
-        <div className="chat-ai-notice">AI-generated. For reference only.</div>
+        <div className="chat-ai-notice">Agentando AI | For reference only.</div>
       </div>
     </div>
   );

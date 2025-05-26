@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
 import { MessageSquare, Send, Plus, Search, X } from "lucide-react";
 import { format } from "date-fns";
-import { useChat } from "../context/ChatContext";
+import { useChat, SearchResult } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
@@ -64,6 +64,12 @@ const Chat: React.FC = () => {
     e.preventDefault();
     if ((!message.trim() && uploadedImages.length === 0) || isProcessing) return;
 
+    // If we're in search mode, perform a search instead of sending a chat message
+    if (isSearchMode && message.trim()) {
+      performSearch(message);
+      return;
+    }
+
     const messageContent = message.trim();
     setIsProcessing(true);
     
@@ -75,8 +81,6 @@ const Chat: React.FC = () => {
       setMessage("");
       const imagesToSend = [...uploadedImages];
       setUploadedImages([]);
-      
-      // If no current chat, create a new one first with a descriptive title
       if (!currentChat) {
         console.log('Creating new chat before sending message');
         
@@ -447,7 +451,9 @@ const Chat: React.FC = () => {
                 onKeyDown={(e) => {
                   if (isSearchMode && e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    performSearch(message);
+                    if (message.trim()) {
+                      performSearch(message);
+                    }
                   } else {
                     handleKeyDown(e);
                   }
@@ -494,7 +500,7 @@ const Chat: React.FC = () => {
                 <div className="search-loading">Searching...</div>
               ) : searchResults.length > 0 ? (
                 <div className="search-results-list">
-                  {searchResults.map((result, index) => (
+                  {searchResults.map((result: SearchResult, index: number) => (
                     <div key={index} className="search-result-item">
                       <h4 className="search-result-title">{result.title}</h4>
                       <p className="search-result-snippet">{result.snippet}</p>

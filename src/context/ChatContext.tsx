@@ -34,7 +34,7 @@ interface Chat {
   language?: string; // Add language property to Chat interface
 }
 
-interface SearchResult {
+export interface SearchResult {
   title: string;
   url: string;
   snippet: string;
@@ -336,19 +336,56 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&count=5`);
+      // Use the correct API path that matches our backend route registration
+      const response = await fetch(`/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`);
+      
       if (!response.ok) {
-        throw new Error('Search failed');
+        const errorText = await response.text();
+        console.error(`Search API error (${response.status}):`, errorText);
+        throw new Error(`Search failed: ${response.statusText}`);
       }
+      
       const data = await response.json();
-      setSearchResults(data.results || []);
+      console.log('Search results:', data);
+      
+      if (data && Array.isArray(data.results)) {
+        setSearchResults(data.results);
+      } else {
+        console.warn('Unexpected search response format:', data);
+        // Fallback to mock results if the API response is invalid
+        provideFallbackSearchResults(query);
+      }
     } catch (error) {
       console.error('Error performing search:', error);
-      toast.error('Search failed. Please try again.');
-      setSearchResults([]);
+      toast.error('Using demo results - API connection failed');
+      // Provide fallback search results when the API call fails
+      provideFallbackSearchResults(query);
     } finally {
       setIsSearching(false);
     }
+  };
+
+  // Provide fallback search results when the API is not available
+  const provideFallbackSearchResults = (query: string) => {
+    // Create mock search results for demonstration purposes
+    const mockResults: SearchResult[] = [
+      {
+        title: `${query} - Latest News and Updates`,
+        url: 'https://example.com/news',
+        snippet: `Find the latest information about ${query}. This is a sample search result provided for demonstration purposes.`
+      },
+      {
+        title: `Everything You Need to Know About ${query}`,
+        url: 'https://example.com/info',
+        snippet: 'This is a demo search result. In production, this would display real search results from Brave Search API.'
+      },
+      {
+        title: `${query} - Wikipedia`,
+        url: 'https://en.wikipedia.org',
+        snippet: `Wikipedia article about ${query}. This sample result is shown because the real search API is not connected.`
+      }
+    ];
+    setSearchResults(mockResults);
   };
 
   // Find the latest version of a chat in the chats array

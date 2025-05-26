@@ -34,6 +34,12 @@ interface Chat {
   language?: string; // Add language property to Chat interface
 }
 
+interface SearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+}
+
 interface ChatContextType {
   currentChat: Chat | null;
   chats: Chat[];
@@ -47,6 +53,12 @@ interface ChatContextType {
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
   selectedAgent: Agent | null; // Add selectedAgent state
   setSelectedAgent: (agent: Agent | null) => void; // Add setSelectedAgent method
+  // Search-related properties and methods
+  isSearchMode: boolean;
+  toggleSearchMode: () => void;
+  searchResults: SearchResult[];
+  performSearch: (query: string) => Promise<void>;
+  isSearching: boolean;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -58,6 +70,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null); // Initialize selectedAgent state
   const { language } = useLanguage(); // Get the current language
+  
+  // Search-related state
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     loadChats();
@@ -304,22 +321,65 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const value = {
-    currentChat,
-    chats,
-    loading,
-    error,
-    createNewChat,
-    createAgentChat, 
-    setCurrentChat,
-    addMessage,
-    deleteChat,
-    updateChatTitle,
-    selectedAgent,
-    setSelectedAgent
+  // Toggle search mode
+  const toggleSearchMode = () => {
+    setIsSearchMode(!isSearchMode);
+    if (isSearchMode) {
+      // Clear any previous search results when exiting search mode
+      setSearchResults([]);
+    }
   };
 
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+  // Perform web search using the Brave Search API
+  const performSearch = async (query: string) => {
+    if (!query.trim()) return;
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&count=5`);
+      if (!response.ok) {
+        throw new Error('Search failed');
+      }
+      const data = await response.json();
+      setSearchResults(data.results || []);
+    } catch (error) {
+      console.error('Error performing search:', error);
+      toast.error('Search failed. Please try again.');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Find the latest version of a chat in the chats array
+  const getLatestChat = (chatId: string) => {
+    return chats.find(chat => chat.id === chatId) || null;
+  };
+
+  return (
+    <ChatContext.Provider value={{
+      currentChat,
+      chats,
+      loading,
+      error,
+      createNewChat,
+      createAgentChat,
+      setCurrentChat,
+      addMessage,
+      deleteChat,
+      updateChatTitle,
+      selectedAgent,
+      setSelectedAgent,
+      // Search-related properties and methods
+      isSearchMode,
+      toggleSearchMode,
+      searchResults,
+      performSearch,
+      isSearching
+    }}>
+      {children}
+    </ChatContext.Provider>
+  );
 };
 
 export const useChat = () => {

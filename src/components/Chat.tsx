@@ -306,16 +306,17 @@ const Chat: React.FC = () => {
                 disabled={isProcessing}
               />
               <div className="absolute bottom-0 right-0 flex items-center p-2">
-                {/* Search button with teal theme color when active */}
+                {/* Pill-shaped search button matching the image design */}
                 <button
                   type="button"
-                  className="text-gray-400 hover:text-[#00F3FF] p-2 rounded-full transition-all duration-300 hover:bg-[#00F3FF]/10 hover:shadow-inner"
+                  className="flex items-center gap-2 bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF] py-1.5 px-3 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner mr-2"
                   onClick={() => {
                     // Just visual feedback, no actual functionality needed
                     toast.success("Search mode toggled", { icon: "🔍" });
                   }}
                 >
-                  <Search className="w-5 h-5" />
+                  <Search className="w-4 h-4" />
+                  <span className="text-sm font-medium">Search</span>
                 </button>
                 
                 {/* New chat button with enhanced hover effect - just creates a new chat without sending a message */}

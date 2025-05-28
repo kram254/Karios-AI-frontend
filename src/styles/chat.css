@@ -215,7 +215,7 @@
   border-radius: 12px;
   resize: none;
   min-height: 2rem;
-  max-height: 6rem;
+  max-height: 400px; /* Increased max-height to 400px before scrolling kicks in */
   border: none;
   outline: none;
   font-size: 0.95rem;
@@ -223,6 +223,8 @@
   overflow-y: auto;
   width: 100%;
   font-weight: 400;
+  transition: height 0.2s ease-in-out; /* Smooth height transition */
+  height: auto; /* Allow it to grow naturally with content */
 }
 
 .chat-textarea:focus {

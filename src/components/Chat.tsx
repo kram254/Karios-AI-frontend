@@ -446,8 +446,24 @@ const Chat: React.FC = () => {
             
             <div className="relative flex-1">
               <textarea
+                ref={(textAreaRef) => {
+                  // Auto-resize logic
+                  if (textAreaRef) {
+                    // Reset height to auto to get the correct scrollHeight
+                    textAreaRef.style.height = 'auto';
+                    // Set the height to the scrollHeight to match content
+                    const newHeight = Math.min(textAreaRef.scrollHeight, 400);
+                    textAreaRef.style.height = `${newHeight}px`;
+                  }
+                }}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  // Adjust height on change
+                  e.target.style.height = 'auto';
+                  const newHeight = Math.min(e.target.scrollHeight, 400);
+                  e.target.style.height = `${newHeight}px`;
+                }}
                 onKeyDown={(e) => {
                   if (isSearchMode && e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();

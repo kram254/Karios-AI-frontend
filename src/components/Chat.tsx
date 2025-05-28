@@ -282,11 +282,27 @@ const Chat: React.FC = () => {
           <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#1A1A1A] rounded-xl shadow-lg overflow-hidden border border-[#00F3FF]/20 glow-border transition-all duration-300 hover:border-[#00F3FF]/40 hover:shadow-[#00F3FF]/20 hover:shadow-xl">
             <form onSubmit={handleSubmit} className="relative">
               <textarea
+                ref={(textAreaRef) => {
+                  // Auto-resize logic - same as main chat
+                  if (textAreaRef) {
+                    // Reset height to auto to get the correct scrollHeight
+                    textAreaRef.style.height = 'auto';
+                    // Set the height to the scrollHeight to match content
+                    const newHeight = Math.min(textAreaRef.scrollHeight, 400);
+                    textAreaRef.style.height = `${newHeight}px`;
+                  }
+                }}
                 placeholder="Message Agentando AI..."
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  // Adjust height on change - matching main chat functionality
+                  e.target.style.height = 'auto';
+                  const newHeight = Math.min(e.target.scrollHeight, 400);
+                  e.target.style.height = `${newHeight}px`;
+                }}
                 onKeyDown={handleKeyDown}
-                className="w-full bg-[#1A1A1A] text-white outline-none border-none py-3 px-4 resize-none h-[56px] sm:h-[64px] placeholder-gray-500 focus:placeholder-[#00F3FF]/50 transition-all"
+                className="w-full bg-[#1A1A1A] text-white outline-none border-none py-3 px-4 resize-none min-h-[56px] placeholder-gray-500 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto"
                 disabled={isProcessing}
               />
               <div className="absolute bottom-0 right-0 flex items-center p-2">

@@ -278,76 +278,78 @@ const Chat: React.FC = () => {
           </h1>
           <p className="text-gray-400 text-center text-sm sm:text-base mb-8 sm:mb-10 max-w-md">How can I help you today?</p>
           
-          {/* Message Input Area with glowing border */}
+          {/* Message Input Area with glowing border - updated to match image 2 */}
           <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#1A1A1A] rounded-xl shadow-lg overflow-hidden border border-[#00F3FF]/20 glow-border transition-all duration-300 hover:border-[#00F3FF]/40 hover:shadow-[#00F3FF]/20 hover:shadow-xl">
             <form onSubmit={handleSubmit} className="relative">
-              <textarea
-                ref={(textAreaRef) => {
-                  // Auto-resize logic - same as main chat
-                  if (textAreaRef) {
-                    // Reset height to auto to get the correct scrollHeight
-                    textAreaRef.style.height = 'auto';
-                    // Set the height to the scrollHeight to match content
-                    const newHeight = Math.min(textAreaRef.scrollHeight, 400);
-                    textAreaRef.style.height = `${newHeight}px`;
-                  }
-                }}
-                placeholder="Message Agentando AI..."
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  // Adjust height on change - matching main chat functionality
-                  e.target.style.height = 'auto';
-                  const newHeight = Math.min(e.target.scrollHeight, 400);
-                  e.target.style.height = `${newHeight}px`;
-                }}
-                onKeyDown={handleKeyDown}
-                className="w-full bg-[#1A1A1A] text-white outline-none border-none py-3 px-4 resize-none min-h-[56px] placeholder-gray-500 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto"
-                disabled={isProcessing}
-              />
-              <div className="absolute bottom-0 right-0 flex items-center p-2">
-                {/* Pill-shaped search button matching the image design */}
+              {/* Top input row with plus icon, text area, and send button */}
+              <div className="flex items-center w-full">
                 <button
                   type="button"
-                  className="flex items-center gap-2 bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF] py-1.5 px-3 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner mr-2"
+                  className="text-gray-400 hover:text-[#00F3FF] p-2 ml-2 transition-all duration-300"
                   onClick={() => {
-                    // Just visual feedback, no actual functionality needed
-                    toast.success("Search mode toggled", { icon: "🔍" });
+                    // Just visual feedback
+                    toast.success("New chat started");
                   }}
                 >
-                  <Search className="w-4 h-4" />
-                  <span className="text-sm font-medium">Search</span>
+                  <Plus className="w-5 h-5" />
                 </button>
                 
-                {/* New chat button with enhanced hover effect - just creates a new chat without sending a message */}
-                <button 
-                  type="button" 
-                  className="text-gray-400 hover:text-[#00F3FF] p-2 rounded-full transition-all duration-300 hover:bg-[#00F3FF]/10 hover:shadow-inner"
-                  onClick={async () => {
-                    setIsProcessing(true);
-                    try {
-                      await createNewChat();
-                      // Clear any message in the input field after creating a new chat
-                      setMessage("");
-                    } catch (error) {
-                      console.error("Error creating new chat:", error);
-                      toast.error("Failed to create new chat");
-                    } finally {
-                      setIsProcessing(false);
-                    }
-                  }}
-                >
-                  {/* <Plus className="w-5 h-5" /> */}
-                </button>
+                <div className="relative flex-1">
+                  <textarea
+                    ref={(textAreaRef) => {
+                      // Auto-resize logic - same as main chat
+                      if (textAreaRef) {
+                        // Reset height to auto to get the correct scrollHeight
+                        textAreaRef.style.height = 'auto';
+                        // Set the height to the scrollHeight to match content
+                        const newHeight = Math.min(textAreaRef.scrollHeight, 400);
+                        textAreaRef.style.height = `${newHeight}px`;
+                      }
+                    }}
+                    placeholder="Ask Agentando AI"
+                    value={message}
+                    onChange={(e) => {
+                      setMessage(e.target.value);
+                      // Adjust height on change - matching main chat functionality
+                      e.target.style.height = 'auto';
+                      const newHeight = Math.min(e.target.scrollHeight, 400);
+                      e.target.style.height = `${newHeight}px`;
+                    }}
+                    onKeyDown={handleKeyDown}
+                    className="w-full bg-[#1A1A1A] text-white outline-none border-none py-3 px-2 resize-none min-h-[56px] placeholder-gray-500 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto"
+                    disabled={isProcessing}
+                  />
+                </div>
                 
                 {/* Send button with glowing effect when active */}
                 <button 
                   type="submit" 
                   disabled={!message.trim() || isProcessing}
-                  className={`p-2 rounded-full transition-all duration-300 ${!message.trim() || isProcessing ? 'text-gray-500' : 'text-[#00F3FF] hover:bg-[#00F3FF]/10 hover:shadow-sm hover:shadow-[#00F3FF]/20 active:bg-[#00F3FF]/20'}`}
+                  className={`p-2 mr-2 rounded-full transition-all duration-300 ${!message.trim() || isProcessing ? 'text-gray-500' : 'text-[#00F3FF] hover:bg-[#00F3FF]/10 hover:shadow-sm hover:shadow-[#00F3FF]/20 active:bg-[#00F3FF]/20'}`}
                 >
                   <Send className="w-5 h-5" />
                 </button>
+              </div>
+              
+              {/* Bottom section with the search button on the left side */}
+              <div className="flex items-center px-4 py-2 mt-1">
+                {/* Pill-shaped search button matching image 2 design */}
+                <div className="flex-1">
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF] py-1.5 px-3 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner"
+                    onClick={() => {
+                      // Just visual feedback, no actual functionality needed
+                      toast.success("Search mode toggled", { icon: "🔍" });
+                    }}
+                  >
+                    <Search className="w-4 h-4" />
+                    <span className="text-sm font-medium">Search</span>
+                  </button>
+                </div>
+                
+                {/* AI reference notice on the right side */}
+                <div className="text-xs text-gray-500">Agentando AI | For reference only.</div>
               </div>
             </form>
           </div>

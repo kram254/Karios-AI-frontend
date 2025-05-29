@@ -279,7 +279,7 @@ const Chat: React.FC = () => {
           <p className="text-gray-400 text-center text-sm sm:text-base mb-8 sm:mb-10 max-w-md">How can I help you today?</p>
           
           {/* Message Input Area with glowing border - updated to match image 2 */}
-          <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#222] rounded-2xl shadow-lg overflow-hidden transition-all duration-300">
+          <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#222] rounded-3xl shadow-lg overflow-hidden border border-[#00F3FF]/20 glow-border transition-all duration-300 hover:border-[#00F3FF]/40 hover:shadow-[#00F3FF]/20 hover:shadow-xl">
             <form onSubmit={handleSubmit} className="relative">
               {/* Top input row with plus icon, text area, and send button */}
               <div className="flex items-center w-full px-0.5 py-1">
@@ -316,7 +316,7 @@ const Chat: React.FC = () => {
                       e.target.style.height = `${newHeight}px`;
                     }}
                     onKeyDown={handleKeyDown}
-                    className="w-full bg-[#222] text-white outline-none border-none py-3 px-2 resize-none min-h-[45px] placeholder-gray-400 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto"
+                    className="w-full bg-[#222] text-white outline-none border-none py-3 px-2 resize-none min-h-[45px] placeholder-gray-400 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto welcome-input"
                     disabled={isProcessing}
                   />
                 </div>

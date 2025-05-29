@@ -407,7 +407,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('🔍 Available API base URLs (in priority order):', apiUrls);
       
-      const searchUrl = `${baseUrl}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`;
+      // Use the new web-search endpoint which is more robust and has better error handling
+      const searchUrl = `${baseUrl}/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
       console.log('🔗 Primary Search API URL:', searchUrl);
       
       // Track if request succeeded
@@ -444,7 +445,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Skip empty URL or the one we already tried
           if (!apiUrl || apiUrl === baseUrl) continue;
           
-          const fallbackUrl = `${apiUrl}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`;
+          const fallbackUrl = `${apiUrl}/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
           console.log('🔗 Trying fallback URL:', fallbackUrl);
           
           try {

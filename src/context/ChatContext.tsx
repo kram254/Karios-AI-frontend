@@ -337,7 +337,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSearching(true);
     try {
       // Use the correct API path that matches our backend route registration
-      const response = await fetch(`/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`);
+      const response = await fetch(`${window.location.origin}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include' // Include cookies for authentication if needed
+      });
       
       if (!response.ok) {
         const errorText = await response.text();

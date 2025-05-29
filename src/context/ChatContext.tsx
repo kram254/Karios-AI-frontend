@@ -336,8 +336,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setIsSearching(true);
     try {
+      // Debug log - search request
+      console.log('🔍 Starting search for query:', query);
+      
+      // Determine the base URL - handle different environments
+      const baseUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:8000' 
+        : window.location.origin;
+      
+      const searchUrl = `${baseUrl}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`;
+      console.log('🔗 Search API URL:', searchUrl);
+      
       // Use the correct API path that matches our backend route registration
-      const response = await fetch(`${window.location.origin}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`, {
+      const response = await fetch(searchUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -346,25 +357,47 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         credentials: 'include' // Include cookies for authentication if needed
       });
       
+      console.log('📡 Search API response status:', response.status);
+      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Search API error (${response.status}):`, errorText);
-        throw new Error(`Search failed: ${response.statusText}`);
+        console.error(`❌ Search API error (${response.status}):`, errorText);
+        throw new Error(`Search failed: ${response.statusText} - ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('Search results:', data);
+      console.log('✅ Search results received:', data);
       
       if (data && Array.isArray(data.results)) {
+        console.log(`📊 Found ${data.results.length} search results`);
         setSearchResults(data.results);
+        toast.success(`Found ${data.results.length} results for "${query}"`);
       } else {
-        console.warn('Unexpected search response format:', data);
+        console.warn('⚠️ Unexpected search response format:', data);
+        // Check if we have a note from the backend about missing API key
+        if (data?.note && data.note.includes("mock data")) {
+          toast.error('Backend API key not configured - using sample results');
+          console.error('Backend API key not configured, received mock data');
+        } else {
+          toast.error('Invalid search response format');
+        }
         // Fallback to mock results if the API response is invalid
         provideFallbackSearchResults(query);
       }
     } catch (error) {
-      console.error('Error performing search:', error);
-      toast.error('Using demo results - API connection failed');
+      console.error('❌ Error performing search:', error);
+      
+      // More specific error message
+      let errorMessage = 'Search failed - using demo results';
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network connection error - backend may be unreachable';
+        console.error('Network error details:', error);
+      } else if (error instanceof Error) {
+        errorMessage = `${error.message}`;
+        console.error('Error details:', error);
+      }
+      
+      toast.error(errorMessage);
       // Provide fallback search results when the API call fails
       provideFallbackSearchResults(query);
     } finally {

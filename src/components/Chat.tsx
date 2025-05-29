@@ -279,10 +279,10 @@ const Chat: React.FC = () => {
           <p className="text-gray-400 text-center text-sm sm:text-base mb-8 sm:mb-10 max-w-md">How can I help you today?</p>
           
           {/* Message Input Area with glowing border - updated to match image 2 */}
-          <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#1A1A1A] rounded-xl shadow-lg overflow-hidden border border-[#00F3FF]/20 glow-border transition-all duration-300 hover:border-[#00F3FF]/40 hover:shadow-[#00F3FF]/20 hover:shadow-xl">
+          <div className="w-full max-w-md sm:max-w-lg md:max-w-2xl bg-[#222] rounded-2xl shadow-lg overflow-hidden transition-all duration-300">
             <form onSubmit={handleSubmit} className="relative">
               {/* Top input row with plus icon, text area, and send button */}
-              <div className="flex items-center w-full">
+              <div className="flex items-center w-full px-0.5 py-1">
                 <button
                   type="button"
                   className="text-gray-400 hover:text-[#00F3FF] p-2 ml-2 transition-all duration-300"
@@ -294,7 +294,7 @@ const Chat: React.FC = () => {
                   <Plus className="w-5 h-5" />
                 </button>
                 
-                <div className="relative flex-1">
+                <div className="relative flex-1 mx-2">
                   <textarea
                     ref={(textAreaRef) => {
                       // Auto-resize logic - same as main chat
@@ -316,7 +316,7 @@ const Chat: React.FC = () => {
                       e.target.style.height = `${newHeight}px`;
                     }}
                     onKeyDown={handleKeyDown}
-                    className="w-full bg-[#1A1A1A] text-white outline-none border-none py-3 px-2 resize-none min-h-[56px] placeholder-gray-500 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto"
+                    className="w-full bg-[#222] text-white outline-none border-none py-3 px-2 resize-none min-h-[45px] placeholder-gray-400 focus:placeholder-[#00F3FF]/50 transition-all overflow-y-auto"
                     disabled={isProcessing}
                   />
                 </div>
@@ -332,12 +332,12 @@ const Chat: React.FC = () => {
               </div>
               
               {/* Bottom section with the search button on the left side */}
-              <div className="flex items-center px-4 py-2 mt-1">
+              <div className="flex items-center px-4 py-2 mt-0.5">
                 {/* Pill-shaped search button matching image 2 design */}
                 <div className="flex-1">
                   <button
                     type="button"
-                    className="flex items-center gap-2 bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF] py-1.5 px-3 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner"
+                    className="flex items-center gap-2 bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF] py-1.5 px-4 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner"
                     onClick={() => {
                       // Just visual feedback, no actual functionality needed
                       toast.success("Search mode toggled", { icon: "🔍" });

@@ -64,9 +64,18 @@ const Chat: React.FC = () => {
     e.preventDefault();
     if ((!message.trim() && uploadedImages.length === 0) || isProcessing) return;
 
-    // If we're in search mode, perform a search instead of sending a chat message
-    if (isSearchMode && message.trim()) {
-      performSearch(message);
+    // Handle search mode differently - perform a search instead of sending a chat message
+    if (isSearchMode) {
+      setIsProcessing(true);
+      try {
+        await performSearch(message);
+        setMessage(""); // Clear input after search
+      } catch (error) {
+        console.error("Search error:", error);
+        toast.error("Search failed. Please try again.");
+      } finally {
+        setIsProcessing(false);
+      }
       return;
     }
 
@@ -337,19 +346,27 @@ const Chat: React.FC = () => {
                 <div className="flex-1">
                   <button
                     type="button"
-                    className="flex items-center gap-2 bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF] py-1.5 px-4 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner"
+                    className={`flex items-center gap-2 ${isSearchMode 
+                      ? 'bg-[#2A2A2A] text-[#00F3FF] border border-[#00F3FF]/40 shadow-inner shadow-[#00F3FF]/10' 
+                      : 'bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF]'} 
+                      py-1.5 px-4 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner`}
                     onClick={() => {
-                      // Just visual feedback, no actual functionality needed
-                      toast.success("Search mode toggled", { icon: "🔍" });
+                      // Toggle search mode using the context function
+                      toggleSearchMode();
+                      toast.success(isSearchMode ? "Search mode disabled" : "Search mode enabled", { 
+                        icon: "🔍",
+                        duration: 2000
+                      });
                     }}
+                    aria-pressed={isSearchMode}
                   >
                     <Search className="w-4 h-4" />
-                    <span className="text-sm font-medium">Search</span>
+                    <span className="text-sm font-medium">{isSearchMode ? "Searching" : "Search"}</span>
                   </button>
                 </div>
                 
                 {/* AI reference notice on the right side */}
-                <div className="text-xs text-gray-500">Agentando AI | For reference only.</div>
+                <div className="text-xs text-gray-500">Agentando AI | Verify important Info.</div>
               </div>
             </form>
           </div>
@@ -379,80 +396,123 @@ const Chat: React.FC = () => {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {currentChat.messages
-          // Filter out duplicate messages (messages with the same content sent within 1 second)
-          .filter((msg, index, array) => {
-            // Always keep the first message
-            if (index === 0) return true;
-            
-            // Check if this message has the same content as the previous one
-            const prevMsg = array[index - 1];
-            if (prevMsg.content !== msg.content || prevMsg.role !== msg.role) return true;
-            
-            // If content is the same, check if the timestamps are within 1 second
-            const currentTime = new Date(msg.timestamp || msg.created_at || Date.now()).getTime();
-            const prevTime = new Date(prevMsg.timestamp || prevMsg.created_at || Date.now()).getTime();
-            
-            // If timestamps are more than 1 second apart, keep both messages
-            return Math.abs(currentTime - prevTime) > 1000;
-          })
-          .map((msg) => (
-          <motion.div
-            key={msg.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`message-container ${msg.role === "user" ? "user" : "agent"}`}
-          >
-            <div
-              className={`message-content ${msg.role}`}
-            >
-              <div className="message-text">
-                <>
-                  <MessageFormatter content={msg.content} role={msg.role} />
-                  
-                  {/* Display message attachments if any */}
-                  {msg.attachments && msg.attachments.length > 0 && (
-                    <div className="message-attachments">
-                      {msg.attachments.map((attachment: Attachment, index: number) => (
-                        <div key={index} className="message-attachment">
-                          {attachment.type === 'image' && (
-                            <img 
-                              src={attachment.url || attachment.preview_url} 
-                              alt={attachment.name} 
-                              className="message-image"
-                              onClick={() => window.open(attachment.url || attachment.preview_url, '_blank')}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              </div>
-              <div className="message-timestamp">
-                {(() => {
-                  try {
-                    // Check if timestamp is a string (from API) or a Date object
-                    const date = msg.timestamp instanceof Date 
-                      ? msg.timestamp 
-                      : new Date(msg.timestamp || msg.created_at || Date.now());
-                    
-                    // Verify if the date is valid before formatting
-                    if (isNaN(date.getTime())) {
-                      return 'Invalid date';
-                    }
-                    
-                    return format(date, "MMM d, yyyy HH:mm");
-                  } catch (error) {
-                    console.error('Error formatting date:', error);
-                    return 'Unknown time';
-                  }
-                })()}
+        {/* Search Results Section */}
+        {isSearchMode && searchResults.length > 0 && (
+          <div className="mb-8 bg-[#1A1A1A] border border-[#00F3FF]/20 rounded-xl p-4 shadow-lg transition-all">
+            <h3 className="text-[#00F3FF] text-lg mb-3 flex items-center">
+              <Search className="w-5 h-5 mr-2" />
+              Search Results
+            </h3>
+            <div className="space-y-4">
+              {searchResults.map((result, index) => (
+                <div key={index} className="border-b border-gray-700 pb-3 last:border-b-0">
+                  <a 
+                    href={result.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-white hover:text-[#00F3FF] font-medium transition-colors"
+                  >
+                    {result.title}
+                  </a>
+                  <div className="text-gray-400 text-sm mt-1">{result.url}</div>
+                  <p className="text-gray-300 text-sm mt-2">{result.snippet}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Render search status when searching */}
+        {isSearchMode && isSearching && (
+          <div className="mb-8 text-center">
+            <div className="inline-block bg-[#1A1A1A] rounded-lg px-4 py-2 shadow-lg">
+              <div className="flex items-center text-[#00F3FF]">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#00F3FF] mr-2"></div>
+                Searching...
               </div>
             </div>
-          </motion.div>
-        ))}
-        <div ref={messagesEndRef} />
+          </div>
+        )}
+        
+        {/* Render chat messages if not in search mode or if we have no search results yet */}
+        {(!isSearchMode || (isSearchMode && searchResults.length === 0 && !isSearching)) && currentChat && (
+          <>
+            {currentChat.messages
+            // Filter out duplicate messages (messages with the same content sent within 1 second)
+            .filter((msg, index, array) => {
+              // Always keep the first message
+              if (index === 0) return true;
+              
+              // Check if this message has the same content as the previous one
+              const prevMsg = array[index - 1];
+              if (prevMsg.content !== msg.content || prevMsg.role !== msg.role) return true;
+              
+              // If content is the same, check if the timestamps are within 1 second
+              const currentTime = new Date(msg.timestamp || msg.created_at || Date.now()).getTime();
+              const prevTime = new Date(prevMsg.timestamp || prevMsg.created_at || Date.now()).getTime();
+              
+              // If timestamps are more than 1 second apart, keep both messages
+              return Math.abs(currentTime - prevTime) > 1000;
+            })
+            .map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`message-container ${msg.role === "user" ? "user" : "agent"}`}
+              >
+                <div
+                  className={`message-content ${msg.role}`}
+                >
+                  <div className="message-text">
+                    <>
+                      <MessageFormatter content={msg.content} role={msg.role} />
+                      
+                      {/* Display message attachments if any */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="message-attachments">
+                          {msg.attachments.map((attachment: Attachment, index: number) => (
+                            <div key={index} className="message-attachment">
+                              {attachment.type === 'image' && (
+                                <img 
+                                  src={attachment.url || attachment.preview_url} 
+                                  alt={attachment.name} 
+                                  className="message-image"
+                                  onClick={() => window.open(attachment.url || attachment.preview_url, '_blank')}
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  </div>
+                  <div className="message-timestamp">
+                    {(() => {
+                      try {
+                        // Check if timestamp is a string (from API) or a Date object
+                        const date = msg.timestamp instanceof Date 
+                          ? msg.timestamp 
+                          : new Date(msg.timestamp || msg.created_at || Date.now());
+                        
+                        // Verify if the date is valid before formatting
+                        if (isNaN(date.getTime())) {
+                          return 'Invalid date';
+                        }
+                        
+                        return format(date, "MMM d, yyyy HH:mm");
+                      } catch (error) {
+                        console.error('Error formatting date:', error);
+                        return 'Unknown time';
+                      }
+                    })()}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+            <div ref={messagesEndRef} />
+          </>
+        )}
       </div>
 
       {/* Input Form - Using updated chat.css classes */}
@@ -598,7 +658,7 @@ const Chat: React.FC = () => {
             ))}
           </div>
         )}
-        <div className="chat-ai-notice">Agentando AI | For reference only.</div>
+        <div className="chat-ai-notice">Agentando AI | Verify important Info.</div>
       </div>
     </div>
   );

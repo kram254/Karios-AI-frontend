@@ -330,34 +330,153 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Check if an API endpoint is alive and responding
+  const checkApiEndpoint = async (url: string): Promise<boolean> => {
+    try {
+      console.log(`🔌 Testing API connectivity to: ${url}`);
+      const response = await fetch(`${url}/api/status`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        mode: 'cors',
+        cache: 'no-cache',
+      });
+      
+      if (response.ok) {
+        console.log(`✅ API endpoint ${url} is alive!`);
+        return true;
+      } else {
+        console.log(`❌ API endpoint ${url} returned status: ${response.status}`);
+        return false;
+      }
+    } catch (error) {
+      console.log(`❌ Cannot connect to API endpoint ${url}:`, error);
+      return false;
+    }
+  };
+  
   // Perform web search using the Brave Search API
   const performSearch = async (query: string) => {
     if (!query.trim()) return;
+    
+    // Check the API status first before attempting search
+    console.log('📍 Checking API endpoint status before search...');
+    const renderEndpoint = 'https://agentando-ai-backend-d7f9.onrender.com';
+    const isApiAlive = await checkApiEndpoint(renderEndpoint);
     
     setIsSearching(true);
     try {
       // Debug log - search request
       console.log('🔍 Starting search for query:', query);
       
-      // Determine the base URL - handle different environments
-      const baseUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:8000' 
-        : window.location.origin;
+      // Determine the base URL based on API status check results
+      // If the Render API is alive, use it directly
+      // Otherwise, try other options in order
+      let baseUrl = '';
+      let apiUrls = [];
+      
+      if (isApiAlive) {
+        baseUrl = renderEndpoint;
+        console.log('💾 Using verified Render API endpoint:', baseUrl);
+        
+        // Still keep other URLs as fallback
+        apiUrls = [
+          renderEndpoint,                  // Known working Render endpoint
+          window.location.origin,          // Same origin as frontend
+          'http://localhost:8000',         // Local development
+          ''                               // Relative path as last resort
+        ];
+      } else {
+        console.log('⚠️ Render API endpoint is not responding, trying other options');
+        
+        if (process.env.NODE_ENV === 'development') {
+          baseUrl = 'http://localhost:8000';
+          console.log('🔧 Development environment detected, using:', baseUrl);
+        } else {
+          // Try relative path as main option since Render API is down
+          baseUrl = window.location.origin;
+          console.log('🚀 Using same-origin API endpoint:', baseUrl);
+        }
+        
+        apiUrls = [
+          window.location.origin,          // Same origin as frontend
+          '',                              // Relative path
+          'http://localhost:8000',         // Local development
+          renderEndpoint                   // Render endpoint as last resort
+        ];
+      }
+      
+      console.log('🔍 Available API base URLs (in priority order):', apiUrls);
       
       const searchUrl = `${baseUrl}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`;
-      console.log('🔗 Search API URL:', searchUrl);
+      console.log('🔗 Primary Search API URL:', searchUrl);
       
-      // Use the correct API path that matches our backend route registration
-      const response = await fetch(searchUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include' // Include cookies for authentication if needed
-      });
+      // Track if request succeeded
+      let requestSucceeded = false;
+      let response: Response | null = null;
+      let lastError: Error | null = null;
       
-      console.log('📡 Search API response status:', response.status);
+      // Try the primary URL first
+      try {
+        console.log('🕐 Attempting API call to primary URL:', searchUrl);
+        
+        response = await fetch(searchUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include' // Include cookies for authentication if needed
+        });
+        
+        console.log('📡 Primary API response status:', response.status);
+        requestSucceeded = response.ok;
+      } catch (error) {
+        console.error('❌ Primary API call failed:', error);
+        lastError = error as Error;
+      }
+      
+      // If primary URL failed, try the fallback URLs
+      if (!requestSucceeded) {
+        console.log('⚠️ Primary API call failed, trying fallback URLs...');
+        
+        // Try each of the other URLs
+        for (const apiUrl of apiUrls) {
+          // Skip empty URL or the one we already tried
+          if (!apiUrl || apiUrl === baseUrl) continue;
+          
+          const fallbackUrl = `${apiUrl}/api/retrieve/search?q=${encodeURIComponent(query)}&count=5`;
+          console.log('🔗 Trying fallback URL:', fallbackUrl);
+          
+          try {
+            response = await fetch(fallbackUrl, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include'
+            });
+            
+            console.log('📡 Fallback API response status:', response.status);
+            
+            if (response.ok) {
+              console.log('✅ Fallback API call succeeded with URL:', fallbackUrl);
+              requestSucceeded = true;
+              break; // Exit the loop as we found a working URL
+            }
+          } catch (error) {
+            console.error(`❌ Fallback API call to ${fallbackUrl} failed:`, error);
+            lastError = error as Error;
+          }
+        }
+      }
+      
+      // If all URLs failed, throw the last error
+      if (!requestSucceeded || !response) {
+        throw new Error(`All API endpoints failed. Last error: ${lastError?.message || 'Unknown error'}`);
+      }
+      
+      console.log('📡 Final successful API response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();

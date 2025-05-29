@@ -62,19 +62,34 @@ const Chat: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!message.trim() && uploadedImages.length === 0) || isProcessing) return;
+    
+    // Log that the form was submitted
+    console.log(`💬 FORM SUBMITTED - SearchMode: ${isSearchMode ? 'ENABLED' : 'DISABLED'}, Message length: ${message.length}`);
+    
+    if ((!message.trim() && uploadedImages.length === 0) || isProcessing) {
+      console.log('⛔ SUBMISSION BLOCKED - Empty message or processing in progress');
+      return;
+    }
 
     // Handle search mode differently - perform a search instead of sending a chat message
     if (isSearchMode) {
+      console.log(`🌐 EXECUTING INTERNET SEARCH - Query: "${message}"`);
+      toast.loading(`Searching the web for: "${message}"`, { id: 'search-toast' });
+      
       setIsProcessing(true);
       try {
+        console.log('🔍 CALLING SEARCH API...');
         await performSearch(message);
+        console.log('✅ SEARCH COMPLETE - Input cleared');
+        toast.success(`Search results found for: "${message}"`, { id: 'search-toast' });
         setMessage(""); // Clear input after search
       } catch (error) {
-        console.error("Search error:", error);
-        toast.error("Search failed. Please try again.");
+        console.error("❌ SEARCH ERROR:", error);
+        toast.error(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'search-toast' });
+        console.log('💡 TROUBLESHOOTING TIPS: Check network connection, API endpoint, and server status');
       } finally {
         setIsProcessing(false);
+        console.log('🔄 SEARCH PROCESSING COMPLETE - UI ready for next action');
       }
       return;
     }
@@ -351,12 +366,26 @@ const Chat: React.FC = () => {
                       : 'bg-[#2A2A2A] text-gray-300 hover:text-[#00F3FF]'} 
                       py-1.5 px-4 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner`}
                     onClick={() => {
+                      // Log the current state before toggling
+                      console.log(`🔍 SEARCH BUTTON CLICKED - Current search mode: ${isSearchMode ? 'ENABLED' : 'DISABLED'}`);
+                      
                       // Toggle search mode using the context function
                       toggleSearchMode();
-                      toast.success(isSearchMode ? "Search mode disabled" : "Search mode enabled", { 
+                      
+                      // Log the new state after toggling
+                      console.log(`🔍 SEARCH MODE TOGGLED - New search mode: ${!isSearchMode ? 'ENABLED' : 'DISABLED'}`);
+                      
+                      // Show toast notification
+                      const newMode = !isSearchMode;
+                      toast.success(newMode ? "Internet search mode enabled" : "Internet search mode disabled", { 
                         icon: "🔍",
                         duration: 2000
                       });
+                      
+                      // Log instructions for the user
+                      if (newMode) {
+                        console.log('🌐 INTERNET SEARCH READY - Type a search query and press Send to search the web');
+                      }
                     }}
                     aria-pressed={isSearchMode}
                   >

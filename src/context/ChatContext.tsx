@@ -488,21 +488,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await response.json();
       console.log('✅ Search results received:', data);
       
-      if (data && Array.isArray(data.results)) {
+      // Handle both successful results and error scenarios
+      if (data.status === "error") {
+        console.error('❌ Search API returned error:', data.error);
+        
+        // Check if this is an API key error
+        if (data.error && data.error.includes("BRAVE_SEARCH_API_KEY")) {
+          toast.error('BRAVE_SEARCH_API_KEY environment variable is not set. Please configure it in your backend settings.');
+          console.error('Search failed: The BRAVE_SEARCH_API_KEY is missing - search cannot work without a valid API key');
+          
+          // Clear search results to avoid showing stale data
+          setSearchResults([]);
+          throw new Error('Brave Search API key not configured');
+        } else {
+          toast.error(`Search error: ${data.error}`);
+          setSearchResults([]);
+          throw new Error(`Search API error: ${data.error}`);
+        }
+      } 
+      else if (data && Array.isArray(data.results) && data.results.length > 0) {
         console.log(`📊 Found ${data.results.length} search results`);
         setSearchResults(data.results);
         toast.success(`Found ${data.results.length} results for "${query}"`);
-      } else {
-        console.warn('⚠️ Unexpected search response format:', data);
-        // Check if we have a note from the backend about missing API key
-        if (data?.note && data.note.includes("mock data")) {
-          toast.error('Backend API key not configured - using sample results');
-          console.error('Backend API key not configured, received mock data');
-        } else {
-          toast.error('Invalid search response format');
-        }
-        // Fallback to mock results if the API response is invalid
-        provideFallbackSearchResults(query);
+      } 
+      else {
+        console.warn('⚠️ No search results found or unexpected format:', data);
+        toast.error('No search results found');
+        setSearchResults([]);
       }
     } catch (error) {
       console.error('❌ Error performing search:', error);

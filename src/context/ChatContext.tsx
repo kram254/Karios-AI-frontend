@@ -1,4 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+
+// Extend the Window interface to include custom properties used for debugging
+declare global {
+  interface Window {
+    _lastSearchUrl?: string;
+    _lastSearchQuery?: string;
+    _lastSearchError?: any;
+    _lastSearchErrorText?: string;
+  }
+}
+
 import { chatService } from '../services/api/chat.service';
 import toast from 'react-hot-toast';
 import { generateTitleFromMessage } from '../utils/titleGenerator';
@@ -410,6 +421,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Use the new web-search endpoint which is more robust and has better error handling
       const searchUrl = `${baseUrl}/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
       console.log('🔗 Primary Search API URL:', searchUrl);
+      window._lastSearchUrl = searchUrl; // For debugging in browser
+      window._lastSearchQuery = query;
       
       // Track if request succeeded
       let requestSucceeded = false;
@@ -418,6 +431,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Try the primary URL first
       try {
+        console.log('🟢 [SEARCH] Triggered performSearch for query:', query, '| Mode:', isSearchMode, '| URL:', searchUrl);
         console.log('🕐 Attempting API call to primary URL:', searchUrl);
         
         response = await fetch(searchUrl, {
@@ -431,13 +445,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         // Log detailed information about the response
-        console.log(`📢 Response details - URL: ${searchUrl}, Status: ${response.status}`);
-        console.log(`📢 Response headers:`, Object.fromEntries([...response.headers.entries()]));
-        
+        console.log(`📢 [SEARCH] Response details - URL: ${searchUrl}, Status: ${response.status}`);
+        console.log(`📢 [SEARCH] Response headers:`, Object.fromEntries([...response.headers.entries()]));
+        if (!response.ok) {
+          console.warn(`[SEARCH] Non-200 response received:`, response.status, await response.text());
+        }
         console.log('📡 Primary API response status:', response.status);
         requestSucceeded = response.ok;
       } catch (error) {
-        console.error('❌ Primary API call failed:', error);
+        console.error('❌ [SEARCH] Primary API call failed:', error);
+        window._lastSearchError = error;
         lastError = error as Error;
       }
       
@@ -447,6 +464,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Try each of the other URLs
         for (const apiUrl of apiUrls) {
+          console.log('[SEARCH] Trying fallback API URL:', apiUrl);
           // Skip empty URL or the one we already tried
           if (!apiUrl || apiUrl === baseUrl) continue;
           
@@ -468,9 +486,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             
             // Log detailed response information
-            console.log(`📢 Fallback response details - URL: ${fallbackUrl}, Status: ${response.status}`);
-            console.log(`📢 Fallback response headers:`, Object.fromEntries([...response.headers.entries()]));
-            
+            console.log(`[SEARCH] Fallback response details - URL: ${fallbackUrl}, Status: ${response.status}`);
+            console.log(`[SEARCH] Fallback response headers:`, Object.fromEntries([...response.headers.entries()]));
+            if (!response.ok) {
+              console.warn(`[SEARCH] Fallback non-200 response:`, response.status, await response.text());
+            }
             console.log('📡 Fallback API response status:', response.status);
             
             if (response.ok) {
@@ -487,6 +507,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // If all URLs failed, throw the last error
       if (!requestSucceeded || !response) {
+        console.error('[SEARCH] All API endpoints failed! Last error:', lastError);
         throw new Error(`All API endpoints failed. Last error: ${lastError?.message || 'Unknown error'}`);
       }
       
@@ -494,16 +515,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ Search API error (${response.status}):`, errorText);
+        console.error(`[SEARCH] ❌ Search API error (${response.status}):`, errorText);
+        window._lastSearchErrorText = errorText;
         throw new Error(`Search failed: ${response.statusText} - ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('✅ Search results received:', data);
+      console.log('✅ [SEARCH] Search results received:', data);
       
       // Handle both successful results and error scenarios
       if (data.status === "error") {
-        console.error('❌ Search API returned error:', data.error);
+        console.error('❌ [SEARCH] Search API returned error:', data.error);
         
         // Check if this is an API key error
         if (data.error && data.error.includes("BRAVE_SEARCH_API_KEY")) {
@@ -514,19 +536,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSearchResults([]);
           throw new Error('Brave Search API key not configured');
         } else {
-          toast.error(`Search error: ${data.error}`);
+          toast.error(`[SEARCH] Search error: ${data.error}`);
           setSearchResults([]);
-          throw new Error(`Search API error: ${data.error}`);
+          throw new Error(`[SEARCH] Search API error: ${data.error}`);
         }
       } 
       else if (data && Array.isArray(data.results) && data.results.length > 0) {
-        console.log(`📊 Found ${data.results.length} search results`);
+        console.log(`[SEARCH] 📊 Found ${data.results.length} search results`);
         setSearchResults(data.results);
-        toast.success(`Found ${data.results.length} results for "${query}"`);
+        toast.success(`[SEARCH] Found ${data.results.length} results for "${query}"`);
       } 
       else {
-        console.warn('⚠️ No search results found or unexpected format:', data);
-        toast.error('No search results found');
+        console.warn('[SEARCH] ⚠️ No search results found or unexpected format:', data);
+        toast.error('[SEARCH] No search results found');
         setSearchResults([]);
       }
     } catch (error) {

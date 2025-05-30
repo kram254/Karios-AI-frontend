@@ -426,8 +426,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           },
-          credentials: 'include' // Include cookies for authentication if needed
+          // Don't use credentials for cross-origin requests to avoid CORS issues
+          credentials: baseUrl === window.location.origin ? 'include' : 'omit'
         });
+        
+        // Log detailed information about the response
+        console.log(`📢 Response details - URL: ${searchUrl}, Status: ${response.status}`);
+        console.log(`📢 Response headers:`, Object.fromEntries([...response.headers.entries()]));
         
         console.log('📡 Primary API response status:', response.status);
         requestSucceeded = response.ok;
@@ -455,8 +460,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
               },
-              credentials: 'include'
+              // Fix CORS issues by not including credentials for cross-origin requests
+              credentials: apiUrl === window.location.origin ? 'include' : 'omit',
+              // Add more useful request options
+              mode: 'cors',
+              cache: 'no-cache'
             });
+            
+            // Log detailed response information
+            console.log(`📢 Fallback response details - URL: ${fallbackUrl}, Status: ${response.status}`);
+            console.log(`📢 Fallback response headers:`, Object.fromEntries([...response.headers.entries()]));
             
             console.log('📡 Fallback API response status:', response.status);
             

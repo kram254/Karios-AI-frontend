@@ -359,7 +359,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
     try {
       // Check the API status first before attempting search
       console.log('📍 Checking API endpoint status before search...');
-      const renderEndpoint = 'https://agentando-ai-backend-d7f9.onrender.com';
+      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
       const isApiAlive = await checkApiEndpoint(renderEndpoint);
 
       // Debug log - search request

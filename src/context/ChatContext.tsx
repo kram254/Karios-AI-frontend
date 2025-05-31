@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 // Extend the Window interface to include custom properties used for debugging
 declare global {
@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { generateTitleFromMessage } from '../utils/titleGenerator';
 import { Agent } from '../types/agent';
 import { useLanguage } from './LanguageContext';
+import { checkApiEndpoint } from '../utils/apiUtils';
 
 interface Attachment {
   id?: string;
@@ -74,11 +75,12 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Define the chat provider component with proper React return type
+export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): JSX.Element => {
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null); // Initialize selectedAgent state
   const { language } = useLanguage(); // Get the current language
   
@@ -333,62 +335,44 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Toggle search mode
-  const toggleSearchMode = () => {
+  const toggleSearchMode = (): void => {
     setIsSearchMode(!isSearchMode);
-    if (isSearchMode) {
-      // Clear any previous search results when exiting search mode
+    if (!isSearchMode) {
       setSearchResults([]);
     }
   };
 
-  // Check if an API endpoint is alive and responding
-  const checkApiEndpoint = async (url: string): Promise<boolean> => {
-    try {
-      console.log(`🔌 Testing API connectivity to: ${url}`);
-      const response = await fetch(`${url}/api/status`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        mode: 'cors',
-        cache: 'no-cache',
-      });
-      
-      if (response.ok) {
-        console.log(`✅ API endpoint ${url} is alive!`);
-        return true;
-      } else {
-        console.log(`❌ API endpoint ${url} returned status: ${response.status}`);
-        return false;
-      }
-    } catch (error) {
-      console.log(`❌ Cannot connect to API endpoint ${url}:`, error);
-      return false;
-    }
-  };
-  
   // Perform web search using the Brave Search API
-  const performSearch = async (query: string) => {
+  const performSearch = async (query: string): Promise<void> => {
     if (!query.trim()) return;
-    
-    // Check the API status first before attempting search
-    console.log('📍 Checking API endpoint status before search...');
-    const renderEndpoint = 'https://agentando-ai-backend-d7f9.onrender.com';
-    const isApiAlive = await checkApiEndpoint(renderEndpoint);
-    
+
+    // Generate a unique ID for this search request for tracing and debugging
+    const searchId = `search-${Date.now()}`;
+    console.log(`🏷️ [SEARCH] Generated unique search ID: ${searchId}`);
+
+    // Set searching state to true to show loading indicator
     setIsSearching(true);
+
+    // Store the query for debugging
+    window._lastSearchQuery = query;
+
     try {
+      // Check the API status first before attempting search
+      console.log('📍 Checking API endpoint status before search...');
+      const renderEndpoint = 'https://agentando-ai-backend-d7f9.onrender.com';
+      const isApiAlive = await checkApiEndpoint(renderEndpoint);
+
       // Debug log - search request
       console.log('🔍 Starting search for query:', query);
-      
+
       // Determine the base URL based on API status check results
-      // If the Render API is alive, use it directly
-      // Otherwise, try other options in order
       let baseUrl = '';
-      let apiUrls = [];
-      
+      let apiUrls: string[] = [];
+
       if (isApiAlive) {
         baseUrl = renderEndpoint;
         console.log('💾 Using verified Render API endpoint:', baseUrl);
-        
+
         // Still keep other URLs as fallback
         apiUrls = [
           renderEndpoint,                  // Known working Render endpoint
@@ -397,7 +381,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ''                               // Relative path as last resort
         ];
       } else {
-        console.log('⚠️ Render API endpoint is not responding, trying other options');
+        // If the main API is not available, try various fallback options
+        console.log('❗ Render API is not responding, using fallback URLs');
         
         if (process.env.NODE_ENV === 'development') {
           baseUrl = 'http://localhost:8000';
@@ -410,202 +395,182 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         apiUrls = [
           window.location.origin,          // Same origin as frontend
-          '',                              // Relative path
           'http://localhost:8000',         // Local development
-          renderEndpoint                   // Render endpoint as last resort
+          'https://localhost:8000',        // Local development with HTTPS
+          '',                              // Relative path as last resort
+          renderEndpoint                   // Still try Render as last resort
         ];
       }
       
+      // Filter out empty URLs
+      apiUrls = apiUrls.filter(url => url);
       console.log('🔍 Available API base URLs (in priority order):', apiUrls);
-      
-      // Use the new web-search endpoint which is more robust and has better error handling
-      const searchUrl = `${baseUrl}/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
-      console.log('🔗 Primary Search API URL:', searchUrl);
-      window._lastSearchUrl = searchUrl; // For debugging in browser
-      window._lastSearchQuery = query;
-      
+
+      // Use the web-search endpoint which is robust and has better error handling
+      const searchEndpoint = `/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
+      const searchUrl = `${baseUrl}${searchEndpoint}`;
+
+      // Full URL logging for debugging
+      console.log(`🔍 [SEARCH][${searchId}] Building search URL with:`);
+      console.log(`🔍 [SEARCH][${searchId}] - Base URL: ${baseUrl}`);
+      console.log(`🔍 [SEARCH][${searchId}] - Endpoint: ${searchEndpoint}`);
+      console.log(`🔍 [SEARCH][${searchId}] - Full URL: ${searchUrl}`);
+
+      // Store on window for debugging in browser console
+      window._lastSearchUrl = searchUrl;
+
       // Track if request succeeded
       let requestSucceeded = false;
       let response: Response | null = null;
       let lastError: Error | null = null;
-      
-      // Try the primary URL first
+
       try {
-        console.log('🟢 [SEARCH] Triggered performSearch for query:', query, '| Mode:', isSearchMode, '| URL:', searchUrl);
-        console.log('🕐 Attempting API call to primary URL:', searchUrl);
-        
-        response = await fetch(searchUrl, {
+        // Make the fetch call - use searchUrl at first attempt
+        const isCrossOrigin = !baseUrl.includes(window.location.host) && baseUrl !== '';
+        const fetchOptions: RequestInit = {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          // Don't use credentials for cross-origin requests to avoid CORS issues
-          credentials: baseUrl === window.location.origin ? 'include' : 'omit'
-        });
-        
-        // Log detailed information about the response
-        console.log(`📢 [SEARCH] Response details - URL: ${searchUrl}, Status: ${response.status}`);
-        console.log(`📢 [SEARCH] Response headers:`, Object.fromEntries([...response.headers.entries()]));
-        if (!response.ok) {
-          console.warn(`[SEARCH] Non-200 response received:`, response.status, await response.text());
-        }
-        console.log('📡 Primary API response status:', response.status);
+          credentials: isCrossOrigin ? 'omit' : 'include',
+          mode: isCrossOrigin ? 'cors' : 'same-origin',
+        };
+
+        console.log(`🔧 [SEARCH][${searchId}] Fetch options:`, fetchOptions);
+        console.log(`🕐 [SEARCH][${searchId}] Attempting API call to: ${searchUrl}`);
+
+        response = await fetch(searchUrl, fetchOptions);
         requestSucceeded = response.ok;
+        console.log(`✅ [SEARCH][${searchId}] API call succeeded with status: ${response.status}`);
       } catch (error) {
-        console.error('❌ [SEARCH] Primary API call failed:', error);
-        window._lastSearchError = error;
+        console.error(`❌ [SEARCH][${searchId}] Initial API call failed with error:`, error);
         lastError = error as Error;
-      }
-      
-      // If primary URL failed, try the fallback URLs
-      if (!requestSucceeded) {
-        console.log('⚠️ Primary API call failed, trying fallback URLs...');
-        
-        // Try each of the other URLs
-        for (const apiUrl of apiUrls) {
-          console.log('[SEARCH] Trying fallback API URL:', apiUrl);
-          // Skip empty URL or the one we already tried
-          if (!apiUrl || apiUrl === baseUrl) continue;
-          
-          const fallbackUrl = `${apiUrl}/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
-          console.log('🔗 Trying fallback URL:', fallbackUrl);
-          
+        window._lastSearchError = error;
+
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+          console.error(`🔴 [SEARCH][${searchId}] NETWORK ERROR - This could be due to:`);
+          console.error('- The backend server is not running');
+          console.error('- There is a CORS configuration issue');
+          console.error('- The URL is incorrect:', searchUrl);
+          console.error('- There is a network connectivity issue');
+        }
+
+        // Try fallback URLs one by one
+        console.log(`⚠️ [SEARCH][${searchId}] Attempting ${apiUrls.length} fallback URLs...`);
+
+        for (const fallbackBaseUrl of apiUrls) {
+          // Skip empty URLs or the one we already tried
+          if (!fallbackBaseUrl || fallbackBaseUrl === baseUrl) continue;
+
+          const fallbackUrl = `${fallbackBaseUrl}${searchEndpoint}`;
+          console.log(`🔄 [SEARCH][${searchId}] Trying fallback URL: ${fallbackUrl}`);
+
+          const isCrossOrigin = !fallbackBaseUrl.includes(window.location.host) && fallbackBaseUrl !== '';
+          const fallbackOptions: RequestInit = {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            credentials: isCrossOrigin ? 'omit' : 'include',
+            mode: isCrossOrigin ? 'cors' : 'same-origin',
+          };
+
           try {
-            response = await fetch(fallbackUrl, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              },
-              // Fix CORS issues by not including credentials for cross-origin requests
-              credentials: apiUrl === window.location.origin ? 'include' : 'omit',
-              // Add more useful request options
-              mode: 'cors',
-              cache: 'no-cache'
-            });
-            
-            // Log detailed response information
-            console.log(`[SEARCH] Fallback response details - URL: ${fallbackUrl}, Status: ${response.status}`);
-            console.log(`[SEARCH] Fallback response headers:`, Object.fromEntries([...response.headers.entries()]));
-            if (!response.ok) {
-              console.warn(`[SEARCH] Fallback non-200 response:`, response.status, await response.text());
-            }
-            console.log('📡 Fallback API response status:', response.status);
-            
-            if (response.ok) {
-              console.log('✅ Fallback API call succeeded with URL:', fallbackUrl);
-              requestSucceeded = true;
-              break; // Exit the loop as we found a working URL
-            }
+            response = await fetch(fallbackUrl, fallbackOptions);
+            requestSucceeded = response.ok;
+            console.log(`✅ [SEARCH][${searchId}] Fallback API call to ${fallbackUrl} succeeded with status: ${response.status}`);
+            if (response.ok) break; // Exit the loop if successful
           } catch (error) {
-            console.error(`❌ Fallback API call to ${fallbackUrl} failed:`, error);
+            console.error(`❌ Fallback API call to ${fallbackBaseUrl} failed:`, error);
             lastError = error as Error;
+            window._lastSearchError = error;
           }
         }
       }
-      
+
       // If all URLs failed, throw the last error
       if (!requestSucceeded || !response) {
         console.error('[SEARCH] All API endpoints failed! Last error:', lastError);
         throw new Error(`All API endpoints failed. Last error: ${lastError?.message || 'Unknown error'}`);
       }
-      
+
       console.log('📡 Final successful API response status:', response.status);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[SEARCH] ❌ Search API error (${response.status}):`, errorText);
         window._lastSearchErrorText = errorText;
         throw new Error(`Search failed: ${response.statusText} - ${errorText}`);
       }
-      
+
+      // Parse JSON response
       const data = await response.json();
       console.log('✅ [SEARCH] Search results received:', data);
-      
+
       // Handle both successful results and error scenarios
       if (data.status === "error") {
         console.error('❌ [SEARCH] Search API returned error:', data.error);
-        
-        // Check if this is an API key error
-        if (data.error && data.error.includes("BRAVE_SEARCH_API_KEY")) {
-          toast.error('BRAVE_SEARCH_API_KEY environment variable is not set. Please configure it in your backend settings.');
-          console.error('Search failed: The BRAVE_SEARCH_API_KEY is missing - search cannot work without a valid API key');
-          
-          // Clear search results to avoid showing stale data
-          setSearchResults([]);
-          throw new Error('Brave Search API key not configured');
-        } else {
-          toast.error(`[SEARCH] Search error: ${data.error}`);
-          setSearchResults([]);
-          throw new Error(`[SEARCH] Search API error: ${data.error}`);
-        }
-      } 
-      else if (data && Array.isArray(data.results) && data.results.length > 0) {
-        console.log(`[SEARCH] 📊 Found ${data.results.length} search results`);
-        setSearchResults(data.results);
-        toast.success(`[SEARCH] Found ${data.results.length} results for "${query}"`);
-      } 
-      else {
-        console.warn('[SEARCH] ⚠️ No search results found or unexpected format:', data);
-        toast.error('[SEARCH] No search results found');
+        throw new Error(`Search API error: ${data.error || 'Unknown error'}`);
+      }
+
+      // If we got search results successfully, process them
+      if (data.results && Array.isArray(data.results)) {
+        console.log(`✅ [SEARCH][${searchId}] Successfully processed ${data.results.length} search results`);
+
+        // Map the API response to our SearchResult type
+        const results: SearchResult[] = data.results.map((result: any) => ({
+          title: result.title || 'No Title',
+          url: result.url || '#',
+          snippet: result.description || result.snippet || 'No description available.'
+        }));
+
+        // Update search results in state
+        setSearchResults(results);
+      } else {
+        console.warn('⚠️ [SEARCH] Search returned empty or invalid results:', data);
+        // Set empty results
         setSearchResults([]);
+
+        // If there are no results but the API didn't report an error, we'll use mock data
+        if (process.env.NODE_ENV === 'development') {
+          console.log('💭 [SEARCH] Using mock search results for development');
+          // Mock search results for development
+          const mockResults: SearchResult[] = [
+            {
+              title: 'Mock Result 1 for "' + query + '"',
+              url: 'https://example.com/1',
+              snippet: 'This is a mock search result for development purposes. Your search was: ' + query
+            },
+            {
+              title: 'Mock Result 2 for "' + query + '"',
+              url: 'https://example.com/2',
+              snippet: 'Another mock search result. Search engines might be down or unreachable.'
+            }
+          ];
+          setSearchResults(mockResults);
+        }
       }
     } catch (error) {
-      console.error('❌ Error performing search:', error);
-      
-      // More specific error message
-      let errorMessage = 'Search failed - using demo results';
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        errorMessage = 'Network connection error - backend may be unreachable';
-        console.error('Network error details:', error);
-      } else if (error instanceof Error) {
-        errorMessage = `${error.message}`;
-        console.error('Error details:', error);
-      }
-      
-      toast.error(errorMessage);
-      // Provide fallback search results when the API call fails
-      provideFallbackSearchResults(query);
+      console.error('🔴 [SEARCH] Unhandled error in performSearch:', error);
+      setSearchResults([]);
+      toast.error('Search failed: ' + (error instanceof Error ? error.message : String(error)));
+      window._lastSearchError = error;
     } finally {
+      // Always set isSearching to false when search completes or fails
       setIsSearching(false);
+      console.log('🏁 [SEARCH] Search operation completed');
     }
   };
 
-  // Provide fallback search results when the API is not available
-  const provideFallbackSearchResults = (query: string) => {
-    // Create mock search results for demonstration purposes
-    const mockResults: SearchResult[] = [
-      {
-        title: `${query} - Latest News and Updates`,
-        url: 'https://example.com/news',
-        snippet: `Find the latest information about ${query}. This is a sample search result provided for demonstration purposes.`
-      },
-      {
-        title: `Everything You Need to Know About ${query}`,
-        url: 'https://example.com/info',
-        snippet: 'This is a demo search result. In production, this would display real search results from Brave Search API.'
-      },
-      {
-        title: `${query} - Wikipedia`,
-        url: 'https://en.wikipedia.org',
-        snippet: `Wikipedia article about ${query}. This sample result is shown because the real search API is not connected.`
-      }
-    ];
-    setSearchResults(mockResults);
-  };
-
-  // Find the latest version of a chat in the chats array
-  const getLatestChat = (chatId: string) => {
-    return chats.find(chat => chat.id === chatId) || null;
-  };
-
+  // Return the chat context provider
   return (
     <ChatContext.Provider value={{
       currentChat,
       chats,
       loading,
-      error,
+      error: errorState,
       createNewChat,
       createAgentChat,
       setCurrentChat,
@@ -626,10 +591,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useChat = () => {
+// Export the hook for consuming the context
+export const useChat = (): ChatContextType => {
   const context = useContext(ChatContext);
   if (context === undefined) {
     throw new Error('useChat must be used within a ChatProvider');
   }
   return context;
 };
+
+// This ensures the useChat hook is properly exported
+// It will be imported and used by other components elsewhere in the application
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const _useChatExport = useChat;

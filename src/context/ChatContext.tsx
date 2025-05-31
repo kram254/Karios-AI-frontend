@@ -369,7 +369,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
       // Check the API status first before attempting search
       console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
       // Updated to use the correct production endpoint
-      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com/';
+      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
       console.log(`🔌 [SEARCH][${searchId}] Using primary API endpoint: ${renderEndpoint}`);
       const isApiAlive = await checkApiEndpoint(renderEndpoint);
       console.log(`🔌 [SEARCH][${searchId}] API status check result: ${isApiAlive ? 'ONLINE' : 'OFFLINE'}`);
@@ -420,8 +420,17 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
       console.log('🔍 Available API base URLs (in priority order):', apiUrls);
 
       // Use the web-search endpoint which is robust and has better error handling
-      const searchEndpoint = `/api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
-      const searchUrl = `${baseUrl}${searchEndpoint}`;
+      const searchEndpoint = `api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
+      
+      // Ensure proper URL construction without double slashes
+      const searchUrl = baseUrl.endsWith('/') 
+        ? `${baseUrl}${searchEndpoint}` 
+        : `${baseUrl}/${searchEndpoint}`;
+        
+      console.log(`🔧 [SEARCH][${searchId}] URL construction details:`); 
+      console.log(`🔧 [SEARCH][${searchId}] - Base URL: ${baseUrl}`); 
+      console.log(`🔧 [SEARCH][${searchId}] - Search endpoint: ${searchEndpoint}`); 
+      console.log(`🔧 [SEARCH][${searchId}] - Constructed URL: ${searchUrl}`);
       
       console.log(`🌐 [SEARCH][${searchId}] ENDPOINT DETAILS:`);
       console.log(`🌐 [SEARCH][${searchId}] - API endpoint: /api/retrieve/web-search`);

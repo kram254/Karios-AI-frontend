@@ -13,7 +13,8 @@ export const checkApiEndpoint = async (url: string): Promise<boolean> => {
     
     // Use a simple GET request to the root of the API to check if it's alive
     // Add a random query param to prevent caching
-    const checkUrl = `${url}/health-check?t=${Date.now()}`;
+    // The backend has a root endpoint (/) that returns status
+    const checkUrl = `${url}?t=${Date.now()}`;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
@@ -51,6 +52,6 @@ export const getApiBaseUrl = (): string => {
     return 'http://localhost:8000';
   }
   
-  // In production, use same origin or the render endpoint
-  return window.location.origin;
+  // In production, use the render endpoint
+  return renderEndpoint;
 };

@@ -369,7 +369,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
       // Check the API status first before attempting search
       console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
       // Updated to use the correct production endpoint
-      const renderEndpoint = 'https://agentando-ai-backend-d7f9.onrender.com';
+      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com/';
       console.log(`🔌 [SEARCH][${searchId}] Using primary API endpoint: ${renderEndpoint}`);
       const isApiAlive = await checkApiEndpoint(renderEndpoint);
       console.log(`🔌 [SEARCH][${searchId}] API status check result: ${isApiAlive ? 'ONLINE' : 'OFFLINE'}`);

@@ -44,7 +44,7 @@ export const checkApiEndpoint = async (url: string): Promise<boolean> => {
  * @returns The base URL to use for API requests
  */
 export const getApiBaseUrl = (): string => {
-  const renderEndpoint = 'https://agentando-ai-backend-d7f9.onrender.com';
+  const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com/';
   
   // In development, use localhost
   if (process.env.NODE_ENV === 'development') {

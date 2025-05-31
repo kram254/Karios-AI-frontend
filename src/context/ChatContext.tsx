@@ -620,14 +620,29 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
 
         // Update search results in state
         setSearchResults(results);
+        
+        // Format search results for display in chat
+        const formattedResults = results.map((result, index) => {
+          return `${index + 1}. **[${result.title}](${result.url})**\n${result.snippet}\n`;
+        }).join('\n');
+        
+        // Create a nice message with the search results to display in chat
+        const searchResponseMessage = `### Search Results for "${query}"\n\n${formattedResults}`;
+        
+        // Add the search results to the chat as an assistant message
+        console.log(`📝 [SEARCH][${searchId}] Adding search results to chat conversation`);
+        await addMessage({
+          role: 'assistant',
+          content: searchResponseMessage
+        });
       } else {
         console.warn('⚠️ [SEARCH] Search returned empty or invalid results:', data);
         // Set empty results
         setSearchResults([]);
-
-        // If there are no results but the API didn't report an error, we'll use mock data
+        
+        // If there are no results but the API didn't report an error, we'll use mock data in development mode
         if (process.env.NODE_ENV === 'development') {
-          console.log('💭 [SEARCH] Using mock search results for development');
+          console.log(`💭 [SEARCH][${searchId}] Using mock search results for development`);
           // Mock search results for development
           const mockResults: SearchResult[] = [
             {
@@ -642,6 +657,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
             }
           ];
           setSearchResults(mockResults);
+          
+          // Format mock results for chat display
+          const formattedMockResults = mockResults.map((result, index) => {
+            return `${index + 1}. **[${result.title}](${result.url})**\n${result.snippet}\n`;
+          }).join('\n');
+          
+          // Add mock results to chat
+          console.log(`📝 [SEARCH][${searchId}] Adding mock search results to chat conversation`);
+          await addMessage({
+            role: 'assistant',
+            content: `### Mock Search Results for "${query}" (Development Mode)\n\n${formattedMockResults}\n\n*Note: These are mock results used in development mode when real search is unavailable.*`
+          });
+        } else {
+          // Only show no results message if we're not in development mode or not using mock data
+          await addMessage({
+            role: 'assistant',
+            content: `### Search Results\n\nNo results found for "${query}". Please try a different search term.`
+          });
         }
       }
     } catch (error: unknown) {

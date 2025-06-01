@@ -72,6 +72,7 @@ interface ChatContextType {
   searchResults: SearchResult[];
   performSearch: (query: string) => Promise<void>;
   isSearching: boolean;
+  accessedWebsites: {title: string, url: string}[];
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -89,6 +90,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [accessedWebsites, setAccessedWebsites] = useState<{title: string, url: string}[]>([]);
 
   useEffect(() => {
     loadChats();
@@ -621,6 +623,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
         // Update search results in state
         setSearchResults(results);
         
+        // Update accessed websites for the floating UI display
+        setAccessedWebsites(results.map(result => ({
+          title: result.title,
+          url: result.url
+        })).slice(0, 7)); // Limit to top 7 as requested
+        
         // Format search results for display in chat
         const formattedResults = results.map((result, index) => {
           return `${index + 1}. **[${result.title}](${result.url})**\n${result.snippet}\n`;
@@ -742,7 +750,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
       toggleSearchMode,
       searchResults,
       performSearch,
-      isSearching
+      isSearching,
+      accessedWebsites
     }}>
       {children}
     </ChatContext.Provider>

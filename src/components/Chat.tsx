@@ -8,6 +8,7 @@ import AgentInfoBanner from "./agent/AgentInfoBanner";
 import MessageFormatter from "./MessageFormatter";
 import { chatService, Attachment } from "../services/api/chat.service";
 import { generateTitleFromMessage } from "../utils/titleGenerator";
+import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -42,7 +43,8 @@ const Chat: React.FC = () => {
     toggleSearchMode,
     searchResults,
     performSearch,
-    isSearching 
+    isSearching,
+    accessedWebsites
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -688,6 +690,12 @@ const Chat: React.FC = () => {
           </div>
         )}
         <div className="chat-ai-notice">Agentando AI | Verify important Info.</div>
+        
+        {/* Floating websites indicator that appears when searching */}
+        <AccessedWebsitesFloater
+          websites={accessedWebsites}
+          isVisible={isSearching}
+        />
       </div>
     </div>
   );

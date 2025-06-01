@@ -596,31 +596,6 @@ const Chat: React.FC = () => {
               Search
             </button>
           </div>
-          
-          {/* Search results display */}
-          {isSearchMode && (
-            <div className="search-results-container">
-              {isSearching ? (
-                <div className="search-loading">Searching...</div>
-              ) : searchResults.length > 0 ? (
-                <div className="search-results-list">
-                  {searchResults.map((result: SearchResult, index: number) => (
-                    <div key={index} className="search-result-item">
-                      <h4 className="search-result-title">{result.title}</h4>
-                      <p className="search-result-snippet">{result.snippet}</p>
-                      <a href={result.url} target="_blank" rel="noopener noreferrer" className="search-result-url">
-                        {result.url}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              ) : message.trim() ? (
-                <div className="search-empty">Press Enter to search</div>
-              ) : (
-                <div className="search-empty">Type a search query</div>
-              )}
-            </div>
-          )}
         </form>
         
         {/* Image upload progress indicator */}

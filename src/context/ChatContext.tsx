@@ -647,13 +647,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
         console.log(`🔍 [SEARCH][${searchId}] Top websites accessed:`, 
           topWebsites.map(site => site.title).join(', ') || 'None')
         
-        // Format search results for display in chat
-        const formattedResults = results.map((result, index) => {
-          return `${index + 1}. **[${result.title}](${result.url})**\n${result.snippet}\n`;
-        }).join('\n');
+        // Format search results for display in chat - clean format like in screenshots
+        // First limit to top relevant results to not overwhelm the chat
+        const topResults = results.slice(0, 5);
         
-        // Create a nice message with the search results to display in chat
-        const searchResponseMessage = `### Search Results for "${query}"\n\n${formattedResults}`;
+        // Format the message that shows in the chat bubble
+        const searchSummary = `I found ${results.length} results for "${query}". Here are the most relevant ones:`;
+        
+        // Format each result with a clean numbered style
+        const formattedResults = topResults.map((result, index) => {
+          return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+        }).join('\n\n');
+        
+        // Create a clean message like shown in the screenshots
+        const searchResponseMessage = `${searchSummary}\n\n${formattedResults}\n\nYou can view all search results by clicking the search button.`;
         
         // Add the search results to the chat as an assistant message
         console.log(`📝 [SEARCH][${searchId}] Adding search results to chat conversation`);
@@ -684,22 +691,28 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
           ];
           setSearchResults(mockResults);
           
-          // Format mock results for chat display
-          const formattedMockResults = mockResults.map((result, index) => {
-            return `${index + 1}. **[${result.title}](${result.url})**\n${result.snippet}\n`;
-          }).join('\n');
+          // Add mock results to chat for better UX during development
+          // Format the message that shows in the chat bubble
+          const mockSearchSummary = `I found ${mockResults.length} results for "${query}". Here are the most relevant ones:`;
+          
+          // Format each result with a clean numbered style like the real search results
+          const mockFormattedResults = mockResults.map((result, index) => {
+            return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+          }).join('\n\n');
+          
+          const mockResponseMessage = `${mockSearchSummary}\n\n${mockFormattedResults}\n\nYou can view all search results by clicking the search button.\n\n*This is a development environment. Mock results are shown.*`;
           
           // Add mock results to chat
           console.log(`📝 [SEARCH][${searchId}] Adding mock search results to chat conversation`);
           await addMessage({
             role: 'assistant',
-            content: `### Mock Search Results for "${query}" (Development Mode)\n\n${formattedMockResults}\n\n*Note: These are mock results used in development mode when real search is unavailable.*`
+            content: mockResponseMessage
           });
         } else {
           // Only show no results message if we're not in development mode or not using mock data
           await addMessage({
             role: 'assistant',
-            content: `### Search Results\n\nNo results found for "${query}". Please try a different search term.`
+            content: `I couldn't find any results for "${query}". Please try a different search term.`
           });
         }
       }

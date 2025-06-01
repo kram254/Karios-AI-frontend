@@ -426,46 +426,10 @@ const Chat: React.FC = () => {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Search Results Section */}
-        {isSearchMode && searchResults.length > 0 && (
-          <div className="mb-8 bg-[#1A1A1A] border border-[#00F3FF]/20 rounded-xl p-4 shadow-lg transition-all">
-            <h3 className="text-[#00F3FF] text-lg mb-3 flex items-center">
-              <Search className="w-5 h-5 mr-2" />
-              Search Results
-            </h3>
-            <div className="space-y-4">
-              {searchResults.map((result, index) => (
-                <div key={index} className="border-b border-gray-700 pb-3 last:border-b-0">
-                  <a 
-                    href={result.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-white hover:text-[#00F3FF] font-medium transition-colors"
-                  >
-                    {result.title}
-                  </a>
-                  <div className="text-gray-400 text-sm mt-1">{result.url}</div>
-                  <p className="text-gray-300 text-sm mt-2">{result.snippet}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Search results are now presented as part of the AI's response in chat bubbles */}
         
-        {/* Render search status when searching */}
-        {isSearchMode && isSearching && (
-          <div className="mb-8 text-center">
-            <div className="inline-block bg-[#1A1A1A] rounded-lg px-4 py-2 shadow-lg">
-              <div className="flex items-center text-[#00F3FF]">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#00F3FF] mr-2"></div>
-                Searching...
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Render chat messages if not in search mode or if we have no search results yet */}
-        {(!isSearchMode || (isSearchMode && searchResults.length === 0 && !isSearching)) && currentChat && (
+        {/* Always render chat messages - search results will appear as agent responses */}
+        {currentChat && (
           <>
             {currentChat.messages
             // Filter out duplicate messages (messages with the same content sent within 1 second)

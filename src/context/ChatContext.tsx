@@ -73,6 +73,9 @@ interface ChatContextType {
   performSearch: (query: string) => Promise<void>;
   isSearching: boolean;
   accessedWebsites: {title: string, url: string}[];
+  searchQuery: string;
+  isSearchSidebarOpen: boolean;
+  toggleSearchSidebar: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -91,6 +94,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [accessedWebsites, setAccessedWebsites] = useState<{title: string, url: string}[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadChats();
@@ -345,9 +350,17 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
     }
   };
 
+  // Toggle search sidebar visibility
+  const toggleSearchSidebar = () => {
+    setIsSearchSidebarOpen(!isSearchSidebarOpen);
+  };
+
   // Perform web search using the Brave Search API
   const performSearch = async (query: string) => {
     if (!query.trim()) return;
+    
+    // Set the search query for display in sidebar
+    setSearchQuery(query);
 
     // Log the search request start time
     const searchStartTime = Date.now();
@@ -623,11 +636,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
         // Update search results in state
         setSearchResults(results);
         
-        // Update accessed websites for the floating UI display
-        setAccessedWebsites(results.map(result => ({
+        // Update accessed websites for monitoring and diagnostics
+        const topWebsites = results.map(result => ({
           title: result.title,
           url: result.url
-        })).slice(0, 7)); // Limit to top 7 as requested
+        })).slice(0, 7); // Limit to top 7 as requested
+        setAccessedWebsites(topWebsites);
+        
+        // Log accessed websites for debugging
+        console.log(`🔍 [SEARCH][${searchId}] Top websites accessed:`, 
+          topWebsites.map(site => site.title).join(', ') || 'None')
         
         // Format search results for display in chat
         const formattedResults = results.map((result, index) => {
@@ -751,7 +769,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
       searchResults,
       performSearch,
       isSearching,
-      accessedWebsites
+      accessedWebsites,
+      searchQuery,
+      isSearchSidebarOpen,
+      toggleSearchSidebar
     }}>
       {children}
     </ChatContext.Provider>

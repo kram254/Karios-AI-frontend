@@ -43,8 +43,7 @@ const Chat: React.FC = () => {
     toggleSearchMode,
     searchResults,
     performSearch,
-    isSearching,
-    accessedWebsites
+    isSearching
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -691,10 +690,9 @@ const Chat: React.FC = () => {
         )}
         <div className="chat-ai-notice">Agentando AI | Verify important Info.</div>
         
-        {/* Floating websites indicator that appears when searching */}
+        {/* Floating search results button that appears when searching */}
         <AccessedWebsitesFloater
-          websites={accessedWebsites}
-          isVisible={isSearching}
+          isVisible={isSearching || searchResults.length > 0}
         />
       </div>
     </div>

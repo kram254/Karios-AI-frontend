@@ -1,54 +1,67 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { Search, ChevronRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useChat } from '../context/ChatContext';
+import SearchResultsSidebar from './SearchResultsSidebar';
 
 interface AccessedWebsitesFloaterProps {
-  websites: { title: string; url: string }[];
   isVisible: boolean;
 }
 
-const AccessedWebsitesFloater: React.FC<AccessedWebsitesFloaterProps> = ({ websites, isVisible }) => {
-  if (!isVisible || websites.length === 0) return null;
+const AccessedWebsitesFloater: React.FC<AccessedWebsitesFloaterProps> = ({ 
+  isVisible
+}) => {
+  const { 
+    searchResults, 
+    isSearchSidebarOpen, 
+    toggleSearchSidebar,
+    searchQuery,
+    isSearching
+  } = useChat();
+
+  if (!isVisible) return null;
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          transition={{ duration: 0.3 }}
-          className="fixed bottom-24 right-5 max-w-xs w-full md:w-80 z-10"
-        >
-          <div className="bg-black/40 backdrop-blur-md rounded-2xl p-3 border border-[#00F3FF]/10 shadow-lg">
-            <div className="text-[#00F3FF]/80 text-xs font-medium mb-2 flex items-center">
-              <ExternalLink size={12} className="mr-1" />
-              <span>Accessing websites...</span>
-            </div>
-            
-            <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
-              {websites.map((site, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center bg-white/5 rounded-lg p-2 hover:bg-white/10 transition-colors"
-                >
-                  <div className="w-6 h-6 flex items-center justify-center rounded-full bg-[#00F3FF]/10 text-[#00F3FF] mr-2 text-xs font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="overflow-hidden flex-1">
-                    <div className="text-white/80 text-xs font-medium truncate">{site.title}</div>
-                    <div className="text-white/40 text-[10px] truncate">{site.url}</div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-24 right-5 z-10"
+          >
+            <motion.button
+              onClick={toggleSearchSidebar}
+              className="flex items-center bg-[#303134] hover:bg-[#3c3f43] text-white text-sm font-medium rounded-full px-4 py-2.5 shadow-lg border border-[#00F3FF]/20 hover:border-[#00F3FF]/40 transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <div className="flex items-center mr-2">
+                {isSearching ? (
+                  <Loader2 size={16} className="mr-2 animate-spin text-[#00F3FF]" />
+                ) : (
+                  <Search size={16} className="mr-2 text-[#00F3FF]" />
+                )}
+                <span>
+                  {isSearching ? 'Searching...' : 
+                    searchResults.length > 0 ? `Found ${searchResults.length} results` : 'No results'}
+                </span>
+              </div>
+              <ChevronRight size={16} className="text-gray-400" />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <SearchResultsSidebar 
+        isOpen={isSearchSidebarOpen} 
+        onClose={toggleSearchSidebar} 
+        searchResults={searchResults}
+        query={searchQuery}
+      />
+    </>
   );
 };
 

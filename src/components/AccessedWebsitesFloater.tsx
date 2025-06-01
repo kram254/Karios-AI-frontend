@@ -19,7 +19,9 @@ const AccessedWebsitesFloater: React.FC<AccessedWebsitesFloaterProps> = ({
     isSearching
   } = useChat();
 
-  if (!isVisible) return null;
+  // Only show when there are search results or actively searching
+  const shouldShow = isVisible && (searchResults.length > 0 || isSearching);  
+  if (!shouldShow) return null;
 
   return (
     <>

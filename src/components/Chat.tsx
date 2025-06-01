@@ -63,27 +63,31 @@ const Chat: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Log that the form was submitted
-    console.log(`💬 FORM SUBMITTED - SearchMode: ${isSearchMode ? 'ENABLED' : 'DISABLED'}, Message length: ${message.length}`);
-    
-    if ((!message.trim() && uploadedImages.length === 0) || isProcessing) {
-      console.log('⛔ SUBMISSION BLOCKED - Empty message or processing in progress');
-      return;
-    }
+    if (!message.trim() && uploadedImages.length === 0) return;
 
-    // Handle search mode differently - perform a search instead of sending a chat message
+    // Don't allow sending messages while processing
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    console.log('🔄 PROCESSING STARTED');
+    
+    // Get message content once for the entire function
+    const messageContent = message.trim();
+    
+    // Clear the input field immediately for better UX
+    setMessage("");
+    
+    // Handle search mode differently
     if (isSearchMode) {
-      console.log(`🌐 EXECUTING INTERNET SEARCH - Query: "${message}"`);
-      toast.loading(`Searching the web for: "${message}"`, { id: 'search-toast' });
+      toast.loading('Searching...', { id: 'search-toast' });
+      console.log('🔍 SEARCH MODE ACTIVE - Processing search');
       
-      setIsProcessing(true);
       try {
         console.log('🔍 CALLING SEARCH API...');
-        await performSearch(message);
-        console.log('✅ SEARCH COMPLETE - Input cleared');
-        toast.success(`Search results found for: "${message}"`, { id: 'search-toast' });
-        setMessage(""); // Clear input after search
+        // This will add the search results as a chat message
+        await performSearch(messageContent);
+        console.log('✅ SEARCH COMPLETE');
+        toast.success(`Search results found for: "${messageContent}"`, { id: 'search-toast' });
       } catch (error) {
         console.error("❌ SEARCH ERROR:", error);
         toast.error(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'search-toast' });
@@ -94,10 +98,8 @@ const Chat: React.FC = () => {
       }
       return;
     }
-
-    const messageContent = message.trim();
-    setIsProcessing(true);
     
+    // Regular chat message processing (not search)
     try {
       // Store the message content before any async operations
       const userMessage = messageContent;
@@ -654,9 +656,9 @@ const Chat: React.FC = () => {
         )}
         <div className="chat-ai-notice">Agentando AI | Verify important Info.</div>
         
-        {/* Floating search results button that appears when searching */}
+        {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater
-          isVisible={isSearching || searchResults.length > 0}
+          isVisible={true} /* Always pass true and let the component handle visibility logic */
         />
       </div>
     </div>

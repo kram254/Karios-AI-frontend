@@ -647,20 +647,30 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
         console.log(`🔍 [SEARCH][${searchId}] Top websites accessed:`, 
           topWebsites.map(site => site.title).join(', ') || 'None')
         
-        // Format search results for display in chat - clean format like in screenshots
+        // Format search results for display in chat - clean format like in the second image
         // First limit to top relevant results to not overwhelm the chat
         const topResults = results.slice(0, 5);
         
-        // Format the message that shows in the chat bubble
-        const searchSummary = `I found ${results.length} results for "${query}". Here are the most relevant ones:`;
+        // Format the message that shows in the chat bubble with a clean header
+        const searchSummary = `Here's a comprehensive overview of the ${query}, including key details about the results:`;
         
-        // Format each result with a clean numbered style
+        // Add a divider line for cleaner separation
+        const dividerLine = '\n\n---\n\n';
+        
+        // Format each result with a clean bullet point style matching image 2
         const formattedResults = topResults.map((result, index) => {
-          return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+          // Add a section header for each result type if needed
+          if (index === 0) {
+            return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+          }
+          return `• **[${result.title}](${result.url})**\n${result.snippet}`;
         }).join('\n\n');
         
-        // Create a clean message like shown in the screenshots
-        const searchResponseMessage = `${searchSummary}\n\n${formattedResults}\n\nYou can view all search results by clicking the search button.`;
+        // Add a footnote with search results count and view all option
+        const footnote = `\n\n*Found ${results.length} results for "${query}". Click the search button to view all results.*`;
+        
+        // Create a clean message that matches the second image style (including the footnote)
+        const searchResponseMessage = `${searchSummary}${dividerLine}${formattedResults}${footnote}`;
         
         // Add the search results to the chat as an assistant message
         console.log(`📝 [SEARCH][${searchId}] Adding search results to chat conversation`);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
 import { MessageSquare, Send, Plus, Search, X } from "lucide-react";
 import { format } from "date-fns";
-import { useChat, SearchResult } from "../context/ChatContext";
+import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
@@ -36,14 +36,12 @@ interface Chat {
 const Chat: React.FC = () => {
   const { 
     currentChat, 
-    setCurrentChat, 
+    setCurrentChat,
     addMessage, 
     createNewChat,
-    isSearchMode,
+    isSearchMode, 
     toggleSearchMode,
-    searchResults,
-    performSearch,
-    isSearching
+    performSearch
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -79,15 +77,33 @@ const Chat: React.FC = () => {
     
     // Handle search mode differently
     if (isSearchMode) {
-      toast.loading('Searching...', { id: 'search-toast' });
       console.log('🔍 SEARCH MODE ACTIVE - Processing search');
       
       try {
+        // First, add the user's search query as a chat message
+        await addMessage({
+          role: 'user',
+          content: messageContent
+        });
+        
+        // Show animated loading indicator
+        const loadingId = 'search-loading';
+        toast.loading(
+          <div className="search-loading-animation">
+            <div className="search-pulse-animation"></div>
+            <span>Searching the web for results...</span>
+          </div>, 
+          { id: loadingId, duration: Infinity }
+        );
+        
         console.log('🔍 CALLING SEARCH API...');
-        // This will add the search results as a chat message
+        // This will add the search results as an assistant chat message
         await performSearch(messageContent);
         console.log('✅ SEARCH COMPLETE');
-        toast.success(`Search results found for: "${messageContent}"`, { id: 'search-toast' });
+        
+        // Clear loading animation and show success
+        toast.dismiss(loadingId);
+        toast.success(`Search results added to chat`, { id: 'search-toast' });
       } catch (error) {
         console.error("❌ SEARCH ERROR:", error);
         toast.error(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'search-toast' });

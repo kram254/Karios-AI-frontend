@@ -354,6 +354,40 @@
 /* Search button styles preserved */
 /* Search results container styles removed as they're no longer needed */
 
+/* Search loading animation */
+.search-loading-animation {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  max-width: 300px;
+}
+
+.search-pulse-animation {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #00b4d8;
+  position: relative;
+  box-shadow: 0 0 0 0 rgba(0, 180, 216, 0.5);
+  animation: search-pulse 1.5s infinite;
+}
+
+@keyframes search-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 180, 216, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 12px rgba(0, 180, 216, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 180, 216, 0);
+  }
+}
+
 .search-loading, .search-empty {
   padding: 1rem;
   text-align: center;

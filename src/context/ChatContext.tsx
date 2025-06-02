@@ -355,19 +355,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
     setIsSearchSidebarOpen(!isSearchSidebarOpen);
   };
 
-  // Perform web search using the Brave Search API
-  const performSearch = async (query: string) => {
-    if (!query.trim()) return;
-    
-    // Set the search query for display in sidebar
-    setSearchQuery(query);
+    if (isApiAlive) {
+      baseUrl = renderEndpoint;
+      console.log('💾 Using verified Render API endpoint:', baseUrl);
 
-    // Log the search request start time
-    const searchStartTime = Date.now();
-    console.log(`🕒 [SEARCH] Search request received at ${new Date(searchStartTime).toISOString()}`);
-    console.log(`🔍 [SEARCH] User query: "${query}"`);
-
-    // Set searching state to true to show loading indicator
+      // Still keep other URLs as fallback
+      apiUrls = [
+        renderEndpoint,                  // Known working Render endpoint
+        window.location.origin,          // Same origin as frontend
+        'http://localhost:8000',         // Local development
+        ''                               // Relative path as last resort
+      ];
+    } else {
+      // If the main API is not available, try various fallback options
+      console.log('❗ Render API is not responding, using fallback URLs');
     setIsSearching(true);
     console.log(`🔄 [SEARCH] Set search loading state to true`);
 

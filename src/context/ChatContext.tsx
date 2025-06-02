@@ -234,8 +234,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!currentChat) return;
       
       console.log(`Sending message to chat ${currentChat.id}:`, { content, role });
-      // Pass only the content to match our updated API function
-      const response = await chatService.addMessage(currentChat.id, content);
+      // Create a message object with required properties for the API
+      const messageData: { content: string; role: 'user' | 'assistant' | 'system' } = {
+        content,
+        role
+      };
+      const response = await chatService.addMessage(currentChat.id, messageData);
       console.log('Message sent response:', response);
       console.log('Response data:', response.data);
       

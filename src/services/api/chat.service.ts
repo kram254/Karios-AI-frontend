@@ -120,27 +120,29 @@ export const chatService = {
     return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
   },
   
-  addMessage: (chatId: string, content: string | ChatMessage) => {
+  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system' }) => {
     console.log(`Adding message to chat ${chatId}`);
     // Match the structure used in the WebSocket service
     let payload;
     
     if (typeof content === 'string') {
+      // If just a string is passed, assume it's user content
       payload = { 
         content: content,
-        attachments: []
+        attachments: [],
+        role: 'user' // Default to user role for backward compatibility
       };
     } else {
-      // If a ChatMessage object is passed, extract the content
+      // If an object is passed, extract the necessary properties
       payload = {
         content: content.content,
-        attachments: content.attachments || [],
-        // Optionally preserve role if backend API supports it
+        attachments: 'attachments' in content ? content.attachments || [] : [],
+        // Always include the role to ensure proper persistence
         role: content.role
       };
     }
     
-    console.log('Message payload:', payload);
+    console.log('Message payload with role:', payload);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   

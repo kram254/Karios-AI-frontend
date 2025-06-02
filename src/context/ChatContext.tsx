@@ -70,7 +70,7 @@ interface ChatContextType {
   isSearchMode: boolean;
   toggleSearchMode: () => void;
   searchResults: SearchResult[];
-  performSearch: (query: string) => Promise<void>;
+  performSearch: (query: string, addUserMessage?: boolean) => Promise<void>;
   isSearching: boolean;
   accessedWebsites: {title: string, url: string}[];
   searchQuery: string;
@@ -81,7 +81,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 // Define the chat provider component with proper React return type
-export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): JSX.Element => {
+export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,6 +191,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
   };
 
   // Add this function to get the chat's language or default to app language
+  // This function is kept for future language handling but currently not used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getChatLanguage = (chat: Chat | null) => {
     if (chat && chat.language) {
       return chat.language;
@@ -355,20 +357,25 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }): J
     setIsSearchSidebarOpen(!isSearchSidebarOpen);
   };
 
-    if (isApiAlive) {
-      baseUrl = renderEndpoint;
-      console.log('💾 Using verified Render API endpoint:', baseUrl);
-
-      // Still keep other URLs as fallback
-      apiUrls = [
-        renderEndpoint,                  // Known working Render endpoint
-        window.location.origin,          // Same origin as frontend
-        'http://localhost:8000',         // Local development
-        ''                               // Relative path as last resort
-      ];
-    } else {
-      // If the main API is not available, try various fallback options
-      console.log('❗ Render API is not responding, using fallback URLs');
+  // Perform web search using the Brave Search API
+  const performSearch = async (query: string, addUserMessage = false) => {
+    if (!query.trim()) return;
+    
+    // Set the search query for display in sidebar
+    setSearchQuery(query);
+    
+    // Track the start time for performance measurement
+    const searchStartTime = Date.now();
+    
+    // Add user's search query as a message first if requested
+    if (addUserMessage) {
+      await addMessage({
+        role: 'user',
+        content: query
+      });
+    }
+    
+    // Indicate searching state
     setIsSearching(true);
     console.log(`🔄 [SEARCH] Set search loading state to true`);
 

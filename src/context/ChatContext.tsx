@@ -125,6 +125,40 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Effect to load full chat details (including messages) when currentChat.id changes
+  useEffect(() => {
+    const loadCurrentChatMessages = async () => {
+      if (currentChat?.id) {
+        // Optimization: If the currentChat object already has messages, and it's the same ID,
+        // assume they are sufficiently loaded. This avoids redundant fetches if the full chat object
+        // was already set (e.g., after creating a new chat or adding a message).
+        // A more robust check might involve looking at a `messages_loaded_fully` flag if available.
+        if (currentChat.messages && currentChat.messages.length > 0 && currentChat.id === currentChat.messages[0]?.chat_id) {
+          console.log(`Messages for chat ${currentChat.id} appear to be already loaded in currentChat state.`);
+          return;
+        }
+
+        console.log(`Fetching full details for chat ${currentChat.id} as currentChat.id changed.`);
+        setLoading(true);
+        try {
+          const response = await chatService.getChat(currentChat.id);
+          console.log(`Full chat ${currentChat.id} loaded:`, response.data);
+          // Update the currentChat state with the fully loaded chat object from the server
+          setCurrentChat(response.data);
+          setError(null);
+        } catch (err: unknown) {
+          console.error(`Error loading messages for chat ${currentChat.id}:`, err);
+          setError(`Failed to load messages for chat ${currentChat.title || 'the selected chat'}`);
+          toast.error(`Failed to load messages for ${currentChat.title || 'the selected chat'}`);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCurrentChatMessages();
+  }, [currentChat?.id]); // Dependency array ensures this runs when currentChat.id changes
+
   const createNewChat = async (customTitle?: string) => {
     try {
       setLoading(true);

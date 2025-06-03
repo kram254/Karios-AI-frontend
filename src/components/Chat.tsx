@@ -171,13 +171,25 @@ const Chat: React.FC = () => {
         if (imagesToSend.length > 0) {
           // If we have images, use the special method to send them with the message
           try {
-            const updatedChat = await chatService.addMessageWithAttachments(
+            console.log(`Attempting to send message with attachments to chat: ${currentChat.id}`);
+            // Send the message with attachments
+            const addMsgWithAttachmentsResponse = await chatService.addMessageWithAttachments(
               currentChat.id, 
               userMessage, 
               imagesToSend
             );
-            if (updatedChat && updatedChat.data) {
-              setCurrentChat(updatedChat.data);
+            console.log('Message with attachments sent, API response:', addMsgWithAttachmentsResponse.data);
+
+            // IMPORTANT: Refetch the entire chat to get the updated state
+            console.log(`Refetching chat ${currentChat.id} after adding message with attachments.`);
+            const fullChatResponse = await chatService.getChat(currentChat.id);
+            if (fullChatResponse && fullChatResponse.data) {
+              console.log('Successfully refetched chat, new data:', fullChatResponse.data);
+              setCurrentChat(fullChatResponse.data); // This is now a full Chat object
+            } else {
+              console.error('Failed to refetch chat after sending message with attachments. UI might be stale.');
+              // Optionally, you could try to manually merge addMsgWithAttachmentsResponse.data if it's just a message,
+              // but refetching is safer for consistency.
             }
           } catch (err) {
             console.error("Error sending message with attachments:", err);

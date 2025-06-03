@@ -388,6 +388,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Perform web search using the Brave Search API
   const performSearch = async (query: string, addUserMessage = false) => {
+    const searchId = `websearch-${Date.now()}`;
     if (!query.trim()) return;
     
     // Set the search query for display in sidebar
@@ -396,26 +397,30 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Track the start time for performance measurement
     const searchStartTime = Date.now();
     
+    console.log(`[ChatContext][performSearch][${searchId}] Initiating search for query: "${query}"`);
+    
     // Add user's search query as a message first if requested
-    if (addUserMessage) {
+    console.log(`[ChatContext][performSearch][${searchId}] Before potentially adding user query. addUserMessage: ${addUserMessage}. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}`);
+      if (addUserMessage) {
       await addMessage({
         role: 'user',
         content: query
       });
+      console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}`);
     }
     
     // Indicate searching state
     setIsSearching(true);
     console.log(`🔄 [SEARCH] Set search loading state to true`);
 
-    // Generate a unique ID for this search request for tracing and debugging
-    const searchId = `search-${Date.now()}`;
-    console.log(`🏷️ [SEARCH][${searchId}] Generated unique search ID: ${searchId}`);
+    console.log(`[ChatContext][performSearch][${searchId}] Search ID generated: ${searchId}`);
     console.log(`🔍 [SEARCH][${searchId}] WORKFLOW STARTED - User requested search for: "${query}"`);
 
     // Store the query for debugging
     window._lastSearchQuery = query;
     console.log(`💾 [SEARCH][${searchId}] Stored search query for debugging: "${query}"`);
+    
+    // ... rest of the code remains the same ...
 
     try {
       // Check the API status first before attempting search
@@ -708,6 +713,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Create a clean message that matches the second image style (including the footnote)
         const searchResponseMessage = `${searchSummary}${dividerLine}${formattedResults}${footnote}`;
+        console.log(`[ChatContext][performSearch][${searchId}] Before adding assistant search results. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}. Search response to be added:`, searchResponseMessage);
         
         // Add the search results to the chat as an assistant message
         console.log(`📝 [SEARCH][${searchId}] Adding search results to chat conversation`);
@@ -715,6 +721,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           role: 'assistant',
           content: searchResponseMessage
         });
+        console.log(`[ChatContext][performSearch][${searchId}] After adding assistant search results. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}`);
       } else {
         console.warn('⚠️ [SEARCH] Search returned empty or invalid results:', data);
         // Set empty results

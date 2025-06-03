@@ -133,18 +133,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // assume they are sufficiently loaded. This avoids redundant fetches if the full chat object
         // was already set (e.g., after creating a new chat or adding a message).
         // A more robust check might involve looking at a `messages_loaded_fully` flag if available.
-        if (currentChat.messages && currentChat.messages.length > 0 && currentChat.id === currentChat.messages[0]?.chat_id) {
-          console.log(`Messages for chat ${currentChat.id} appear to be already loaded in currentChat state.`);
+        if (currentChat.messages && currentChat.messages.length > 0) {
+          console.log(`[ChatContext][useEffect] Chat ${currentChat.id} already has ${currentChat.messages.length} messages in state. Optimization: Skipping fetch. First message ID: ${currentChat.messages[0]?.id}`);
           return;
         }
 
-        console.log(`Fetching full details for chat ${currentChat.id} as currentChat.id changed.`);
+        console.log(`[ChatContext][useEffect] Chat ${currentChat.id} has no messages or messages are empty. Fetching full details... Current messages count: ${currentChat.messages?.length || 0}`);
         setLoading(true);
         try {
-          const response = await chatService.getChat(currentChat.id);
-          console.log(`Full chat ${currentChat.id} loaded:`, response.data);
+          const freshChatResponse = await chatService.getChat(currentChat.id);
+          console.log(`[ChatContext][useEffect] Full chat ${currentChat.id} loaded:`, freshChatResponse.data);
           // Update the currentChat state with the fully loaded chat object from the server
-          setCurrentChat(response.data);
+          setCurrentChat(freshChatResponse.data);
+          console.log(`[ChatContext][useEffect] Successfully fetched and set messages for chat ${currentChat.id}. New messages count: ${freshChatResponse.data.messages?.length || 0}. Messages:`, freshChatResponse.data.messages);
           setError(null);
         } catch (err: unknown) {
           console.error(`Error loading messages for chat ${currentChat.id}:`, err);
@@ -265,80 +266,70 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     try {
-      if (!currentChat) return;
-      
-      console.log(`Sending message to chat ${currentChat.id}:`, { content, role });
-      // Create a message object with required properties for the API
-      const messageData: { content: string; role: 'user' | 'assistant' | 'system' } = {
-        content,
-        role
-      };
-      const response = await chatService.addMessage(currentChat.id, messageData);
-      console.log('Message sent response:', response);
-      console.log('Response data:', response.data);
-      
-      // Replace optimistic message with real one from server
-      // Handle the response based on its structure
-      let updatedChat: Chat;
-      if (response.data && typeof response.data === 'object') {
-        if ('messages' in response.data && Array.isArray(response.data.messages) && 'title' in response.data) {
-          // If the response is a full chat object with all required Chat properties
-          updatedChat = response.data as Chat;
-        } else {
-          // If the response is just the new message or another format
-          // Create an updated chat with the new message
-          const responseData = response.data as any; // Use any to avoid type errors
-          
-          // Keep the optimistic message but update with server data if available
-          updatedChat = {
-            ...currentChat,
-            messages: currentChat.messages.map(msg => 
-              msg.id === tempId && responseData.id 
-                ? { ...msg, id: responseData.id, content: responseData.content || msg.content } 
-                : msg
-            )
-          };
-        }
-      } else {
-        // If we didn't get a valid response, keep the optimistic update
-        updatedChat = {
-          ...currentChat,
-          messages: currentChat.messages
-        };
+      if (!currentChat) {
+        // This should ideally not happen if createNewChat was successful
+        console.error('[ChatContext][addMessage] currentChat is null, cannot add message.');
+        toast.error('Cannot send message: No active chat.');
+        // Revert optimistic message if currentChat became null unexpectedly
+        setCurrentChat(prev => {
+          if (!prev) return null;
+          return { ...prev, messages: prev.messages.filter(msg => msg.id !== tempId) };
+        });
+        return;
       }
       
-      setCurrentChat(updatedChat);
-      
-      // Update chat in chats list
-      setChats(prev => 
-        prev.map(chat => chat.id === updatedChat.id ? updatedChat : chat)
+      const activeChatId = currentChat.id;
+      console.log(`[ChatContext][addMessage] Sending message to chat ${activeChatId}:`, { content, role });
+
+      const messageData: { content: string; role: 'user' | 'assistant' | 'system' } = { content, role };
+      const addedMessageResponse = await chatService.addMessage(activeChatId, messageData);
+      const newlyAddedMessage: Message = addedMessageResponse.data;
+
+      console.log(`[ChatContext][addMessage] Message successfully added via API for chat ${activeChatId}. New message ID: ${newlyAddedMessage.id}.`);
+
+      // Crucial Step: Refetch the entire chat to get the most up-to-date state from the server
+      console.log(`[ChatContext][addMessage] Refetching chat ${activeChatId} to ensure UI consistency.`);
+      const updatedChatResponse = await chatService.getChat(activeChatId);
+      const fullyUpdatedChat: Chat = updatedChatResponse.data;
+
+      console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
+      console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
+
+      // Update the currentChat state with the fully loaded chat object
+      setCurrentChat(fullyUpdatedChat);
+
+      // Update the chats array in the state
+      setChats(prevChats =>
+        prevChats.map(chat =>
+          chat.id === activeChatId ? fullyUpdatedChat : chat
+        )
       );
 
       // Generate title for the chat if this is the first user message and title is still default
       if (role === 'user' && 
-          updatedChat.title === 'New Chat' && 
-          updatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
+          fullyUpdatedChat.title === 'New Chat' && 
+          fullyUpdatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
+        console.log(`[ChatContext][addMessage] First user message in 'New Chat'. Generating title for chat ${activeChatId}.`);
         const generatedTitle = generateTitleFromMessage(content);
-        await updateChatTitle(updatedChat.id, generatedTitle);
+        await updateChatTitle(activeChatId, generatedTitle); // This might trigger another fetch if updateChatTitle modifies and refetches.
       }
-      
+
       setError(null);
     } catch (err: unknown) {
-      console.error('Error sending message:', err);
-      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
-      setError('Failed to send message');
-      toast.error('Failed to send message');
-      
-      // Revert optimistic update
+      console.error(`[ChatContext][addMessage] Error during addMessage for chat ${currentChat?.id || 'UNKNOWN_CHAT_ID'}:`, err);
+      toast.error('Failed to send message. Please try again.');
+
+      // Revert optimistic message on error
       setCurrentChat(prev => {
         if (!prev) return null;
+        // Ensure tempId is correctly captured if this block is reached.
+        // If currentChat became null, this might not behave as expected.
         return {
           ...prev,
           messages: prev.messages.filter(msg => msg.id !== tempId)
         };
       });
-      
-      throw err;
+      setError('Failed to send message');
     }
   };
 

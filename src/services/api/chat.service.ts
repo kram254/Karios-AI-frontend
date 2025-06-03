@@ -1,7 +1,5 @@
 import axios from 'axios';
-
-// API URL - using direct value instead of import to fix module resolution issue
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import { API_URL } from '../../utils/constants';
 
 export interface ChatMessage {
   id: string;
@@ -44,8 +42,8 @@ export const chatService = {
   },
 
   // Create a new chat
-  createChat: (title: string = 'New Chat', agentId?: string, language?: string) => {
-    return axios.post(`${API_URL}/chats`, { title, agent_id: agentId, language });
+  createChat: (params: { title?: string; agent_id?: string; chat_type?: string; language?: string }) => {
+    return axios.post(`${API_URL}/chats`, params);
   },
 
   // Update chat title

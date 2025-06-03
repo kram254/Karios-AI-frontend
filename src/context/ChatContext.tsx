@@ -132,8 +132,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
     try {
       setLoading(true);
       console.log('Attempting to create a new chat...');
-      const title = customTitle || 'New Conversation';
-      const response = await chatService.createChat(title, undefined, language.code);
+      const response = await chatService.createChat({
+        title: customTitle || 'New Conversation',
+        chat_type: 'default',
+        language: language.code // Include the selected language
+      });
       console.log('Chat created response:', response);
       
       const newChat = response.data;
@@ -164,10 +167,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
     try {
       setLoading(true);
       console.log(`Creating a new chat with agent ${selectedAgent.id}...`);
-      const title = `Chat with ${selectedAgent.name}`;
-      const agentId = selectedAgent.id.toString();
-      const lang = selectedAgent.language || language.code;
-      const response = await chatService.createChat(title, agentId, lang);
+      const response = await chatService.createChat({
+        agent_id: selectedAgent.id.toString(),
+        title: `Chat with ${selectedAgent.name}`,
+        chat_type: 'sales_agent',
+        language: selectedAgent.language || language.code
+      });
       console.log('Agent chat created response:', response);
       
       const newChat = response.data;
@@ -658,7 +663,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
           const updatedChat = await chatService.getChat(currentChat.id);
           if (updatedChat.data) {
             const searchMessagesInChat = updatedChat.data.messages.filter(
-              (msg: Message) => msg.role === 'assistant' && msg.content.includes(query)
+              (msg: { role: string; content: string }) => msg.role === 'assistant' && msg.content.includes(query)
             );
             
             if (searchMessagesInChat.length > 0) {

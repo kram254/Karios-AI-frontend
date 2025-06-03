@@ -3,12 +3,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 // Extend the Window interface to include custom properties// Types for storing debug info on window object
 declare global {
   interface Window {
-    _lastSearchQuery?: string;
     _lastSearchUrl?: string;
+    _lastSearchQuery?: string;
     _lastSearchError?: any;
     _lastSearchErrorText?: string;
     _lastSearchErrorResponse?: any;
-    _lastSearchResults?: any;
   }
 }
 
@@ -17,7 +16,7 @@ import toast from 'react-hot-toast';
 import { generateTitleFromMessage } from '../utils/titleGenerator';
 import { Agent } from '../types/agent';
 import { useLanguage } from './LanguageContext';
-import { AxiosResponse } from 'axios';
+import { checkApiEndpoint } from '../utils/apiUtils';
 
 interface Attachment {
   id?: string;
@@ -49,11 +48,9 @@ interface Chat {
 }
 
 export interface SearchResult {
-  id: string;
   title: string;
   url: string;
   snippet: string;
-  source: string;
 }
 
 interface ChatContextType {
@@ -73,7 +70,7 @@ interface ChatContextType {
   isSearchMode: boolean;
   toggleSearchMode: () => void;
   searchResults: SearchResult[];
-  performSearch: (query: string, addUserMessage?: boolean) => Promise<SearchResult[]>;
+  performSearch: (query: string, addUserMessage?: boolean) => Promise<void>;
   isSearching: boolean;
   accessedWebsites: {title: string, url: string}[];
   searchQuery: string;
@@ -84,7 +81,7 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 // Define the chat provider component with proper React return type
-export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element => {
+export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,46 +200,28 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
     return language.code;
   };
 
-  // Enhanced addMessage with verification and retry for better persistence
   const addMessage = async ({ role, content }: { role: 'user' | 'assistant' | 'system'; content: string }) => {
-    // Keep track of attempts for retry logic
-    let attempts = 0;
-    const maxAttempts = 2;
-    
-    // Check if we need to create a new chat first
     if (!currentChat) {
-      console.log('No active chat found, creating a new one before adding message');
       try {
         await createNewChat();
-        console.log('Successfully created new chat for message');
       } catch (err: unknown) {
         console.error('Error creating new chat for message:', err);
         console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
-        toast.error('Failed to create a chat for your message');
-        return;
-      }
-      
-      // Double-check that chat was created successfully
-      if (!currentChat) {
-        console.error('Failed to create a new chat. Chat is still null after createNewChat()');
-        toast.error('Could not create a new conversation');
         return;
       }
     }
 
     // Create optimistic update
     const tempId = Date.now().toString();
-    const timestamp = new Date().toISOString();
     const tempMessage: Message = {
       id: tempId,
       content,
       role,
-      timestamp: timestamp,
-      created_at: timestamp,
+      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       chat_id: currentChat?.id
     };
 
-    // Add the message optimistically to the UI first
     setCurrentChat(prev => {
       if (!prev) return null;
       return {
@@ -251,74 +230,18 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
       };
     });
 
-    // Try to save the message to the database with retry logic
     try {
       if (!currentChat) return;
       
-      // Implement retry logic for database persistence with proper TypeScript typing
-      let response: AxiosResponse<any> | null = null;
-      let responseSuccessful = false;
-      
-      // Store chat ID to avoid race conditions where currentChat might change
-      const chatId = currentChat.id;
-      
-      // Add database saving metrics for debugging
-      const dbSaveStartTime = Date.now();
-      console.log(`Starting database save for message. Chat ID: ${chatId}, Role: ${role}`);
-      
-      while (attempts < maxAttempts) {
-        try {
-          attempts++;
-          console.log(`Sending message to chat ${chatId} (attempt ${attempts}/${maxAttempts}):`, { content, role });
-          
-          // Create a message object with required properties for the API
-          // Ensure role is explicitly sent for proper database persistence
-          const messageData = {
-            content,
-            role,
-            // Add timestamp for additional consistency
-            timestamp: new Date().toISOString()
-          };
-          
-          // Send to backend with explicit role to ensure proper persistence
-          response = await chatService.addMessage(chatId, messageData);
-          
-          if (response?.data) {
-            const dbSaveTime = Date.now() - dbSaveStartTime;
-            console.log(`✅ Message successfully saved to database in ${dbSaveTime}ms (attempt ${attempts}/${maxAttempts})`);
-            responseSuccessful = true;
-            break; // Success - exit the retry loop
-          } else {
-            console.error(`⚠️ Response received but no data was returned (attempt ${attempts}/${maxAttempts})`);
-            // Try again if we haven't reached max attempts
-            if (attempts >= maxAttempts) {
-              throw new Error('Received empty response from server');
-            }
-          }
-        } catch (saveErr: unknown) {
-          console.error(`❌ Failed to save message on attempt ${attempts}/${maxAttempts}:`, saveErr);
-          console.error('Error details:', (saveErr as { response?: { data: string } }).response?.data || (saveErr as { message: string }).message);
-          
-          if (attempts >= maxAttempts) {
-            console.error(`❌ Max retry attempts (${maxAttempts}) reached. Giving up.`);
-            throw saveErr; // Re-throw after max attempts
-          }
-          
-          // Exponential backoff: 1s, 2s
-          const backoffMs = Math.pow(2, attempts - 1) * 1000;
-          console.log(`⏳ Retrying in ${backoffMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
-        }
-      }
-      
-      if (!responseSuccessful || !response) {
-        console.error('❌ Failed to save message after multiple attempts');
-        throw new Error('Failed to save message after multiple attempts');
-      }
-      
-      // Successful response handling with proper null checking
-      console.log('✅ Message successfully sent and saved. Response:', response);
-      console.log('📄 Response data:', response.data);
+      console.log(`Sending message to chat ${currentChat.id}:`, { content, role });
+      // Create a message object with required properties for the API
+      const messageData: { content: string; role: 'user' | 'assistant' | 'system' } = {
+        content,
+        role
+      };
+      const response = await chatService.addMessage(currentChat.id, messageData);
+      console.log('Message sent response:', response);
+      console.log('Response data:', response.data);
       
       // Replace optimistic message with real one from server
       // Handle the response based on its structure
@@ -438,263 +361,384 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
     setIsSearchSidebarOpen(!isSearchSidebarOpen);
   };
 
-  // Format search results into a readable message for the assistant
-  const formatSearchResultsMessage = (results: SearchResult[], query: string): string => {
-    if (!results.length) {
-      return `I searched for "${query}" but couldn't find any relevant results.`;
-    }
-    
-    let message = `Here are the search results for "${query}":\n\n`;
-    
-    results.forEach((result, index) => {
-      message += `${index + 1}. **${result.title}**\n`;
-      message += `   ${result.snippet}\n`;
-      message += `   [${result.url}](${result.url})\n\n`;
-    });
-    
-    message += `\nLet me know if you'd like more information about any of these results.`;
-    return message;
-  };
-
-  // Perform web search using the Search API
-  const performSearch = async (query: string, addUserMessage = false): Promise<SearchResult[]> => {
-    if (!query.trim()) return [];
-    
-    // Track the start time for performance measurement
-    const searchStartTime = Date.now();
-    
-    // Generate a unique ID for this search request for tracing and debugging
-    const searchId = `search-${Date.now()}`;
-    
-    // Initialize empty search results array for scoping throughout the function
-    let searchResults: SearchResult[] = [];
+  // Perform web search using the Brave Search API
+  const performSearch = async (query: string, addUserMessage = false) => {
+    if (!query.trim()) return;
     
     // Set the search query for display in sidebar
     setSearchQuery(query);
     
-    console.log(`🏷️ [SEARCH][${searchId}] Generated unique search ID: ${searchId}`);
-    console.log(`🔍 [SEARCH][${searchId}] WORKFLOW STARTED - User requested search for: "${query}"`);
-
-    // Store the query for debugging
-    if (typeof window !== 'undefined') {
-      (window as any)._lastSearchQuery = query;
+    // Track the start time for performance measurement
+    const searchStartTime = Date.now();
+    
+    // Add user's search query as a message first if requested
+    if (addUserMessage) {
+      await addMessage({
+        role: 'user',
+        content: query
+      });
     }
     
     // Indicate searching state
     setIsSearching(true);
-    console.log(`🔄 [SEARCH][${searchId}] Set search loading state to true`);
+    console.log(`🔄 [SEARCH] Set search loading state to true`);
+
+    // Generate a unique ID for this search request for tracing and debugging
+    const searchId = `search-${Date.now()}`;
+    console.log(`🏷️ [SEARCH][${searchId}] Generated unique search ID: ${searchId}`);
+    console.log(`🔍 [SEARCH][${searchId}] WORKFLOW STARTED - User requested search for: "${query}"`);
+
+    // Store the query for debugging
+    window._lastSearchQuery = query;
     console.log(`💾 [SEARCH][${searchId}] Stored search query for debugging: "${query}"`);
-    
-    // Add user's search query as a message first if requested
-    if (addUserMessage) {
-      console.log(`📝 [SEARCH][${searchId}] Adding user search query as a chat message`);
-      if (!currentChat) {
-        console.log(`📝 [SEARCH][${searchId}] No active chat found, creating one for search`);
-        try {
-          await createNewChat();
-          console.log(`📝 [SEARCH][${searchId}] Successfully created new chat for search`);
-        } catch (err) {
-          console.error(`❌ [SEARCH][${searchId}] Error creating new chat for search:`, err);
-          toast.error('Failed to create a new chat');
-          setIsSearching(false);
-          return [];
-        }
-      }
-      
-      try {
-        // Make sure the user message is saved to database with retry logic
-        let userMsgAttempts = 0;
-        const maxUserMsgAttempts = 3; // Increased from 2 to 3 for better reliability
-        let userMsgSaved = false;
-        
-        // Verify chat exists before attempting to save
-        if (!currentChat) {
-          console.error(`❌ [SEARCH][${searchId}] No current chat available to save user query`);
-          throw new Error('No current chat available');
-        }
-        
-        // Check if chat ID is valid
-        if (!currentChat.id) {
-          console.error(`❌ [SEARCH][${searchId}] Current chat has no valid ID`);
-          throw new Error('Chat ID is missing');
-        }
-        
-        console.log(`📝 [SEARCH][${searchId}] Attempting to save user search query to chat ID: ${currentChat.id}`);
-        
-        while (userMsgAttempts < maxUserMsgAttempts && !userMsgSaved) {
-          try {
-            userMsgAttempts++;
-            // Use addMessage which handles database persistence
-            await addMessage({
-              role: 'user',
-              content: query
-            });
-            
-            // Verify the message was added to the current chat
-            if (currentChat && currentChat.messages) {
-              const hasUserMessage = currentChat.messages.some(
-                msg => msg.role === 'user' && msg.content === query
-              );
-              
-              if (!hasUserMessage) {
-                console.warn(`⚠️ [SEARCH][${searchId}] User query message not found in chat after saving`);
-                if (userMsgAttempts >= maxUserMsgAttempts) {
-                  throw new Error('User message not found in chat after multiple save attempts');
-                }
-              } else {
-                console.log(`✅ [SEARCH][${searchId}] Verified user query message exists in current chat`);
-                userMsgSaved = true;
-              }
-            } else {
-              console.log(`📝 [SEARCH][${searchId}] User search query saved to database (attempt ${userMsgAttempts})`);
-              userMsgSaved = true;
-            }
-          } catch (err) {
-            console.error(`❌ [SEARCH][${searchId}] Error saving search query to database (attempt ${userMsgAttempts}):`, err);
-            if (userMsgAttempts >= maxUserMsgAttempts) {
-              toast.error('Failed to save your search query');
-              throw err;
-            }
-            // Wait before retry with exponential backoff
-            const backoffMs = Math.pow(2, userMsgAttempts - 1) * 1000;
-            console.log(`⏳ [SEARCH][${searchId}] Retrying user message save in ${backoffMs}ms...`);
-            await new Promise(resolve => setTimeout(resolve, backoffMs));
-          }
-        }
-      } catch (err) {
-        console.error(`❌ [SEARCH][${searchId}] Error saving search query to database:`, err);
-        toast.error('Failed to save your search query');
-        setIsSearching(false);
-        return [];
-      }
-    }
-    
-    // Main try-catch-finally block for the search operation
+
     try {
-      // API endpoint determination and fallback logic would typically go here
-      console.log(`🌐 [SEARCH][${searchId}] Executing search API call with query: "${query}"`);
-      
-      // Your actual API call would go here instead of mock results
-      // This is just placeholder for syntax correction
-      const mockResults: SearchResult[] = [
-        {
-          title: 'Example result',
-          url: 'https://example.com',
-          snippet: 'Example snippet for demonstration',
-          source: 'Web',
-          id: 'mock-id-1'
+      // Check the API status first before attempting search
+      console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
+      // Updated to use the correct production endpoint
+      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
+      console.log(`🔌 [SEARCH][${searchId}] Using primary API endpoint: ${renderEndpoint}`);
+      const isApiAlive = await checkApiEndpoint(renderEndpoint);
+      console.log(`🔌 [SEARCH][${searchId}] API status check result: ${isApiAlive ? 'ONLINE' : 'OFFLINE'}`);
+
+      // Debug log - search request
+      console.log(`🔍 [SEARCH][${searchId}] Starting search for query: "${query}"`);
+      console.log(`🔍 [SEARCH][${searchId}] Search workflow: 1. API endpoint check → 2. Build URL → 3. API request → 4. Process results`);
+
+      // Determine the base URL based on API status check results
+      let baseUrl = '';
+      let apiUrls: string[] = [];
+
+      if (isApiAlive) {
+        baseUrl = renderEndpoint;
+        console.log('💾 Using verified Render API endpoint:', baseUrl);
+
+        // Still keep other URLs as fallback
+        apiUrls = [
+          renderEndpoint,                  // Known working Render endpoint
+          window.location.origin,          // Same origin as frontend
+          'http://localhost:8000',         // Local development
+          ''                               // Relative path as last resort
+        ];
+      } else {
+        // If the main API is not available, try various fallback options
+        console.log('❗ Render API is not responding, using fallback URLs');
+        
+        if (process.env.NODE_ENV === 'development') {
+          baseUrl = 'http://localhost:8000';
+          console.log('🔧 Development environment detected, using:', baseUrl);
+        } else {
+          // Try relative path as main option since Render API is down
+          baseUrl = window.location.origin;
+          console.log('🚀 Using same-origin API endpoint:', baseUrl);
         }
-      ];
+        
+        apiUrls = [
+          window.location.origin,          // Same origin as frontend
+          'http://localhost:8000',         // Local development
+          'https://localhost:8000',        // Local development with HTTPS
+          '',                              // Relative path as last resort
+          renderEndpoint                   // Still try Render as last resort
+        ];
+      }
       
-      // Set the results in state
-      searchResults = mockResults;
-      setSearchResults(searchResults);
+      // Filter out empty URLs
+      apiUrls = apiUrls.filter(url => url);
+      console.log('🔍 Available API base URLs (in priority order):', apiUrls);
+
+      // Use the web-search endpoint which is robust and has better error handling
+      const searchEndpoint = `api/retrieve/web-search?q=${encodeURIComponent(query)}&count=5`;
       
-      // Format search results into a displayable message
-      const searchResponseMessage = formatSearchResultsMessage(searchResults, query);
-      console.log(`📝 [SEARCH][${searchId}] Generated search response message`);
+      // Ensure proper URL construction without double slashes
+      const searchUrl = baseUrl.endsWith('/') 
+        ? `${baseUrl}${searchEndpoint}` 
+        : `${baseUrl}/${searchEndpoint}`;
+        
+      console.log(`🔧 [SEARCH][${searchId}] URL construction details:`); 
+      console.log(`🔧 [SEARCH][${searchId}] - Base URL: ${baseUrl}`); 
+      console.log(`🔧 [SEARCH][${searchId}] - Search endpoint: ${searchEndpoint}`); 
+      console.log(`🔧 [SEARCH][${searchId}] - Constructed URL: ${searchUrl}`);
       
-      // CRITICAL: Save the assistant's search results message to database with retry logic
-      let assistantMsgAttempts = 0;
-      const maxAssistantMsgAttempts = 3;
-      let assistantMsgSaved = false;
+      console.log(`🌐 [SEARCH][${searchId}] ENDPOINT DETAILS:`);
+      console.log(`🌐 [SEARCH][${searchId}] - API endpoint: /api/retrieve/web-search`);
+      console.log(`🌐 [SEARCH][${searchId}] - Query parameter: q=${encodeURIComponent(query)}`);
+      console.log(`🌐 [SEARCH][${searchId}] - Results count: 5`);
+
+      // Full URL logging for debugging
+      console.log(`🔍 [SEARCH][${searchId}] Building search URL with:`);
+      console.log(`🔍 [SEARCH][${searchId}] - Base URL: ${baseUrl}`);
+      console.log(`🔍 [SEARCH][${searchId}] - Endpoint: ${searchEndpoint}`);
+      console.log(`🔍 [SEARCH][${searchId}] - Full URL: ${searchUrl}`);
+
+      // Store on window for debugging in browser console
+      window._lastSearchUrl = searchUrl;
+
+      // Track request status and details
+      let requestSucceeded = false;
+      let response: Response | null = null;
+      let lastError: Error | null = null;
+      let requestStartTime = Date.now();
       
-      while (assistantMsgAttempts < maxAssistantMsgAttempts && !assistantMsgSaved) {
-        try {
-          assistantMsgAttempts++;
-          console.log(`🔄 [SEARCH][${searchId}] Saving assistant search results message (attempt ${assistantMsgAttempts})`);
-          
-          // Add the message to the database - CRITICAL for persistence across reloads
-          // This explicitly uses the addMessage function that handles database persistence
-          if (!currentChat) {
-            console.error(`❌ [SEARCH][${searchId}] No current chat available to save search results`);
-            throw new Error('No current chat available');
+      console.log(`⏱️ [SEARCH][${searchId}] Request tracking initialized. Start time: ${new Date(requestStartTime).toISOString()}`);
+
+      try {
+        // Make the fetch call - use searchUrl at first attempt
+        const isCrossOrigin = !baseUrl.includes(window.location.host) && baseUrl !== '';
+        const fetchOptions: RequestInit = {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          credentials: isCrossOrigin ? 'omit' : 'include',
+          mode: isCrossOrigin ? 'cors' : 'same-origin',
+        };
+
+        console.log(`🔧 [SEARCH][${searchId}] Fetch options:`, fetchOptions);
+        console.log(`🕐 [SEARCH][${searchId}] Attempting API call to: ${searchUrl}`);
+
+        console.log(`🚀 [SEARCH][${searchId}] SENDING REQUEST to ${searchUrl}`);
+        response = await fetch(searchUrl, fetchOptions);
+        
+        const requestDuration = Date.now() - requestStartTime;
+        requestSucceeded = response.ok;
+        
+        console.log(`📡 [SEARCH][${searchId}] RESPONSE RECEIVED in ${requestDuration}ms`);
+        console.log(`📡 [SEARCH][${searchId}] Status: ${response.status} ${response.statusText}`);
+        
+        // Log additional response details
+        if (response.headers) {
+          const contentType = response.headers.get('content-type');
+          console.log(`📡 [SEARCH][${searchId}] Content-Type: ${contentType || 'none'}`);
+        }
+        
+        if (response.ok) {
+          console.log(`✅ [SEARCH][${searchId}] API call SUCCEEDED with status: ${response.status}`);
+        } else {
+          console.log(`❌ [SEARCH][${searchId}] API call FAILED with status: ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`❌ [SEARCH][${searchId}] Initial API call failed with error:`, error);
+        lastError = error as Error;
+        window._lastSearchError = error;
+
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+          console.error(`🔴 [SEARCH][${searchId}] NETWORK ERROR - This could be due to:`);
+          console.error('- The backend server is not running');
+          console.error('- There is a CORS configuration issue');
+          console.error('- The URL is incorrect:', searchUrl);
+          console.error('- There is a network connectivity issue');
+        }
+
+        // Try fallback URLs one by one
+        console.log(`⚠️ [SEARCH][${searchId}] Attempting ${apiUrls.length} fallback URLs...`);
+
+        for (const fallbackBaseUrl of apiUrls) {
+          // Skip empty URLs or the one we already tried
+          if (!fallbackBaseUrl || fallbackBaseUrl === baseUrl) continue;
+
+          const fallbackUrl = `${fallbackBaseUrl}${searchEndpoint}`;
+          console.log(`🔄 [SEARCH][${searchId}] Trying fallback URL: ${fallbackUrl}`);
+
+          const isCrossOrigin = !fallbackBaseUrl.includes(window.location.host) && fallbackBaseUrl !== '';
+          const fallbackOptions: RequestInit = {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            credentials: isCrossOrigin ? 'omit' : 'include',
+            mode: isCrossOrigin ? 'cors' : 'same-origin',
+          };
+
+          try {
+            response = await fetch(fallbackUrl, fallbackOptions);
+            requestSucceeded = response.ok;
+            console.log(`✅ [SEARCH][${searchId}] Fallback API call to ${fallbackUrl} succeeded with status: ${response.status}`);
+            if (response.ok) break; // Exit the loop if successful
+          } catch (error) {
+            console.error(`❌ Fallback API call to ${fallbackBaseUrl} failed:`, error);
+            lastError = error as Error;
+            window._lastSearchError = error;
           }
+        }
+      }
+
+      // If all URLs failed, throw the last error with detailed diagnostic info
+      if (!requestSucceeded || !response) {
+        const errorMessage = `All API endpoints failed. Last error: ${lastError?.message || 'Unknown error'}`;
+        console.error(`❌ [SEARCH][${searchId}] FATAL ERROR: ${errorMessage}`);
+        console.error(`❌ [SEARCH][${searchId}] API endpoints attempted: ${apiUrls.join(', ')}`);
+        console.error(`❌ [SEARCH][${searchId}] Last error details:`, lastError);
+        
+        // Store diagnostic info on window object
+        window._lastSearchError = {
+          message: errorMessage,
+          lastError,
+          apiUrls,
+          searchId,
+          timestamp: new Date().toISOString()
+        };
+        
+        throw new Error(errorMessage);
+      }
+
+      console.log(`📡 [SEARCH][${searchId}] Final successful API response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ [SEARCH][${searchId}] Search API error (${response.status}):`, errorText);
+        window._lastSearchErrorText = errorText;
+        
+        // Log detailed error diagnostics
+        console.error(`❌ [SEARCH][${searchId}] ERROR DETAILS:`);
+        console.error(`❌ [SEARCH][${searchId}] - Status: ${response.status} ${response.statusText}`);
+        console.error(`❌ [SEARCH][${searchId}] - URL: ${searchUrl}`);
+        console.error(`❌ [SEARCH][${searchId}] - Error: ${errorText}`);
+        
+        throw new Error(`Search failed: ${response.statusText} - ${errorText}`);
+      }
+
+      // Parse JSON response
+      console.log(`🔄 [SEARCH][${searchId}] Parsing JSON response...`);
+      let data;
+      try {
+        data = await response.json();
+        console.log(`✅ [SEARCH][${searchId}] Search results successfully parsed:`, data);
+        console.log(`📊 [SEARCH][${searchId}] Response structure: ${Object.keys(data).join(', ')}`);
+      } catch (parseError: unknown) {
+        console.error(`❌ [SEARCH][${searchId}] Failed to parse JSON response:`, parseError);
+        const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
+        throw new Error(`Failed to parse search results: ${errorMessage}`);
+      }
+
+      // Handle both successful results and error scenarios
+      if (data.status === "error") {
+        console.error(`❌ [SEARCH][${searchId}] Search API returned error status in JSON response`);
+        console.error(`❌ [SEARCH][${searchId}] Error details:`, data.error);
+        console.error(`❌ [SEARCH][${searchId}] Full error response:`, data);
+        
+        // Store error details for debugging
+        window._lastSearchErrorResponse = data;
+        
+        throw new Error(`Search API error: ${data.error || 'Unknown error'}`);
+      }
+      
+      // Log request ID from backend for correlation
+      if (data.request_id) {
+        console.log(`🔄 [SEARCH][${searchId}] Backend request ID: ${data.request_id}`);
+      }
+
+      // If we got search results successfully, process them
+      if (data.results && Array.isArray(data.results)) {
+        const resultCount = data.results.length;
+        console.log(`✅ [SEARCH][${searchId}] Successfully received ${resultCount} search results`);
+        console.log(`📊 [SEARCH][${searchId}] RESULT STATS:`);
+        console.log(`📊 [SEARCH][${searchId}] - Total results: ${resultCount}`);
+        console.log(`📊 [SEARCH][${searchId}] - Query: "${query}"`);
+        console.log(`📊 [SEARCH][${searchId}] - Process time: ${data.process_time_ms || 'unknown'}ms`);
+
+        // Map the API response to our SearchResult type
+        const results: SearchResult[] = data.results.map((result: any) => ({
+          title: result.title || 'No Title',
+          url: result.url || '#',
+          snippet: result.description || result.snippet || 'No description available.'
+        }));
+
+        // Update search results in state
+        setSearchResults(results);
+        
+        // Update accessed websites for monitoring and diagnostics
+        const topWebsites = results.map(result => ({
+          title: result.title,
+          url: result.url
+        })).slice(0, 7); // Limit to top 7 as requested
+        setAccessedWebsites(topWebsites);
+        
+        // Log accessed websites for debugging
+        console.log(`🔍 [SEARCH][${searchId}] Top websites accessed:`, 
+          topWebsites.map(site => site.title).join(', ') || 'None')
+        
+        // Format search results for display in chat - clean format like in the second image
+        // First limit to top relevant results to not overwhelm the chat
+        const topResults = results.slice(0, 5);
+        
+        // Format the message that shows in the chat bubble with a clean header
+        const searchSummary = `Here's a comprehensive overview of the ${query}, including key details about the results:`;
+        
+        // Add a divider line for cleaner separation
+        const dividerLine = '\n\n---\n\n';
+        
+        // Format each result with a clean bullet point style matching image 2
+        const formattedResults = topResults.map((result, index) => {
+          // Add a section header for each result type if needed
+          if (index === 0) {
+            return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+          }
+          return `• **[${result.title}](${result.url})**\n${result.snippet}`;
+        }).join('\n\n');
+        
+        // Add a footnote with search results count and view all option
+        const footnote = `\n\n*Found ${results.length} results for "${query}". Click the search button to view all results.*`;
+        
+        // Create a clean message that matches the second image style (including the footnote)
+        const searchResponseMessage = `${searchSummary}${dividerLine}${formattedResults}${footnote}`;
+        
+        // Add the search results to the chat as an assistant message
+        console.log(`📝 [SEARCH][${searchId}] Adding search results to chat conversation`);
+        await addMessage({
+          role: 'assistant',
+          content: searchResponseMessage
+        });
+      } else {
+        console.warn('⚠️ [SEARCH] Search returned empty or invalid results:', data);
+        // Set empty results
+        setSearchResults([]);
+        
+        // If there are no results but the API didn't report an error, we'll use mock data in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`💭 [SEARCH][${searchId}] Using mock search results for development`);
+          // Mock search results for development
+          const mockResults: SearchResult[] = [
+            {
+              title: 'Mock Result 1 for "' + query + '"',
+              url: 'https://example.com/1',
+              snippet: 'This is a mock search result for development purposes. Your search was: ' + query
+            },
+            {
+              title: 'Mock Result 2 for "' + query + '"',
+              url: 'https://example.com/2',
+              snippet: 'Another mock search result. Search engines might be down or unreachable.'
+            }
+          ];
+          setSearchResults(mockResults);
           
-          // Save with explicit timestamp to ensure consistent ordering
+          // Add mock results to chat for better UX during development
+          // Format the message that shows in the chat bubble
+          const mockSearchSummary = `I found ${mockResults.length} results for "${query}". Here are the most relevant ones:`;
+          
+          // Format each result with a clean numbered style like the real search results
+          const mockFormattedResults = mockResults.map((result, index) => {
+            return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+          }).join('\n\n');
+          
+          const mockResponseMessage = `${mockSearchSummary}\n\n${mockFormattedResults}\n\nYou can view all search results by clicking the search button.\n\n*This is a development environment. Mock results are shown.*`;
+          
+          // Add mock results to chat
+          console.log(`📝 [SEARCH][${searchId}] Adding mock search results to chat conversation`);
           await addMessage({
             role: 'assistant',
-            content: searchResponseMessage
+            content: mockResponseMessage
           });
-          
-          // Verify the message was added to the current chat
-          if (currentChat && currentChat.messages) {
-            const hasSearchResultMessage = currentChat.messages.some(
-              msg => msg.role === 'assistant' && msg.content === searchResponseMessage
-            );
-            
-            if (!hasSearchResultMessage) {
-              console.warn(`⚠️ [SEARCH][${searchId}] Search result message not found in chat after saving`);
-            } else {
-              console.log(`✅ [SEARCH][${searchId}] Verified search result message exists in current chat`);
-            }
-          }
-          
-          console.log(`✅ [SEARCH][${searchId}] Successfully saved assistant search results message to database`);
-          assistantMsgSaved = true;
-        } catch (err) {
-          console.error(`❌ [SEARCH][${searchId}] Error saving assistant search results message (attempt ${assistantMsgAttempts}):`, err);
-          
-          if (assistantMsgAttempts >= maxAssistantMsgAttempts) {
-            console.error(`❌ [SEARCH][${searchId}] Failed to save assistant search results after ${maxAssistantMsgAttempts} attempts`);
-            toast.error('Failed to save search results');
-            // Don't throw here, we should still return the results even if saving failed
-          }
-          
-          // Wait before retry with exponential backoff
-          const backoffMs = Math.pow(2, assistantMsgAttempts - 1) * 1000;
-          console.log(`⏳ [SEARCH][${searchId}] Retrying in ${backoffMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        } else {
+          // Only show no results message if we're not in development mode or not using mock data
+          await addMessage({
+            role: 'assistant',
+            content: `I couldn't find any results for "${query}". Please try a different search term.`
+          });
         }
       }
-      
-      // Ensure results are properly stored in state and for debugging
-      if (typeof window !== 'undefined') {
-        (window as any)._lastSearchResults = searchResults;
-        (window as any)._lastSearchResponseMessage = searchResponseMessage;
-        (window as any)._lastSearchSuccessTime = new Date().toISOString();
-      }
-      
-      // Verify the search results are in the chat's messages after saving
-      // This helps ensure the messages will be visible when the chat is reloaded
-      if (currentChat) {
-        // Fetch the chat from the server to verify persistence
-        try {
-          const updatedChat = await chatService.getChat(currentChat.id);
-          if (updatedChat.data) {
-            const searchMessagesInChat = updatedChat.data.messages.filter(
-              (msg: { role: string; content: string }) => msg.role === 'assistant' && msg.content.includes(query)
-            );
-            
-            if (searchMessagesInChat.length > 0) {
-              console.log(`✅ [SEARCH][${searchId}] Verified ${searchMessagesInChat.length} search-related messages in database`);
-            } else {
-              console.warn(`⚠️ [SEARCH][${searchId}] Could not find search messages in database after save`);
-            }
-            
-            // Update current chat with the freshly fetched data to ensure UI consistency
-            setCurrentChat(updatedChat.data);
-            
-            // Update chat in chats list for complete persistence
-            setChats(prev => prev.map(chat => 
-              chat.id === updatedChat.data.id ? updatedChat.data : chat
-            ));
-          }
-        } catch (err) {
-          console.error(`❌ [SEARCH][${searchId}] Error verifying search messages persistence:`, err);
-          // Non-critical error, don't block search results
-        }
-      }
-      
-      console.log(`✅ [SEARCH][${searchId}] Search completed successfully with ${searchResults.length} results`);
-      return searchResults;
-      
     } catch (error: unknown) {
-      // Clear search results
-      setSearchResults([]);
-
-      // Show user-friendly error message
-      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`🔴 [SEARCH][${searchId}] UNHANDLED ERROR in performSearch:`, error);
       if (error instanceof Error) {
         console.error(`🔴 [SEARCH][${searchId}] Error type: ${error.constructor.name}`);
@@ -706,68 +750,65 @@ export const ChatProvider = ({ children }: { children: ReactNode }): JSX.Element
         console.error(`🔴 [SEARCH][${searchId}] Unknown error type`); 
       }
       
+      // Clear search results
+      setSearchResults([]);
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`🔴 [SEARCH][${searchId}] Showing error toast: ${errorMessage}`);
       toast.error('Search failed: ' + errorMessage);
-
+      
       // Save error for debugging
-      if (typeof window !== 'undefined') {
-        (window as any)._lastSearchError = {
-          error: error instanceof Error ? error : { message: String(error) },
-          searchId: searchId,
-          timestamp: new Date().toISOString(),
-          query: query
-        };
-      }
-
-      return [];
+      window._lastSearchError = {
+        error: error instanceof Error ? error : { message: String(error) },
+        searchId,
+        timestamp: new Date().toISOString(),
+        query
+      };
     } finally {
       // Always set isSearching to false when search completes or fails
       setIsSearching(false);
-
+      
       // Calculate search duration using the searchStartTime from the beginning of the function
       const searchDuration = Date.now() - searchStartTime;
-      console.log(`🎱 [SEARCH][${searchId}] Search operation COMPLETED in ${searchDuration}ms`);
-      console.log(`🎱 [SEARCH][${searchId}] Loading state reset to false`);
-
+      console.log(`🏁 [SEARCH][${searchId}] Search operation COMPLETED in ${searchDuration}ms`);
+      console.log(`🏁 [SEARCH][${searchId}] Loading state reset to false`);
+      
       // Complete logging of workflow
-      console.log(`📝 [SEARCH][${searchId}] SEARCH WORKFLOW SUMMARY:`);
-      console.log(`📝 [SEARCH][${searchId}] - Query: "${query}"`);
-      console.log(`📝 [SEARCH][${searchId}] - Duration: ${searchDuration}ms`);
-      console.log(`📝 [SEARCH][${searchId}] - Results: ${searchResults.length}`);
-      console.log(`📝 [SEARCH][${searchId}] - Status: ${searchResults.length > 0 ? 'SUCCESS' : 'FAILED'}`);
+      console.log(`📋 [SEARCH][${searchId}] SEARCH WORKFLOW SUMMARY:`);
+      console.log(`📋 [SEARCH][${searchId}] - Query: "${query}"`);
+      console.log(`📋 [SEARCH][${searchId}] - Duration: ${searchDuration}ms`);
+      console.log(`📋 [SEARCH][${searchId}] - Results: ${searchResults.length}`);
+      console.log(`📋 [SEARCH][${searchId}] - Status: ${searchResults.length > 0 ? 'SUCCESS' : 'FAILED'}`);
     }
   };
 
-// Return the ChatContext.Provider with all values
-return (
-  <ChatContext.Provider value={{
-    // Chat management
-    currentChat,
-    chats,
-    loading,
-    error: errorState,
-    createNewChat,
-    createAgentChat,
-    setCurrentChat,
-    addMessage,
-    deleteChat,
-    updateChatTitle,
-    
-    // Agent selection
-    selectedAgent,
-    setSelectedAgent,
-    
-    // Search-related properties and methods
-    isSearchMode,
-    toggleSearchMode,
-    searchResults,
-    performSearch,
-    isSearching,
-    accessedWebsites,
-    searchQuery,
-    isSearchSidebarOpen,
-    toggleSearchSidebar
-  }}>
+  // Return the chat context provider
+  return (
+    <ChatContext.Provider value={{
+      currentChat,
+      chats,
+      loading,
+      error: errorState,
+      createNewChat,
+      createAgentChat,
+      setCurrentChat,
+      addMessage,
+      deleteChat,
+      updateChatTitle,
+      selectedAgent,
+      setSelectedAgent,
+      // Search-related properties and methods
+      isSearchMode,
+      toggleSearchMode,
+      searchResults,
+      performSearch,
+      isSearching,
+      accessedWebsites,
+      searchQuery,
+      isSearchSidebarOpen,
+      toggleSearchSidebar
+    }}>
       {children}
     </ChatContext.Provider>
   );

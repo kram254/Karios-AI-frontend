@@ -80,11 +80,7 @@ const Chat: React.FC = () => {
       console.log('🔍 SEARCH MODE ACTIVE - Processing search');
       
       try {
-        // First, add the user's search query as a chat message
-        await addMessage({
-          role: 'user',
-          content: messageContent
-        });
+        const searchId = `search-${Date.now()}`;
         
         // Show animated loading indicator
         const loadingId = 'search-loading';
@@ -96,10 +92,13 @@ const Chat: React.FC = () => {
           { id: loadingId, duration: Infinity }
         );
         
-        console.log('🔍 CALLING SEARCH API...');
-        // This will add the search results as an assistant chat message
-        await performSearch(messageContent);
-        console.log('✅ SEARCH COMPLETE');
+        console.log(`🔍 [Chat][${searchId}] CALLING SEARCH API... isSearchMode=${isSearchMode}, internetSearchEnabled=${internetSearchEnabled}`);
+        
+        // Let performSearch handle both adding the user message and the search results
+        // This ensures everything happens in a single chat conversation
+        await performSearch(messageContent, true);
+        
+        console.log(`✅ [Chat][${searchId}] SEARCH COMPLETE`);
         
         // Clear loading animation and show success
         toast.dismiss(loadingId);

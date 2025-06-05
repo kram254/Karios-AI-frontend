@@ -165,9 +165,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createNewChat = async (customTitle?: string) => {
     try {
       setLoading(true);
-      console.log('Attempting to create a new chat...');
+      console.log('Attempting to create a new chat with title:', customTitle || 'New Conversation');
+      
+      // Format title appropriately if it's a search query
+      let finalTitle = customTitle || 'New Conversation';
+      if (customTitle?.startsWith('Search:')) {
+        // Title is already in search format
+        finalTitle = customTitle;
+      } else if (customTitle && !customTitle.startsWith('Search:') && internetSearchEnabled) {
+        // For search queries, add a prefix and truncate if necessary
+        finalTitle = `Search: ${customTitle.slice(0, 40)}${customTitle.length > 40 ? '...' : ''}`;
+      }
+      
       const response = await chatService.createChat({
-        title: customTitle || 'New Conversation',
+        title: finalTitle,
         chat_type: 'default',
         language: language.code // Include the selected language
       });
@@ -180,12 +191,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.success('New chat created');
       setError(null);
       return newChat;
-    } catch (err: unknown) {
-      console.error('Error creating chat:', err);
-      console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
-      setError('Failed to create chat');
-      toast.error('Failed to create chat');
-      throw err;
+    } catch (err) {
+      console.error('Failed to create new chat:', err);
+      toast.error('Failed to create new chat. Please try again.');
+      setError('Failed to create new chat');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -410,26 +420,63 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsSearching(true);
     setInternetSearchEnabled(true); // Mark that internet search is active
     console.log(`[ChatContext][performSearch][${searchId}] Internet search enabled for query: "${query}"`);
-    console.log(`[ChatContext][performSearch][${searchId}] Before adding user query. Current chat ID: ${currentChat?.id}`);
-
-    // Make sure we have a current chat to add messages to
+    
+    // CRITICAL: Store the chat ID at the beginning of the process
+    // and use this same chat throughout the entire search process
     let chatToUse = currentChat;
+    let chatIdToUse = currentChat?.id;
+    
+    // If there's no current chat, create one, but ONLY IF NECESSARY
     if (!chatToUse) {
       console.log(`[ChatContext][performSearch][${searchId}] No current chat, creating one first`);
-      const newChat = await createNewChat();
-      chatToUse = newChat;
-      // Small delay to ensure chat creation is complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-      console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatToUse?.id}`);
+      // Generate a title based on the search query
+      const chatTitle = `Search: ${query.slice(0, 30)}${query.length > 30 ? '...' : ''}`;
+      const newChat = await createNewChat(chatTitle);
+      
+      if (newChat && newChat.id) {
+        chatToUse = newChat;
+        chatIdToUse = newChat.id;
+        setCurrentChat(newChat); // Important: update the current chat in state
+        
+        // Refresh the chats list
+        const chatsResponse = await chatService.getChats();
+        if (chatsResponse?.data) {
+          setChats(chatsResponse.data);
+        }
+        
+        // Small delay to ensure chat creation is complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatIdToUse}`);
+      } else {
+        console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
+        setInternetSearchEnabled(false);
+        setIsSearching(false);
+        return;
+      }
+    } else {
+      console.log(`[ChatContext][performSearch][${searchId}] Using existing chat with ID: ${chatIdToUse}`);
     }
     
     // Check if user message should be added
     // Note: In Chat.tsx the user message is usually already added before calling performSearch
     // so we set addUserMessage=false in many cases to avoid duplicates
-    if (addUserMessage && chatToUse && chatToUse.id) {
-      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatToUse.id}`);
-      await addMessage({ role: 'user', content: query });
-      console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${chatToUse?.messages?.length}`);
+    if (addUserMessage && chatToUse && chatIdToUse) {
+      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse}`);
+      try {
+        // Send the user message directly to the chat service to avoid creating a new chat
+        await chatService.addMessage(chatIdToUse, { role: 'user', content: query });
+        
+        // Refresh the chat to make sure we have the latest messages
+        const updatedChat = await chatService.getChat(chatIdToUse);
+        if (updatedChat?.data) {
+          chatToUse = updatedChat.data;
+          setCurrentChat(updatedChat.data);
+        }
+        
+        console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${chatToUse?.messages?.length}`);
+      } catch (error) {
+        console.error(`[ChatContext][performSearch][${searchId}] Error adding user message:`, error);
+      }
     }
 
     try {
@@ -722,15 +769,29 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Create a clean message that matches the second image style (including the footnote)
         const searchResponseMessage = `${searchSummary}${dividerLine}${formattedResults}${footnote}`;
-        console.log(`[ChatContext][performSearch][${searchId}] Before adding assistant search results. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}. Search response to be added:`, searchResponseMessage);
+        console.log(`[ChatContext][performSearch][${searchId}] Before adding assistant search results. Current chat ID: ${chatIdToUse}, Messages count: ${chatToUse?.messages?.length}`);
         
         // Add the search results to the chat as an assistant message
-        console.log(`📝 [SEARCH][${searchId}] Adding search results to chat conversation`);
-        await addMessage({
-          role: 'assistant',
-          content: searchResponseMessage
-        });
-        console.log(`[ChatContext][performSearch][${searchId}] After adding assistant search results. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}`);
+        // CRITICAL: Use chatIdToUse to ensure we're adding to the same chat
+        console.log(`📝 [SEARCH][${searchId}] Adding search results directly to chat ${chatIdToUse}`);
+        try {
+          if (chatIdToUse) {
+            // Use direct service call to avoid creating a new chat
+            await chatService.addMessage(chatIdToUse, { role: 'assistant', content: searchResponseMessage });
+            
+            // Now refresh the chat to get the latest messages
+            const updatedChat = await chatService.getChat(chatIdToUse);
+            if (updatedChat?.data) {
+              console.log(`📝 [SEARCH][${searchId}] Successfully refreshed chat after adding search results`);
+              setCurrentChat(updatedChat.data);
+            }
+          } else {
+            console.error(`📝 [SEARCH][${searchId}] Cannot add search results: No chat ID available`);
+          }
+        } catch (error) {
+          console.error(`📝 [SEARCH][${searchId}] Error adding search results:`, error);
+        }
+        console.log(`[ChatContext][performSearch][${searchId}] After adding assistant search results. Current chat ID: ${chatIdToUse}`);
       } else {
         console.warn('⚠️ [SEARCH] Search returned empty or invalid results:', data);
         // Set empty results
@@ -809,10 +870,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       // Always set isSearching to false when search completes or fails
       setIsSearching(false);
-      setInternetSearchEnabled(false); // Reset internet search flag when done
+      setInternetSearchEnabled(false); // CRITICAL: Reset internet search flag to prevent duplicate chats
       
       // Calculate search duration using the searchStartTime from the beginning of the function
       const searchDuration = Date.now() - searchStartTime;
+      
+      // Final refresh of the chat to ensure UI is up to date
+      try {
+        if (chatIdToUse) {
+          const refreshResponse = await chatService.getChat(chatIdToUse);
+          if (refreshResponse?.data) {
+            setCurrentChat(refreshResponse.data);
+            console.log(`🏁 [SEARCH][${searchId}] Successfully refreshed chat ${chatIdToUse} with ${refreshResponse.data.messages?.length} messages`);
+          }
+        }
+      } catch (refreshError) {
+        console.error(`🛑 [SEARCH][${searchId}] Error refreshing chat after search:`, refreshError);
+      }
+      
       console.log(`🏁 [SEARCH][${searchId}] Search operation COMPLETED in ${searchDuration}ms`);
       console.log(`🏁 [SEARCH][${searchId}] Loading state reset to false`);
       
@@ -820,8 +895,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log(`📋 [SEARCH][${searchId}] SEARCH WORKFLOW SUMMARY:`);
       console.log(`📋 [SEARCH][${searchId}] - Query: "${query}"`);
       console.log(`📋 [SEARCH][${searchId}] - Duration: ${searchDuration}ms`);
-      console.log(`📋 [SEARCH][${searchId}] - Results: ${searchResults.length}`);
-      console.log(`📋 [SEARCH][${searchId}] - Status: ${searchResults.length > 0 ? 'SUCCESS' : 'FAILED'}`);
+      console.log(`📋 [SEARCH][${searchId}] - Results: ${searchResults?.length || 0}`);
+      console.log(`📋 [SEARCH][${searchId}] - Final chat ID: ${chatIdToUse}`);
+      console.log(`📋 [SEARCH][${searchId}] - Status: ${searchResults?.length > 0 ? 'SUCCESS' : 'FAILED'}`);
     }
   };
 

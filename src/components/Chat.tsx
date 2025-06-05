@@ -484,6 +484,25 @@ const Chat: React.FC = () => {
               // If timestamps are more than 1 second apart, keep both messages
               return Math.abs(currentTime - prevTime) > 1000;
             })
+            // Filter out generic "I'm sorry, but as an AI..." messages when internet search is enabled
+            .filter((msg) => {
+              // If internet search is NOT enabled, show all messages
+              if (!internetSearchEnabled) return true;
+              
+              // If this is a user message, always show it
+              if (msg.role === 'user') return true;
+              
+              // When in internet search mode, filter out generic AI fallback messages
+              // that start with "I'm sorry, but as an AI..."
+              const genericMessagePattern = /^I'm sorry, but as an AI developed by OpenAI/i;
+              if (msg.role === 'assistant' && genericMessagePattern.test(msg.content)) {
+                console.log('🌐 FILTERED OUT generic AI response in search mode:', msg.content.substring(0, 50) + '...');
+                return false;
+              }
+              
+              // Show all other messages
+              return true;
+            })
             .map((msg) => (
               <motion.div
                 key={msg.id}

@@ -30,18 +30,18 @@ interface Chat {
   messages: Message[];
   created_at?: string;
   updated_at?: string;
-  agent_id?: string;
 }
 
 const Chat: React.FC = () => {
   const { 
     currentChat, 
-    setCurrentChat,
     addMessage, 
-    createNewChat,
     isSearchMode, 
-    toggleSearchMode,
-    performSearch
+    performSearch, 
+    setCurrentChat, 
+    createNewChat,
+    internetSearchEnabled, // Get the internet search status from context
+    toggleSearchMode, // Add this to fix the TypeScript errors
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -76,7 +76,7 @@ const Chat: React.FC = () => {
     setMessage("");
     
     // Handle search mode differently
-    if (isSearchMode) {
+    if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
       console.log('🔍 SEARCH MODE ACTIVE - Processing search');
       
       try {
@@ -116,6 +116,13 @@ const Chat: React.FC = () => {
     }
     
     // Regular chat message processing (not search)
+    // Check if internet search is already in progress to avoid duplicate messages
+    if (internetSearchEnabled) {
+      console.log('Internet search is already in progress, skipping regular message processing');
+      setIsProcessing(false);
+      return;
+    }
+    
     try {
       // Store the message content before any async operations
       const userMessage = messageContent;

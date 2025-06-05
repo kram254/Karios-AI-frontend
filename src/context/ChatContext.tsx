@@ -76,6 +76,7 @@ interface ChatContextType {
   searchQuery: string;
   isSearchSidebarOpen: boolean;
   toggleSearchSidebar: () => void;
+  internetSearchEnabled: boolean; // Indicates if internet search is currently active
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -96,6 +97,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [accessedWebsites, setAccessedWebsites] = useState<{title: string, url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
+  const [internetSearchEnabled, setInternetSearchEnabled] = useState(false); // Track if internet search is active
 
   useEffect(() => {
     loadChats();
@@ -392,40 +394,43 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Perform web search using the Brave Search API
-  const performSearch = async (query: string, addUserMessage = false) => {
+  const performSearch = async (query: string, addUserMessage = true) => {
     const searchId = `websearch-${Date.now()}`;
-    if (!query.trim()) return;
-    
-    // Set the search query for display in sidebar
-    setSearchQuery(query);
-    
-    // Track the start time for performance measurement
     const searchStartTime = Date.now();
     
-    console.log(`[ChatContext][performSearch][${searchId}] Initiating search for query: "${query}"`);
-    
-    // Add user's search query as a message first if requested
-    console.log(`[ChatContext][performSearch][${searchId}] Before potentially adding user query. addUserMessage: ${addUserMessage}. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}`);
-      if (addUserMessage) {
-      await addMessage({
-        role: 'user',
-        content: query
-      });
-      console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Current chat ID: ${currentChat?.id}, Messages count: ${currentChat?.messages?.length}`);
+    if (!query.trim()) {
+      console.log(`[ChatContext][performSearch][${searchId}] Empty query, aborting search`);
+      return;
     }
     
-    // Indicate searching state
-    setIsSearching(true);
-    console.log(`🔄 [SEARCH] Set search loading state to true`);
-
-    console.log(`[ChatContext][performSearch][${searchId}] Search ID generated: ${searchId}`);
-    console.log(`🔍 [SEARCH][${searchId}] WORKFLOW STARTED - User requested search for: "${query}"`);
-
-    // Store the query for debugging
-    window._lastSearchQuery = query;
-    console.log(`💾 [SEARCH][${searchId}] Stored search query for debugging: "${query}"`);
+    // Set search query for UI components to use
+    setSearchQuery(query);
     
-    // ... rest of the code remains the same ...
+    // Set searching state to true to show loading indicators
+    setIsSearching(true);
+    setInternetSearchEnabled(true); // Mark that internet search is active
+    console.log(`[ChatContext][performSearch][${searchId}] Internet search enabled for query: "${query}"`);
+    console.log(`[ChatContext][performSearch][${searchId}] Before adding user query. Current chat ID: ${currentChat?.id}`);
+
+    // Make sure we have a current chat to add messages to
+    let chatToUse = currentChat;
+    if (!chatToUse) {
+      console.log(`[ChatContext][performSearch][${searchId}] No current chat, creating one first`);
+      const newChat = await createNewChat();
+      chatToUse = newChat;
+      // Small delay to ensure chat creation is complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatToUse?.id}`);
+    }
+    
+    // Check if user message should be added
+    // Note: In Chat.tsx the user message is usually already added before calling performSearch
+    // so we set addUserMessage=false in many cases to avoid duplicates
+    if (addUserMessage && chatToUse && chatToUse.id) {
+      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatToUse.id}`);
+      await addMessage({ role: 'user', content: query });
+      console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${chatToUse?.messages?.length}`);
+    }
 
     try {
       // Check the API status first before attempting search
@@ -608,11 +613,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Store diagnostic info on window object
         window._lastSearchError = {
-          message: errorMessage,
-          lastError,
-          apiUrls,
+          error: lastError,
           searchId,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          query
         };
         
         throw new Error(errorMessage);
@@ -805,6 +809,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       // Always set isSearching to false when search completes or fails
       setIsSearching(false);
+      setInternetSearchEnabled(false); // Reset internet search flag when done
       
       // Calculate search duration using the searchStartTime from the beginning of the function
       const searchDuration = Date.now() - searchStartTime;
@@ -844,7 +849,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       accessedWebsites,
       searchQuery,
       isSearchSidebarOpen,
-      toggleSearchSidebar
+      toggleSearchSidebar,
+      internetSearchEnabled // Add to context so components can access this
     }}>
       {children}
     </ChatContext.Provider>

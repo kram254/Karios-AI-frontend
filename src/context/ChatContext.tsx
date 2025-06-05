@@ -236,16 +236,32 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addMessage = async ({ role, content }: { role: 'user' | 'assistant' | 'system'; content: string }) => {
-    if (!currentChat) {
+    let chatToUse = currentChat;
+    
+    // If we don't have a current chat, create one and ensure it's set in state
+    if (!chatToUse) {
+      console.log('[ChatContext][addMessage] No current chat found. Creating a new chat first.');
       try {
-        await createNewChat();
+        // Create a new chat and get the newly created chat object
+        const newChat = await createNewChat();
+        
+        if (!newChat) {
+          console.error('[ChatContext][addMessage] Failed to create a new chat - createNewChat returned null/undefined');
+          toast.error('Cannot send message: Unable to create a chat.');
+          return;
+        }
+        
+        // Use this newly created chat for our message
+        chatToUse = newChat;
+        console.log(`[ChatContext][addMessage] Successfully created new chat with ID: ${chatToUse.id}`);
       } catch (err: unknown) {
-        console.error('Error creating new chat for message:', err);
-        console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
+        console.error('[ChatContext][addMessage] Error creating new chat for message:', err);
+        console.error('[ChatContext][addMessage] Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
+        toast.error('Cannot send message: Failed to create a chat.');
         return;
       }
     }
-
+    
     // Create optimistic update
     const tempId = Date.now().toString();
     const tempMessage: Message = {
@@ -254,9 +270,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       role,
       timestamp: new Date().toISOString(),
       created_at: new Date().toISOString(),
-      chat_id: currentChat?.id
+      chat_id: chatToUse.id // Use chatToUse instead of currentChat
     };
 
+    // Optimistically add the message to the UI
     setCurrentChat(prev => {
       if (!prev) return null;
       return {
@@ -266,22 +283,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     try {
-      if (!currentChat) {
-        // This should ideally not happen if createNewChat was successful
-        console.error('[ChatContext][addMessage] currentChat is null, cannot add message.');
-        toast.error('Cannot send message: No active chat.');
-        // Revert optimistic message if currentChat became null unexpectedly
-        setCurrentChat(prev => {
-          if (!prev) return null;
-          return { ...prev, messages: prev.messages.filter(msg => msg.id !== tempId) };
-        });
-        return;
-      }
-      
-      const activeChatId = currentChat.id;
+      // At this point chatToUse should always be defined
+      const activeChatId = chatToUse.id;
       console.log(`[ChatContext][addMessage] Sending message to chat ${activeChatId}:`, { content, role });
+      console.log(`[ChatContext][addMessage] Detailed chat info: ID=${chatToUse.id}, Title=${chatToUse.title}, MessageCount=${chatToUse.messages?.length || 0}`);
 
-      const messageData: { content: string; role: 'user' | 'assistant' | 'system' } = { content, role };
+      const messageData = { content, role };
       const addedMessageResponse = await chatService.addMessage(activeChatId, messageData);
       const newlyAddedMessage: Message = addedMessageResponse.data;
 
@@ -289,6 +296,54 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Crucial Step: Refetch the entire chat to get the most up-to-date state from the server
       console.log(`[ChatContext][addMessage] Refetching chat ${activeChatId} to ensure UI consistency.`);
+      const updatedChatResponse = await chatService.getChat(activeChatId);
+      const fullyUpdatedChat: Chat = updatedChatResponse.data;
+
+      console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
+      console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
+
+      // Update the currentChat state with the fully loaded chat object
+      setCurrentChat(fullyUpdatedChat);
+
+      // Update the chats array in the state
+      setChats(prevChats =>
+        prevChats.map(chat =>
+          chat.id === activeChatId ? fullyUpdatedChat : chat
+        )
+      );
+
+      // Generate title for the chat if this is the first user message and title is still default
+      if (role === 'user' && 
+          fullyUpdatedChat.title === 'New Chat' && 
+          fullyUpdatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
+        console.log(`[ChatContext][addMessage] First user message in 'New Chat'. Generating title for chat ${activeChatId}.`);
+        const generatedTitle = generateTitleFromMessage(content);
+        await updateChatTitle(activeChatId, generatedTitle); // This might trigger another fetch if updateChatTitle modifies and refetches.
+      }
+
+      setError(null);
+    } catch (err: unknown) {
+      console.error(`[ChatContext][addMessage] Error during addMessage for chat ${chatToUse?.id || 'UNKNOWN_CHAT_ID'}:`, err);
+      toast.error('Failed to send message. Please try again.');
+
+      // Revert optimistic message on error
+      setCurrentChat(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: prev.messages.filter(msg => msg.id !== tempId)
+        };
+      });
+      setError('Failed to send message');
+    }
+  };
+
+const deleteChat = async (chatId: string) => {
+  try {
+    await chatService.deleteChat(chatId);
+
+      // Delete completed, update UI accordingly 
+      console.log(`[ChatContext][deleteChat] Successfully deleted chat ${chatId}.`);
       const updatedChatResponse = await chatService.getChat(activeChatId);
       const fullyUpdatedChat: Chat = updatedChatResponse.data;
 

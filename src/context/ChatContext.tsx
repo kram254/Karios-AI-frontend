@@ -461,10 +461,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Note: In Chat.tsx the user message is usually already added before calling performSearch
     // so we set addUserMessage=false in many cases to avoid duplicates
     if (addUserMessage && chatToUse && chatIdToUse) {
-      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse}`);
+      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse} with AI response suppressed`);
       try {
-        // Send the user message directly to the chat service to avoid creating a new chat
-        await chatService.addMessage(chatIdToUse, { role: 'user', content: query });
+        // Send the user message directly to the chat service with suppressAiResponse=true
+        // This prevents the standard "I'm sorry, but as an AI..." response when in search mode
+        await chatService.addMessage(chatIdToUse, { 
+          role: 'user', 
+          content: query,
+          suppressAiResponse: true // CRITICAL: Suppress the standard AI response during search
+        });
         
         // Refresh the chat to make sure we have the latest messages
         const updatedChat = await chatService.getChat(chatIdToUse);

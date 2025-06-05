@@ -77,7 +77,7 @@ const Chat: React.FC = () => {
     
     // Handle search mode differently
     if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
-      console.log('🔍 SEARCH MODE ACTIVE - Processing search');
+      console.log('🌐 INTERNET SEARCH MODE ACTIVE - Processing search');
       
       try {
         const searchId = `search-${Date.now()}`;
@@ -92,10 +92,10 @@ const Chat: React.FC = () => {
           { id: loadingId, duration: Infinity }
         );
         
-        console.log(`🔍 [Chat][${searchId}] CALLING SEARCH API... isSearchMode=${isSearchMode}, internetSearchEnabled=${internetSearchEnabled}`);
+        console.log(`🌐 [Chat][${searchId}] CALLING SEARCH API... isSearchMode=${isSearchMode}, internetSearchEnabled=${internetSearchEnabled}`);
         
         // Let performSearch handle both adding the user message and the search results
-        // This ensures everything happens in a single chat conversation
+        // This ensures everything happens in a single chat conversation with suppressAiResponse=true
         await performSearch(messageContent, true);
         
         console.log(`✅ [Chat][${searchId}] SEARCH COMPLETE`);
@@ -109,7 +109,7 @@ const Chat: React.FC = () => {
         console.log('💡 TROUBLESHOOTING TIPS: Check network connection, API endpoint, and server status');
       } finally {
         setIsProcessing(false);
-        console.log('🔄 SEARCH PROCESSING COMPLETE - UI ready for next action');
+        console.log('🔄 INTERNET SEARCH COMPLETE - UI ready for next action');
       }
       return;
     }
@@ -404,18 +404,18 @@ const Chat: React.FC = () => {
                       py-1.5 px-4 rounded-full transition-all duration-300 hover:bg-[#2A2A2A]/90 hover:shadow-inner`}
                     onClick={() => {
                       // Log the current state before toggling
-                      console.log(`🔍 SEARCH BUTTON CLICKED - Current search mode: ${isSearchMode ? 'ENABLED' : 'DISABLED'}`);
+                      console.log(`🌐 SEARCH BUTTON CLICKED - Current search mode: ${isSearchMode ? 'ENABLED' : 'DISABLED'}`);
                       
                       // Toggle search mode using the context function
                       toggleSearchMode();
                       
                       // Log the new state after toggling
-                      console.log(`🔍 SEARCH MODE TOGGLED - New search mode: ${!isSearchMode ? 'ENABLED' : 'DISABLED'}`);
+                      console.log(`🌐 SEARCH MODE TOGGLED - New search mode: ${!isSearchMode ? 'ENABLED' : 'DISABLED'}`);
                       
                       // Show toast notification
                       const newMode = !isSearchMode;
                       toast.success(newMode ? "Internet search mode enabled" : "Internet search mode disabled", { 
-                        icon: "🔍",
+                        icon: "🌐",
                         duration: 2000
                       });
                       
@@ -426,7 +426,7 @@ const Chat: React.FC = () => {
                     }}
                     aria-pressed={isSearchMode}
                   >
-                    <Search className="w-4 h-4" />
+                    <span className="text-lg leading-none">🌐</span>
                     <span className="text-sm font-medium">{isSearchMode ? "Searching" : "Search"}</span>
                   </button>
                 </div>
@@ -596,7 +596,7 @@ const Chat: React.FC = () => {
                     handleKeyDown(e);
                   }
                 }}
-                placeholder={isSearchMode ? "Search the web..." : "Ask Agentando AI"}
+                placeholder={isSearchMode ? "Ask Agentando AI..." : "Ask Agentando AI"}
                 className="chat-textarea"
                 rows={1}
                 disabled={isProcessing}

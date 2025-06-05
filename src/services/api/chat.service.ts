@@ -121,7 +121,7 @@ export const chatService = {
     return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
   },
   
-  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system' }) => {
+  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean }) => {
     console.log(`Adding message to chat ${chatId}`);
     // Match the structure used in the WebSocket service
     let payload;
@@ -131,7 +131,8 @@ export const chatService = {
       payload = { 
         content: content,
         attachments: [],
-        role: 'user' // Default to user role for backward compatibility
+        role: 'user', // Default to user role for backward compatibility
+        suppress_ai_response: false // Default behavior - generate AI response
       };
     } else {
       // If an object is passed, extract the necessary properties
@@ -139,22 +140,26 @@ export const chatService = {
         content: content.content,
         attachments: 'attachments' in content ? content.attachments || [] : [],
         // Always include the role to ensure proper persistence
-        role: content.role
+        role: content.role,
+        // Add suppress_ai_response flag if provided (for internet search mode)
+        suppress_ai_response: 'suppressAiResponse' in content ? content.suppressAiResponse : false
       };
     }
     
-    console.log('Message payload with role:', payload);
+    console.log('Message payload with role and suppress flag:', payload);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
   // Upload and send message with image attachments
-  addMessageWithAttachments: (chatId: string, content: string, attachments: Attachment[]) => {
-    console.log(`Adding message with ${attachments.length} attachments to chat ${chatId}`);
+  addMessageWithAttachments: (chatId: string, content: string, attachments: Attachment[], suppressAiResponse = false) => {
+    console.log(`Adding message with ${attachments.length} attachments to chat ${chatId}${suppressAiResponse ? ' (AI response suppressed)' : ''}`);
     
-    // Create a payload with the message content and attachments
+    // Create a payload with the message content, attachments and suppress flag
     const payload = {
       content,
-      attachments
+      attachments,
+      role: 'user',
+      suppress_ai_response: suppressAiResponse
     };
     
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);

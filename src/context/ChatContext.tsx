@@ -338,56 +338,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-const deleteChat = async (chatId: string) => {
-  try {
-    await chatService.deleteChat(chatId);
-
-      // Delete completed, update UI accordingly 
-      console.log(`[ChatContext][deleteChat] Successfully deleted chat ${chatId}.`);
-      const updatedChatResponse = await chatService.getChat(activeChatId);
-      const fullyUpdatedChat: Chat = updatedChatResponse.data;
-
-      console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
-      console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
-
-      // Update the currentChat state with the fully loaded chat object
-      setCurrentChat(fullyUpdatedChat);
-
-      // Update the chats array in the state
-      setChats(prevChats =>
-        prevChats.map(chat =>
-          chat.id === activeChatId ? fullyUpdatedChat : chat
-        )
-      );
-
-      // Generate title for the chat if this is the first user message and title is still default
-      if (role === 'user' && 
-          fullyUpdatedChat.title === 'New Chat' && 
-          fullyUpdatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
-        console.log(`[ChatContext][addMessage] First user message in 'New Chat'. Generating title for chat ${activeChatId}.`);
-        const generatedTitle = generateTitleFromMessage(content);
-        await updateChatTitle(activeChatId, generatedTitle); // This might trigger another fetch if updateChatTitle modifies and refetches.
-      }
-
-      setError(null);
-    } catch (err: unknown) {
-      console.error(`[ChatContext][addMessage] Error during addMessage for chat ${currentChat?.id || 'UNKNOWN_CHAT_ID'}:`, err);
-      toast.error('Failed to send message. Please try again.');
-
-      // Revert optimistic message on error
-      setCurrentChat(prev => {
-        if (!prev) return null;
-        // Ensure tempId is correctly captured if this block is reached.
-        // If currentChat became null, this might not behave as expected.
-        return {
-          ...prev,
-          messages: prev.messages.filter(msg => msg.id !== tempId)
-        };
-      });
-      setError('Failed to send message');
-    }
-  };
-
   const deleteChat = async (chatId: string) => {
     try {
       await chatService.deleteChat(chatId);

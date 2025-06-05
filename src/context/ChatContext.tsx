@@ -782,13 +782,30 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           if (chatIdToUse) {
             // Use direct service call to avoid creating a new chat
-            await chatService.addMessage(chatIdToUse, { role: 'assistant', content: searchResponseMessage });
+            // Add search results message with suppress AI response flag
+            // This helps prevent generic AI fallback messages
+            await chatService.addMessage(chatIdToUse, { 
+              role: 'assistant', 
+              content: `[SEARCH_RESULTS] ${searchResponseMessage}`, // Prefix to help identify search results
+              suppressAiResponse: true // Prevent additional AI responses
+            });
             
             // Now refresh the chat to get the latest messages
             const updatedChat = await chatService.getChat(chatIdToUse);
             if (updatedChat?.data) {
               console.log(`📝 [SEARCH][${searchId}] Successfully refreshed chat after adding search results`);
               setCurrentChat(updatedChat.data);
+              
+              // Log if there are any generic AI messages still present
+              const genericMessages = updatedChat.data.messages.filter(msg => {
+                if (msg.role !== 'assistant') return false;
+                const content = msg.content?.toLowerCase() || '';
+                return content.includes("i'm sorry") && content.includes("as an ai");
+              });
+              
+              if (genericMessages.length > 0) {
+                console.warn(`⚠️ [SEARCH][${searchId}] ${genericMessages.length} generic AI messages found in chat after search. These will be filtered in the UI.`);
+              }
             }
           } else {
             console.error(`📝 [SEARCH][${searchId}] Cannot add search results: No chat ID available`);

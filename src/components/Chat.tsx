@@ -482,59 +482,69 @@ const Chat: React.FC = () => {
               // If this is a user message, always show it
               if (msg.role === 'user') return true;
               
+              // SPECIAL CASE: Always keep search result messages in search mode
+              if (msg.content.startsWith('[SEARCH_RESULTS]')) {
+                console.log('🌐 Keeping search results message');
+                return true;
+              }
+              
               // When in internet search mode, filter out all generic AI fallback messages and disclaimers
               if (msg.role === 'assistant') {
                 // Get message content in lowercase for case-insensitive matching
                 const content = msg.content.toLowerCase();
                 
-                // METHOD 1: Detect standard patterns using regular expressions
+                // METHOD 1: Detect generic AI disclaimer patterns using structure-based regular expressions
+                // These patterns target the structure of disclaimer messages, not specific topics
                 const commonDisclaimerPatterns = [
-                  // Matches "I'm sorry" + AI/model/assistant mentions (more variations)
-                  /i['']m sorry.{0,30}(ai|language model|assistant|model|openai|developed|created)/i,
-                  /(apologi[sz]e).{0,30}(ai|language model|assistant|model|openai|developed|created)/i,
+                  // General apology patterns
+                  /^i['']m sorry.{0,30}(as|being).{0,10}(an|a).{0,10}(ai|assistant|model)/i,
+                  /^(i apologize|sorry).{0,30}(as|being).{0,10}(an|a).{0,10}(ai|assistant|model)/i,
                   
-                  // Matches cutoff training data mentions
-                  /(training|knowledge|data|information).{0,20}(only|ends|until|limited|cutoff|up to).{0,30}(20\d\d|september|may|june|april)/i,
+                  // Knowledge/training cutoff patterns (generalized)
+                  /(my|the).{0,10}(training|knowledge|data).{0,20}(only|limited|up to|as of|until|cutoff)/i,
                   
-                  // Matches lack of capability disclaimers 
-                  /(don't|do not|cannot|can't|not able|unable|doesn't have).{0,30}(access|provide|have|get|browse|search|know).{0,40}(information|data|results|events|knowledge|web|internet|update)/i,
+                  // General capability limitation patterns
+                  /(cannot|can't|don't|do not|unable to).{0,15}(access|provide|browse|search|know|get|have)/i,
                   
-                  // Matches references to external sources
-                  /(refer|check|consult|visit).{0,30}(news|sources|websites|latest|official|search engine)/i,
+                  // Real-time/current information patterns
+                  /(no|without|lack of).{0,15}(access|ability).{0,15}(real-time|current|latest|up-to-date)/i,
                   
-                  // Matches AI identity statements when they appear with limitations
-                  /as an (ai|assistant).{0,50}(cannot|can't|don't|do not|limited|not able|unable)/i,
+                  // AI identity combined with limitation statements
+                  /as (an|a).{0,10}(ai|model|assistant|llm).{0,40}(cannot|can't|don't|do not|unable|limited)/i,
                   
-                  // Match disclaimer about current information
-                  /(current|latest|up-to-date|real-time).{0,30}(information|data|events|news)/i,
+                  // Year mention with limitations
+                  /(20\d{2}).{0,30}(only|until|up to|not beyond|after this|cutoff)/i,
                   
-                  // Match specific Monaco Grand Prix case
-                  /(monaco|grand prix).{0,50}(future|upcoming|next|predict|2025)/i
+                  // General prediction inability patterns
+                  /(cannot|can't|unable to|don't have).{0,20}(predict|provide|tell you|know).{0,20}(future|upcoming|will)/i,
+                  
+                  // Training data reference patterns
+                  /(training|knowledge).{0,15}(cut-?off|only includes|ends at|limited to)/i,
+                  
+                  // Mixed identity and limitation patterns
+                  /^(as|being).{0,10}(an|a).{0,10}(ai|language model|assistant).{0,40}(cannot|don't|limited to)/i
                 ];
                 
-                // METHOD 2: Keyword density approach for detecting disclaimers
+                // METHOD 2: Keyword density approach using general disclaimer indicators
                 const disclaimerKeywords = [
-                  // Apologies and AI identification
-                  "i'm sorry", "i apologize", "as an ai", "openai", "developed by", "created by",
-                  "i regret", "i must clarify", "language model", "assistant", "claude", "gemini",
+                  // General AI identity and limitation terms
+                  'sorry', 'training', 'data', 'knowledge', 'cutoff', 'updated', 
+                  'ai', 'model', 'assistant', 'access', 'cannot', "can't", 'unable', 
+                  'don\'t', 'not able', 'limited', 'latest', 'current', 'up-to-date',
                   
-                  // Knowledge limitations
-                  "training", "data", "knowledge", "limited", "real-time", "information", 
-                  "updates", "current", "accurate", "refer to", "sources", "latest", 
-                  "cannot predict", "september 2021", "cutoff", "access", "not capable", 
+                  // General capability limitations
+                  "don't have the ability", "unable to", "not capable", "not possible",
+                  "not able", "limited to", "cannot access", "cannot browse",
+                  "don't have access", "search engine", "unable to search",
                   
-                  // Capability limitations
-                  "don't have the ability", "unable to", "check", "consult", "news",
-                  "future events", "outcomes", "not able", "limited to", "cannot access",
-                  "cannot browse", "don't have access", "search engine", "unable to search",
-                  
-                  // Date-related terms
-                  "2021", "2022", "2023", "training data", "knowledge cutoff",
+                  // Knowledge and time-related terms
+                  "training data", "knowledge cutoff", "as of", "until",
                   "after my", "beyond my", "trained up to", "up until", "up to",
                   
-                  // Current events indicators
-                  "recent", "currently", "happening now", "ongoing", "live", "today",
-                  "breaking news", "latest updates", "current status"
+                  // General limitation phrases
+                  "i don't know", "i cannot predict", "i don't have information",
+                  "i'm not able to", "i can't access", "not designed to",
+                  "i apologize", "i'm sorry", "doesn't include", "lacks ability"
                 ];
                 
                 // Check if content matches any disclaimer pattern
@@ -548,9 +558,11 @@ const Chat: React.FC = () => {
                   }
                 }
                 
-                // SPECIAL CASE: Directly check for the exact message we saw in the screenshot
-                const exactMatchMonaco = content.includes("i'm sorry, but as an ai developed by openai, i am not capable of predicting or providing future events or outcomes") && 
-                  content.includes("monaco grand prix 2025");
+                // Check for phrases indicating search results
+                const containsSearchTerms = content.includes('search results') || 
+                                             content.includes('found information') || 
+                                             content.includes('according to') || 
+                                             content.includes('based on my search');
                 
                 // Find the original user query that might be in the current chat's title
                 const chatTitle = currentChat?.title?.toLowerCase() || '';
@@ -571,10 +583,8 @@ const Chat: React.FC = () => {
                     .map(term => term.replace(/[^a-z0-9]/gi, '')); // Remove punctuation
                   
                   // Check if the message references inability to provide info about the search topic
-                  const hasLimitationIndicator = content.includes("cannot") || 
-                    content.includes("don't have") || 
-                    content.includes("not able") || 
-                    content.includes("unable");
+                  const limitationPhrases = ["cannot", "can't", "don't have", "not able", "unable", "impossible"];
+                  const hasLimitationIndicator = limitationPhrases.some(phrase => content.includes(phrase));
                     
                   if (hasLimitationIndicator) {
                     // Check if any of the search terms appear near limitation words
@@ -588,16 +598,29 @@ const Chat: React.FC = () => {
                   }
                 }
                 
-                // Four ways to filter out a message:
-                // 1. It matches one of our regex patterns for disclaimers
-                // 2. It contains a high density of disclaimer keywords (4 or more)
-                // 3. It's an exact match for known problematic messages
-                // 4. It contextually references inability to provide info about the search query
-                if (matchesPattern || keywordCount >= 4 || exactMatchMonaco || contextualMatch) {
+                // METHOD 4: Detect potential search response messages (we should keep these)
+                const likelySearchResponse = containsSearchTerms || 
+                  (content.includes('http') && content.includes('://')) || // Contains links
+                  (content.match(/\d{4}/) && !content.match(/20(21|22|23)/) && content.includes('published')) || // Mentions recent years
+                  content.includes('website') || 
+                  content.includes('article');
+                
+                // First try to detect if this is actually a genuine search response
+                // If it looks like a search response, we should keep it regardless of other factors
+                if (likelySearchResponse) {
+                  console.log('🌐 Keeping likely search response message');
+                  return true;
+                }
+                
+                // Otherwise use our disclaimer patterns to decide whether to filter
+                // Three ways to filter out a message:
+                // 1. It matches one of our generic disclaimer regex patterns
+                // 2. It contains a high density of disclaimer keywords (threshold lowered to 3 for more aggressive filtering)
+                // 3. It contextually references inability to provide info about the search query
+                if (matchesPattern || keywordCount >= 3 || contextualMatch) {
                   console.log(`🌐 FILTERED OUT AI disclaimer in search mode:`);
                   console.log(`   - Pattern match: ${matchesPattern}`);
                   console.log(`   - Keyword count: ${keywordCount}`);
-                  console.log(`   - Exact Monaco match: ${exactMatchMonaco}`);
                   console.log(`   - Contextual match: ${contextualMatch}`);
                   console.log(`   - Message preview: ${msg.content.substring(0, 50)}...`);
                   return false;

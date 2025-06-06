@@ -121,10 +121,13 @@ export const chatService = {
     return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
   },
   
-  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean }) => {
+  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean; searchModeActive?: boolean }) => {
     console.log(`Adding message to chat ${chatId}`);
     // Match the structure used in the WebSocket service
     let payload;
+    
+    // Extract search mode flag if present
+    const searchModeActive = typeof content === 'object' && 'searchModeActive' in content ? content.searchModeActive : false;
     
     if (typeof content === 'string') {
       // If just a string is passed, assume it's user content
@@ -132,26 +135,39 @@ export const chatService = {
         content: content,
         attachments: [],
         role: 'user', // Default to user role for backward compatibility
-        suppress_ai_response: false // Default behavior - generate AI response
+        suppress_ai_response: false, // Default behavior - generate AI response
+        search_only_mode: false
       };
     } else {
       // If an object is passed, extract the necessary properties
+      const suppressAiResponse = 'suppressAiResponse' in content ? content.suppressAiResponse : false;
+      
       payload = {
         content: content.content,
         attachments: 'attachments' in content ? content.attachments || [] : [],
         // Always include the role to ensure proper persistence
         role: content.role,
         // Add suppress_ai_response flag if provided (for internet search mode)
-        suppress_ai_response: 'suppressAiResponse' in content ? content.suppressAiResponse : false
+        suppress_ai_response: suppressAiResponse,
+        // Add search_only_mode flag for enhanced directive handling
+        search_only_mode: searchModeActive,
+        // Add directive to avoid disclaimers when in search mode
+        system_directive: searchModeActive ? 
+          "Provide only search results. Never generate disclaimers about future events, knowledge cutoff, or AI limitations." : 
+          undefined
       };
     }
     
-    console.log('Message payload with role and suppress flag:', payload);
+    console.log(`Message payload with role=${payload.role}, suppress_ai_response=${payload.suppress_ai_response}, search_mode=${searchModeActive}`);
     return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
-  // Upload and send message with image attachments
-  addMessageWithAttachments: (chatId: string, content: string, attachments: Attachment[], suppressAiResponse = false) => {
+  addMessageWithAttachments: async (
+    chatId: string, 
+    content: string, 
+    attachments: Attachment[], 
+    { suppressAiResponse = false, searchModeActive = false } = {}
+  ) => {
     console.log(`Adding message with ${attachments.length} attachments to chat ${chatId}${suppressAiResponse ? ' (AI response suppressed)' : ''}`);
     
     // Create a payload with the message content, attachments and suppress flag
@@ -159,9 +175,15 @@ export const chatService = {
       content,
       attachments,
       role: 'user',
-      suppress_ai_response: suppressAiResponse
+      suppress_ai_response: suppressAiResponse,
+      search_only_mode: searchModeActive,
+      // Add directive to avoid disclaimers when in search mode
+      system_directive: searchModeActive ? 
+        "Provide only search results. Never generate disclaimers about future events, knowledge cutoff, or AI limitations." : 
+        undefined
     };
     
-    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
+    console.log(`🔄 [chat.service] Adding message with attachments, searchModeActive=${searchModeActive}, suppressAiResponse=${suppressAiResponse}`);
+    return api.post(`/api/chat/chats/${chatId}/messages`, payload);
   }
 };

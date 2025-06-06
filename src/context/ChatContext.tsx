@@ -403,6 +403,104 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsSearchSidebarOpen(!isSearchSidebarOpen);
   };
 
+  // Pre-filter function to detect and block generic AI disclaimers
+  const processIncomingMessage = (msg: Message | null) => {
+    // Skip processing for null messages or non-assistant messages
+    if (!msg || msg.role !== 'assistant') return msg;
+    
+    // Always keep search result messages
+    if (msg.content.startsWith('[SEARCH_RESULTS]')) {
+      console.log("✅ [ChatContext] Keeping search results message");
+      return msg;
+    }
+    
+    // When in internet search mode, pre-process all assistant messages
+    if (internetSearchEnabled) {
+      const content = msg.content.toLowerCase();
+      
+      // STRUCTURAL PATTERNS that identify disclaimers (not topic specific)
+      // Pattern 1: Starts with apology or limitations
+      const startsWithApology = /^(i['']m sorry|i apologize|sorry)/i.test(content);
+      const startsWithLimitation = /^(as|being)\s+(an|a)\s+(ai|assistant|language model)/i.test(content);
+      
+      // Pattern 2: Contains limitation statements (more comprehensive patterns)
+      const limitationPatterns = [
+        // AI identity patterns
+        /(as|being)\s+(an|a)\s+(ai|assistant|language model|artificial intelligence)/i,
+        
+        // Knowledge limitation patterns
+        /(cannot|can't|unable to|don't have|do not have|lacks?|without)\s+(access|provide|predict|browse|search|see|know|tell|determine|check|verify)/i,
+        /(my|the)\s+(knowledge|data|training|information|database)\s+(is|was|has been|are|were)\s+(limited|outdated|restricted|updated|only|up to|as of|current|cut off|not current)/i,
+        /(no|without|lack\s+of)\s+(access|ability|capability|way)\s+to\s+(current|real-time|latest|future|upcoming|live|internet|web)/i,
+        /I\s+(don't|do not|cannot|can't)\s+(access|browse|search|retrieve|get)\s+(the internet|current|future|real-time|live data|post-\w+|after\s+\w+)/i,
+        
+        // Temporal limitation patterns
+        /(information|data|knowledge|training|awareness)\s+(only|just)\s+(goes|extends|up)\s+(to|through|until)/i,
+        /(trained|last updated|knowledge cutoff|data cutoff)\s+(is|was|in|on|as of|date|point)/i,
+        
+        // Request for external verification patterns
+        /(please|would need to|you('d| would) (need|have) to)\s+(check|verify|consult|refer to|look at)\s+(official|current|latest|up-to-date|recent)/i,
+        /(recommend|suggest|advise)\s+(checking|visiting|consulting|referring to)\s+(official|recent|current|latest)/i,
+        
+        // Future event patterns
+        /(hasn't|has not|have not|haven't)\s+(happened|occurred|taken place|been|started)/i,
+        /(future|upcoming|scheduled|not yet|after my|beyond my)\s+(event|information|data|release|update|knowledge)/i,
+        /(would need|need)\s+(real-time|current|more recent|up-to-date)\s+(information|data|sources)/i
+      ];
+      
+      // Count how many limitation patterns are in the message
+      const patternMatches = limitationPatterns.filter(pattern => pattern.test(content)).length;
+      
+      // Check for specific temporal indicators (especially knowledge cutoff dates)
+      const temporalIndicators = [/(20\d\d|knowledge cutoff|training|data cutoff|last updated|information up to|not include|after|post-|only have information up to)/i.test(content)]
+                              .filter(Boolean).length;
+      
+      // Check for phrases suggesting checking external sources
+      const externalSourceReferences = [/check\s+(with|the|official|latest|current|recent)\s+(sources|website|information|data)/i.test(content),
+                                      /visit\s+(the|official|their)\s+website/i.test(content),
+                                      /refer\s+to\s+(the|official|authoritative|up-to-date)/i.test(content)]
+                                    .filter(Boolean).length;
+      
+      // Calculate pattern strength score based on combined factors
+      let disclaimerScore = 0;
+      if (startsWithApology) disclaimerScore += 2;
+      if (startsWithLimitation) disclaimerScore += 2;
+      disclaimerScore += patternMatches * 1.5;
+      disclaimerScore += temporalIndicators * 2; // Stronger weight for temporal indicators
+      disclaimerScore += externalSourceReferences * 1.5;
+      
+      // Additional detection: Disclaimer-like structure
+      if (content.length > 50 && content.includes('please') && 
+          (content.includes('check') || content.includes('refer'))) {
+        disclaimerScore += 1;
+      }
+      
+      // Messages containing search responses generally don't have these disclaimer patterns
+      if (disclaimerScore >= 2) {
+        console.log(`🚫 [ChatContext] BLOCKED AI disclaimer message (score: ${disclaimerScore})`);
+        console.log(`   - Starts with apology/limitation: ${startsWithApology || startsWithLimitation}`);
+        console.log(`   - Limitation patterns: ${patternMatches}`);
+        console.log(`   - Temporal indicators: ${temporalIndicators}`);
+        console.log(`   - External source references: ${externalSourceReferences}`);
+        console.log(`   - Preview: ${msg.content.substring(0, 50)}...`);
+        
+        // Return null to indicate this message should be filtered out
+        return null;
+      }
+      
+      // Double-check for classic disclaimer opening followed by any limitation pattern
+      // This catches subtler cases that might slip through scoring
+      if ((content.startsWith("i'm sorry") || content.startsWith("i apologize") || content.startsWith("sorry")) && 
+          patternMatches > 0) {
+        console.log(`🚫 [ChatContext] BLOCKED AI disclaimer message (direct pattern match)`);
+        console.log(`   - Preview: ${msg.content.substring(0, 50)}...`);
+        return null;
+      }
+    }
+    
+    return msg;
+  };
+
   // Perform web search using the Brave Search API
   const performSearch = async (query: string, addUserMessage = true) => {
     const searchId = `websearch-${Date.now()}`;
@@ -421,118 +519,175 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInternetSearchEnabled(true); // Mark that internet search is active
     console.log(`[ChatContext][performSearch][${searchId}] Internet search enabled for query: "${query}"`);
     
-    // CRITICAL: Store the chat ID at the beginning of the process
-    // and use this same chat throughout the entire search process
-    let chatToUse = currentChat;
-    let chatIdToUse = currentChat?.id;
-    
-    // If there's no current chat, create one, but ONLY IF NECESSARY
-    if (!chatToUse) {
-      console.log(`[ChatContext][performSearch][${searchId}] No current chat, creating one first`);
-      // Generate a title based on the search query
-      const chatTitle = `Search: ${query.slice(0, 30)}${query.length > 30 ? '...' : ''}`;
-      const newChat = await createNewChat(chatTitle);
-      
-      if (newChat && newChat.id) {
-        chatToUse = newChat;
-        chatIdToUse = newChat.id;
-        setCurrentChat(newChat); // Important: update the current chat in state
-        
-        // Refresh the chats list
-        const chatsResponse = await chatService.getChats();
-        if (chatsResponse?.data) {
-          setChats(chatsResponse.data);
-        }
-        
-        // Small delay to ensure chat creation is complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-        console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatIdToUse}`);
-      } else {
-        console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
-        setInternetSearchEnabled(false);
-        setIsSearching(false);
-        return;
-      }
-    } else {
-      console.log(`[ChatContext][performSearch][${searchId}] Using existing chat with ID: ${chatIdToUse}`);
-    }
-    
-    // Check if user message should be added
-    // Note: In Chat.tsx the user message is usually already added before calling performSearch
-    // so we set addUserMessage=false in many cases to avoid duplicates
-    if (addUserMessage && chatToUse && chatIdToUse) {
-      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse} with AI response suppressed`);
-      try {
-        // Send the user message directly to the chat service with suppressAiResponse=true
-        // This prevents the standard "I'm sorry, but as an AI..." response when in search mode
-        await chatService.addMessage(chatIdToUse, { 
-          role: 'user', 
-          content: query,
-          suppressAiResponse: true // CRITICAL: Suppress the standard AI response during search
-        });
-        
-        // Refresh the chat to make sure we have the latest messages
-        const updatedChat = await chatService.getChat(chatIdToUse);
-        if (updatedChat?.data) {
-          chatToUse = updatedChat.data;
-          setCurrentChat(updatedChat.data);
-        }
-        
-        console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${chatToUse?.messages?.length}`);
-      } catch (error) {
-        console.error(`[ChatContext][performSearch][${searchId}] Error adding user message:`, error);
-      }
-    }
-
     try {
-      // Check the API status first before attempting search
-      console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
-      // Updated to use the correct production endpoint
-      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
-      console.log(`🔌 [SEARCH][${searchId}] Using primary API endpoint: ${renderEndpoint}`);
-      const isApiAlive = await checkApiEndpoint(renderEndpoint);
-      console.log(`🔌 [SEARCH][${searchId}] API status check result: ${isApiAlive ? 'ONLINE' : 'OFFLINE'}`);
-
-      // Debug log - search request
-      console.log(`🔍 [SEARCH][${searchId}] Starting search for query: "${query}"`);
-      console.log(`🔍 [SEARCH][${searchId}] Search workflow: 1. API endpoint check → 2. Build URL → 3. API request → 4. Process results`);
-
-      // Determine the base URL based on API status check results
-      let baseUrl = '';
-      let apiUrls: string[] = [];
-
-      if (isApiAlive) {
-        baseUrl = renderEndpoint;
-        console.log('💾 Using verified Render API endpoint:', baseUrl);
-
-        // Still keep other URLs as fallback
-        apiUrls = [
-          renderEndpoint,                  // Known working Render endpoint
-          window.location.origin,          // Same origin as frontend
-          'http://localhost:8000',         // Local development
-          ''                               // Relative path as last resort
-        ];
-      } else {
-        // If the main API is not available, try various fallback options
-        console.log('❗ Render API is not responding, using fallback URLs');
+      // CRITICAL: Store the chat ID at the beginning of the process
+      // and use this same chat throughout the entire search process
+      let chatToUse = currentChat;
+      let chatIdToUse = currentChat?.id;
+    
+      // If there's no current chat, create one, but ONLY IF NECESSARY
+      if (!chatToUse) {
+        console.log(`[ChatContext][performSearch][${searchId}] No current chat, creating one first`);
+        // Generate a title based on the search query
+        const chatTitle = `Search: ${query.slice(0, 30)}${query.length > 30 ? '...' : ''}`;
+        const newChat = await createNewChat(chatTitle);
         
-        if (process.env.NODE_ENV === 'development') {
-          baseUrl = 'http://localhost:8000';
-          console.log('🔧 Development environment detected, using:', baseUrl);
+        if (newChat && newChat.id) {
+          chatToUse = newChat;
+          chatIdToUse = newChat.id;
+          setCurrentChat(newChat); // Important: update the current chat in state
+          
+          const refreshChat = async (chatId: string) => {
+            try {
+              const response = await chatService.getChat(chatId);
+              if (response?.data) {
+                // When internet search is enabled, filter out generic AI messages
+                if (internetSearchEnabled) {
+                  console.log('🔍 [ChatContext] Filtering messages during chat refresh');
+                  // Filter out any unwanted AI disclaimer messages
+                  const filteredMessages = response.data.messages.filter(msg => {
+                    const processedMsg = processIncomingMessage(msg);
+                    return processedMsg !== null;
+                  });
+                  
+                  // Set current chat with filtered messages
+                  setCurrentChat({
+                    ...response.data,
+                    messages: filteredMessages
+                  });
+                  
+                  console.log(`🔍 [ChatContext] Filtered ${response.data.messages.length - filteredMessages.length} messages during refresh`);
+                } else {
+                  // Normal mode - don't filter messages
+                  setCurrentChat(response.data);
+                }
+              }
+            } catch (error) {
+              console.error('Error refreshing chat:', error);
+            }
+          };
+
+          await refreshChat(chatIdToUse);
+          
+          // Refresh the chats list
+          const chatsResponse = await chatService.getChats();
+          if (chatsResponse?.data) {
+            setChats(chatsResponse.data);
+          }
+          
+          // Small delay to ensure chat creation is complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatIdToUse}`);
         } else {
-          // Try relative path as main option since Render API is down
-          baseUrl = window.location.origin;
-          console.log('🚀 Using same-origin API endpoint:', baseUrl);
+          console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
+          setInternetSearchEnabled(false);
+          setIsSearching(false);
+          return;
         }
-        
-        apiUrls = [
-          window.location.origin,          // Same origin as frontend
-          'http://localhost:8000',         // Local development
-          'https://localhost:8000',        // Local development with HTTPS
-          '',                              // Relative path as last resort
-          renderEndpoint                   // Still try Render as last resort
-        ];
+      } else {
+        console.log(`[ChatContext][performSearch][${searchId}] Using existing chat with ID: ${chatIdToUse}`);
       }
+      
+      // Check if user message should be added
+      // Note: In Chat.tsx the user message is usually already added before calling performSearch
+      // so we set addUserMessage=false in many cases to avoid duplicates
+      if (addUserMessage && chatToUse && chatIdToUse) {
+        console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse} with AI response suppressed`);
+        try {
+          // Send the user message directly to the chat service with suppressAiResponse=true
+          // This prevents the standard "I'm sorry, but as an AI..." response when in search mode
+          await chatService.addMessage(chatIdToUse, { 
+            role: 'user', 
+            content: query,
+            suppressAiResponse: true, // CRITICAL: Suppress the standard AI response during search
+            searchModeActive: true // Signal this is a search mode message to trigger backend directive
+          });
+          
+          // Refresh the chat to make sure we have the latest messages
+          const updatedChat = await chatService.getChat(chatIdToUse);
+          if (updatedChat?.data) {
+            // Filter out any unwanted AI messages when in search mode
+            if (internetSearchEnabled) {
+              console.log(`🔍 [SEARCH][${searchId}] Filtering messages during user message refresh`);
+              const filteredMessages = updatedChat.data.messages.filter(msg => {
+                const processedMsg = processIncomingMessage(msg);
+                return processedMsg !== null;
+              });
+              
+              const filteredChat = {
+                ...updatedChat.data,
+                messages: filteredMessages
+              };
+              
+              setCurrentChat(filteredChat);
+              console.log(`🔍 [SEARCH][${searchId}] Filtered ${updatedChat.data.messages.length - filteredMessages.length} messages`);
+              
+              // Log the messages to help with debugging
+              console.log(`[ChatContext][performSearch][${searchId}] Current messages in chat after user message:`);
+              filteredMessages?.forEach((msg, i) => {
+                console.log(`   - [${i}] ${msg.role}: ${msg.content.substring(0, 30)}...`);
+              });
+            } else {
+              // Normal mode - don't filter messages
+              setCurrentChat(updatedChat.data);
+            }
+          }
+          
+          console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${chatToUse?.messages?.length}`);
+        } catch (error) {
+          console.error(`[ChatContext][performSearch][${searchId}] Error adding user message:`, error);
+        }
+      }
+
+      try {
+        // Check the API status first before attempting search
+        console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
+        // Updated to use the correct production endpoint
+        const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
+        console.log(`🔌 [SEARCH][${searchId}] Using primary API endpoint: ${renderEndpoint}`);
+        const isApiAlive = await checkApiEndpoint(renderEndpoint);
+        console.log(`🔌 [SEARCH][${searchId}] API status check result: ${isApiAlive ? 'ONLINE' : 'OFFLINE'}`);
+
+        // Debug log - search request
+        console.log(`🔍 [SEARCH][${searchId}] Starting search for query: "${query}"`);
+        console.log(`🔍 [SEARCH][${searchId}] Search workflow: 1. API endpoint check → 2. Build URL → 3. API request → 4. Process results`);
+
+        // Determine the base URL based on API status check results
+        let baseUrl = '';
+        let apiUrls: string[] = [];
+
+        if (isApiAlive) {
+          baseUrl = renderEndpoint;
+          console.log('💾 Using verified Render API endpoint:', baseUrl);
+
+          // Still keep other URLs as fallback
+          apiUrls = [
+            renderEndpoint,                  // Known working Render endpoint
+            window.location.origin,          // Same origin as frontend
+            'http://localhost:8000',         // Local development
+            ''                               // Relative path as last resort
+          ];
+        } else {
+          // If the main API is not available, try various fallback options
+          console.log('❗ Render API is not responding, using fallback URLs');
+          
+          if (process.env.NODE_ENV === 'development') {
+            baseUrl = 'http://localhost:8000';
+            console.log('🔧 Development environment detected, using:', baseUrl);
+          } else {
+            // Try relative path as main option since Render API is down
+            baseUrl = window.location.origin;
+            console.log('🚀 Using same-origin API endpoint:', baseUrl);
+          }
+          
+          apiUrls = [
+            window.location.origin,          // Same origin as frontend
+            'http://localhost:8000',         // Local development
+            'https://localhost:8000',        // Local development with HTTPS
+            '',                              // Relative path as last resort
+            renderEndpoint                   // Still try Render as last resort
+          ];
+        }
       
       // Filter out empty URLs
       apiUrls = apiUrls.filter(url => url);
@@ -610,63 +765,50 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log(`❌ [SEARCH][${searchId}] API call FAILED with status: ${response.status}`);
         }
       } catch (error) {
-        console.error(`❌ [SEARCH][${searchId}] Initial API call failed with error:`, error);
-        lastError = error as Error;
-        window._lastSearchError = error;
-
-        if (error instanceof TypeError && error.message === 'Failed to fetch') {
-          console.error(`🔴 [SEARCH][${searchId}] NETWORK ERROR - This could be due to:`);
-          console.error('- The backend server is not running');
-          console.error('- There is a CORS configuration issue');
-          console.error('- The URL is incorrect:', searchUrl);
-          console.error('- There is a network connectivity issue');
-        }
-
-        // Try fallback URLs one by one
-        console.log(`⚠️ [SEARCH][${searchId}] Attempting ${apiUrls.length} fallback URLs...`);
-
-        for (const fallbackBaseUrl of apiUrls) {
-          // Skip empty URLs or the one we already tried
-          if (!fallbackBaseUrl || fallbackBaseUrl === baseUrl) continue;
-
-          const fallbackUrl = `${fallbackBaseUrl}${searchEndpoint}`;
-          console.log(`🔄 [SEARCH][${searchId}] Trying fallback URL: ${fallbackUrl}`);
-
-          const isCrossOrigin = !fallbackBaseUrl.includes(window.location.host) && fallbackBaseUrl !== '';
-          const fallbackOptions: RequestInit = {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            credentials: isCrossOrigin ? 'omit' : 'include',
-            mode: isCrossOrigin ? 'cors' : 'same-origin',
           };
-
-          try {
-            response = await fetch(fallbackUrl, fallbackOptions);
-            requestSucceeded = response.ok;
-            console.log(`✅ [SEARCH][${searchId}] Fallback API call to ${fallbackUrl} succeeded with status: ${response.status}`);
-            if (response.ok) break; // Exit the loop if successful
-          } catch (error) {
-            console.error(`❌ Fallback API call to ${fallbackBaseUrl} failed:`, error);
-            lastError = error as Error;
-            window._lastSearchError = error;
+          
+          setCurrentChat(filteredChat);
+          console.log(`🔍 [SEARCH][${searchId}] Filtered ${refreshedChat.data.messages.length - filteredMessages.length} messages after adding search results`);
+          
+          // Log if any generic AI messages are still present
+          const genericMessages = filteredMessages.filter(msg => {
+            if (msg.role !== 'assistant') return false;
+            const content = msg.content?.toLowerCase() || '';
+            return content.includes("i'm sorry") && content.includes("as an ai");
+          });
+          
+          if (genericMessages.length > 0) {
+            console.warn(`⚠️ [SEARCH][${searchId}] ${genericMessages.length} generic AI messages found in chat after filtering. These should be hidden in UI.`);
           }
+        } else {
+          setCurrentChat(refreshedChat.data);
         }
       }
-
-      // If all URLs failed, throw the last error with detailed diagnostic info
-      if (!requestSucceeded || !response) {
-        const errorMessage = `All API endpoints failed. Last error: ${lastError?.message || 'Unknown error'}`;
-        console.error(`❌ [SEARCH][${searchId}] FATAL ERROR: ${errorMessage}`);
-        console.error(`❌ [SEARCH][${searchId}] API endpoints attempted: ${apiUrls.join(', ')}`);
-        console.error(`❌ [SEARCH][${searchId}] Last error details:`, lastError);
-        
-        // Store diagnostic info on window object
-        window._lastSearchError = {
-          error: lastError,
-          searchId,
+    } catch (error) {
+      console.error(`❌ [SEARCH][${searchId}] Failed to add search results to chat:`, error);
+    }
+  } else {
+    console.error(`📝 [SEARCH][${searchId}] Cannot add search results: No chat ID available`);
+  }
+} else {
+  console.warn(`⚠️ [SEARCH][${searchId}] Search returned empty or invalid results:`, data);
+  // Set empty results
+  setSearchResults([]);
+  
+  // If there are no results but the API didn't report an error, we'll use mock data in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`💭 [SEARCH][${searchId}] Using mock search results for development`);
+    // Mock search results for development
+    const mockResults: SearchResult[] = [
+      {
+        title: 'Mock Result 1 for "' + query + '"',
+        url: 'https://example.com/1',
+        snippet: 'This is a mock search result for development purposes. Your search was: ' + query
+      },
+      {
+        title: 'Mock Result 2 for "' + query + '"',
+        url: 'https://example.com/2',
+        snippet: 'Another mock search result. Search engines might be down or unreachable.'
           timestamp: new Date().toISOString(),
           query
         };
@@ -748,7 +890,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Log accessed websites for debugging
         console.log(`🔍 [SEARCH][${searchId}] Top websites accessed:`, 
-          topWebsites.map(site => site.title).join(', ') || 'None')
+          topWebsites.map(site => site.title).join(', ') || 'None');
         
         // Format search results for display in chat - clean format like in the second image
         // First limit to top relevant results to not overwhelm the chat
@@ -772,50 +914,78 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Add a footnote with search results count and view all option
         const footnote = `\n\n*Found ${results.length} results for "${query}". Click the search button to view all results.*`;
         
-        // Create a clean message that matches the second image style (including the footnote)
+        // Create a clean message that combines all parts (including the footnote)
         const searchResponseMessage = `${searchSummary}${dividerLine}${formattedResults}${footnote}`;
-        console.log(`[ChatContext][performSearch][${searchId}] Before adding assistant search results. Current chat ID: ${chatIdToUse}, Messages count: ${chatToUse?.messages?.length}`);
         
-        // Add the search results to the chat as an assistant message
-        // CRITICAL: Use chatIdToUse to ensure we're adding to the same chat
-        console.log(`📝 [SEARCH][${searchId}] Adding search results directly to chat ${chatIdToUse}`);
-        try {
-          if (chatIdToUse) {
-            // Use direct service call to avoid creating a new chat
-            // Add search results message with suppress AI response flag
-            // This helps prevent generic AI fallback messages
-            await chatService.addMessage(chatIdToUse, { 
-              role: 'assistant', 
-              content: `[SEARCH_RESULTS] ${searchResponseMessage}`, // Prefix to help identify search results
-              suppressAiResponse: true // Prevent additional AI responses
+        // Important: use a prefix to identify this as a search result message
+        // Using a special prefix '[SEARCH_RESULTS]' makes it easier to detect in filtering
+        const formattedMessage = `[SEARCH_RESULTS] ${searchResponseMessage}`;
+        
+        if (chatIdToUse) {
+          console.log(`🌎 [SEARCH][${searchId}] Adding search results to chat ${chatIdToUse}`);
+          // Add the formatted search results as an AI message
+          // Use suppressAiResponse to avoid generating additional LLM answers
+          // Use searchModeActive to signal this is part of internet search
+          try {
+            await chatService.addMessage(chatIdToUse, {
+              role: 'assistant',
+              content: formattedMessage,
+              suppressAiResponse: true, // Critical: prevent further AI response
+              searchModeActive: true    // Mark this as search mode message
             });
+            console.log(`✅ [SEARCH][${searchId}] Search results added to chat ${chatIdToUse} successfully`);
             
-            // Now refresh the chat to get the latest messages
-            const updatedChat = await chatService.getChat(chatIdToUse);
-            if (updatedChat?.data) {
-              console.log(`📝 [SEARCH][${searchId}] Successfully refreshed chat after adding search results`);
-              setCurrentChat(updatedChat.data);
-              
-              // Log if there are any generic AI messages still present
-              const genericMessages = updatedChat.data.messages.filter(msg => {
-                if (msg.role !== 'assistant') return false;
-                const content = msg.content?.toLowerCase() || '';
-                return content.includes("i'm sorry") && content.includes("as an ai");
-              });
-              
-              if (genericMessages.length > 0) {
-                console.warn(`⚠️ [SEARCH][${searchId}] ${genericMessages.length} generic AI messages found in chat after search. These will be filtered in the UI.`);
+            // Refresh the chat to show the results
+            const refreshedChat = await chatService.getChat(chatIdToUse);
+            if (refreshedChat?.data) {
+              // Filter messages to ensure no disclaimers appear
+              if (internetSearchEnabled) {
+                const filteredMessages = refreshedChat.data.messages.filter(msg => {
+                  // Always keep search results messages
+                  if (msg.content.startsWith('[SEARCH_RESULTS]')) {
+                    return true;
+                  }
+                  
+                  // For assistant messages, process through our filter
+                  if (msg.role === 'assistant') {
+                    const processedMsg = processIncomingMessage(msg);
+                    return processedMsg !== null;
+                  }
+                  
+                  // Always keep user messages
+                  return msg.role === 'user';
+                });
+                
+                const filteredChat = {
+                  ...refreshedChat.data,
+                  messages: filteredMessages
+                };
+                
+                setCurrentChat(filteredChat);
+                console.log(`🔍 [SEARCH][${searchId}] Filtered ${refreshedChat.data.messages.length - filteredMessages.length} messages after adding search results`);
+                
+                // Log if any generic AI messages are still present
+                const genericMessages = filteredMessages.filter(msg => {
+                  if (msg.role !== 'assistant') return false;
+                  const content = msg.content?.toLowerCase() || '';
+                  return content.includes("i'm sorry") && content.includes("as an ai");
+                });
+                
+                if (genericMessages.length > 0) {
+                  console.warn(`⚠️ [SEARCH][${searchId}] ${genericMessages.length} generic AI messages found in chat after filtering. These should be hidden in UI.`);
+                }
+              } else {
+                setCurrentChat(refreshedChat.data);
               }
             }
-          } else {
-            console.error(`📝 [SEARCH][${searchId}] Cannot add search results: No chat ID available`);
+          } catch (error) {
+            console.error(`❌ [SEARCH][${searchId}] Failed to add search results to chat:`, error);
           }
-        } catch (error) {
-          console.error(`📝 [SEARCH][${searchId}] Error adding search results:`, error);
+        } else {
+          console.error(`📝 [SEARCH][${searchId}] Cannot add search results: No chat ID available`);
         }
-        console.log(`[ChatContext][performSearch][${searchId}] After adding assistant search results. Current chat ID: ${chatIdToUse}`);
       } else {
-        console.warn('⚠️ [SEARCH] Search returned empty or invalid results:', data);
+        console.warn(`⚠️ [SEARCH][${searchId}] Search returned empty or invalid results:`, data);
         // Set empty results
         setSearchResults([]);
         
@@ -839,7 +1009,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           // Add mock results to chat for better UX during development
           // Format the message that shows in the chat bubble
-          const mockSearchSummary = `I found ${mockResults.length} results for "${query}". Here are the most relevant ones:`;
+          const mockSearchSummary = `[SEARCH_RESULTS] I found ${mockResults.length} results for "${query}". Here are the most relevant ones:`;
           
           // Format each result with a clean numbered style like the real search results
           const mockFormattedResults = mockResults.map((result, index) => {
@@ -848,18 +1018,53 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           const mockResponseMessage = `${mockSearchSummary}\n\n${mockFormattedResults}\n\nYou can view all search results by clicking the search button.\n\n*This is a development environment. Mock results are shown.*`;
           
-          // Add mock results to chat
-          console.log(`📝 [SEARCH][${searchId}] Adding mock search results to chat conversation`);
-          await addMessage({
-            role: 'assistant',
-            content: mockResponseMessage
-          });
+          // Add mock results to chat with search flags to prevent AI fallback
+          if (chatIdToUse) {
+            console.log(`📝 [SEARCH][${searchId}] Adding mock search results to chat conversation`);
+            await chatService.addMessage(chatIdToUse, {
+              role: 'assistant',
+              content: mockResponseMessage,
+              suppressAiResponse: true, // Prevent AI fallback
+              searchModeActive: true    // Mark as search mode message
+            });
+            
+            // Refresh the chat to show the results with filtering
+            const refreshedChat = await chatService.getChat(chatIdToUse);
+            if (refreshedChat?.data) {
+              if (internetSearchEnabled) {
+                const filteredMessages = refreshedChat.data.messages.filter(msg => {
+                  // Always keep search results messages
+                  if (msg.content.startsWith('[SEARCH_RESULTS]')) {
+                    return true;
+                  }
+                  // For assistant messages, filter through processIncomingMessage
+                  if (msg.role === 'assistant') {
+                    const processedMsg = processIncomingMessage(msg);
+                    return processedMsg !== null;
+                  }
+                  // Always keep user messages
+                  return msg.role === 'user';
+                });
+                
+                setCurrentChat({
+                  ...refreshedChat.data,
+                  messages: filteredMessages
+                });
+              } else {
+                setCurrentChat(refreshedChat.data);
+              }
+            }
+          }
         } else {
           // Only show no results message if we're not in development mode or not using mock data
-          await addMessage({
-            role: 'assistant',
-            content: `I couldn't find any results for "${query}". Please try a different search term.`
-          });
+          if (chatIdToUse) {
+            await chatService.addMessage(chatIdToUse, {
+              role: 'assistant',
+              content: `[SEARCH_RESULTS] I couldn't find any results for "${query}". Please try a different search term.`,
+              suppressAiResponse: true,
+              searchModeActive: true
+            });
+          }
         }
       }
     } catch (error: unknown) {

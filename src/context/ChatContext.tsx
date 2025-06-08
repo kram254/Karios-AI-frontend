@@ -469,11 +469,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         /my\s+(knowledge|training|data)\s+(is|was)\s+(limited|cut off|only up to|current as of)/i.test(content),
         // Direct mention of specific cutoff dates (occurs frequently in disclaimers)
         /training data only includes information up to/i.test(content),
-        /information up to October 2021/i.test(content),
+        /information up to (?:September|October) 2021/i.test(content),
         // OpenAI specific cutoff language
         /developed by openai/i.test(content) && /don't have real-time capabilities/i.test(content),
         // Very specific to the issue you're seeing - broad match for the exact message
-        content.includes("October 2021") ? 3 : 0 // High weight for mentions of September 2021
+        content.includes("October 2021") ? 3 : 0, // High weight for mentions of October 2021
+        content.includes("September 2021") ? 3 : 0 // High weight for mentions of September 2021
       ].filter(Boolean).length;
       
       // Check for phrases suggesting checking external sources
@@ -517,6 +518,27 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         console.log(`🚫 [ChatContext] BLOCKED AI disclaimer message (direct pattern match)`);
         console.log(`   - Preview: ${msg.content.substring(0, 50)}...`);
         return null;
+      }
+      
+      // CRITICAL: Add ultra-specific matcher for the exact message pattern seen in logs
+      // This is a direct, targeted filter for the specific AI disclaimer causing problems
+      if (/I['']m sorry, but as an AI model developed by OpenAI and last trained on data up to (?:September|October) 2021/i.test(msg.content)) {
+        console.log(`🚨 [CRITICAL] BLOCKED specific AI knowledge cutoff disclaimer about September/October 2021`);
+        console.log(`   - Content: ${msg.content}`);
+        
+        // If this message is already in the chat and has an ID, we need to delete it immediately
+        if (msg.id && currentChat?.id) {
+          try {
+            // Attempt to delete from the chat service
+            chatService.deleteMessage(currentChat.id, msg.id)
+              .then(() => console.log(`🚫 Successfully deleted AI disclaimer message: ${msg.id}`))
+              .catch(err => console.error(`Failed to delete AI disclaimer: ${err}`));
+          } catch (e) {
+            console.error('Error attempting to delete AI disclaimer message', e);
+          }
+        }
+        
+        return null; // Completely block the message
       }
     }
     
@@ -694,7 +716,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           role: 'user', 
           content: query,
           suppressAiResponse: true, // Critical: prevent further AI response
-          searchModeActive: true // Signal this is a search mode message to trigger backend directive
+          searchModeActive: true, // Signal this is a search mode message to trigger backend directive
+          // We're using suppressAiResponse and searchModeActive flags to prevent generic responses
         });
         
         // Refresh the chat to make sure we have the latest messages
@@ -715,10 +738,21 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 // When in internet search mode, apply aggressive filtering to AI disclaimer messages
                 if (internetSearchEnabled) {
                   // Detect the exact pattern seen in the screenshots (October 2021 knowledge cutoff message)
-                  const knownDisclaimerPattern = /I('m| am) sorry, but as an AI developed by OpenAI.*October 2021.*information about this specific event is not available/i;
+                  // ULTRA-SPECIFIC pattern matching for the exact disclaimer message seen in the logs
+                  const knownDisclaimerPattern = /I('m| am) sorry, but as an AI (?:model )?developed by OpenAI and last trained on data up to (?:September|October) 2021, I don't have (?:the ability to provide|access to|information about)/i;
                   
                   if (knownDisclaimerPattern.test(msg.content)) {
-                    console.log('🚫 [CRITICAL] Blocked exact match AI knowledge cutoff disclaimer');
+                    console.log('🚨 [CRITICAL] Blocked exact match AI knowledge cutoff disclaimer');
+                    // Try to delete the message if it has an ID
+                    if (msg.id && chatIdToUse) {
+                      try {
+                        chatService.deleteMessage(chatIdToUse, msg.id)
+                          .then(() => console.log(`🚫 [CRITICAL] Successfully deleted AI disclaimer message during refresh: ${msg.id}`))
+                          .catch(e => console.error('Error deleting disclaimer message', e));
+                      } catch (e) {
+                        console.error('Failed to delete AI disclaimer message', e);
+                      }
+                    }
                     // Return null to completely remove this message
                     return null;
                   }
@@ -940,6 +974,31 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               if (chatIdToUse && mappedResults.length > 0) {
                 console.log(`🔍 [SEARCH][${searchId}] Adding search results to chat ${chatIdToUse}`);
                 try {
+                  // CRITICAL: First, check and remove any existing AI disclaimer messages in the chat
+                  const currentChatData = await chatService.getChat(chatIdToUse);
+                  if (currentChatData?.data?.messages) {
+                    const disclaimerMessages = currentChatData.data.messages.filter(msg => 
+                      msg.role === 'assistant' && 
+                      (/I['']m sorry, but as an AI|As of my last update in (?:September|October) 2021|I don't have the ability to provide or predict/i.test(msg.content))
+                    );
+                    
+                    if (disclaimerMessages.length > 0) {
+                      console.log(`🚨 [CRITICAL] Found ${disclaimerMessages.length} AI disclaimer messages - removing them before adding search results`);
+                      
+                      // Delete each disclaimer message
+                      for (const msg of disclaimerMessages) {
+                        if (msg.id) {
+                          try {
+                            await chatService.deleteMessage(chatIdToUse, msg.id);
+                            console.log(`🚫 [SEARCH] Deleted AI disclaimer message: ${msg.id}`);
+                          } catch (deleteError) {
+                            console.error(`❌ [SEARCH] Failed to delete AI disclaimer message: ${msg.id}`, deleteError);
+                          }
+                        }
+                      }
+                    }
+                  }
+                  
                   // Format search results for display - ensure they start with the search identifier
                   // Add an additional emoji at the very beginning to ensure it's recognized by our filters
                   const searchResultsContent = `🔍 [SEARCH_RESULTS] Found ${mappedResults.length} results for "${query}":\n\n` + 
@@ -964,22 +1023,50 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                   
                   console.log(`✅ [SEARCH][${searchId}] Search result message added with ID: ${searchResultMessage?.data?.id || 'unknown'}`);
                   
-                  // Force an immediate refresh to ensure search results are displayed
+                  // CRITICAL: Check again after adding search results to ensure no new AI disclaimer messages appeared
                   const refreshedChat = await chatService.getChat(chatIdToUse);
                   if (refreshedChat?.data) {
-                    // Preserve any search result messages
-                    const updatedMessages = refreshedChat.data.messages.map(msg => {
-                      if (msg.content.startsWith('🔍 [SEARCH_RESULTS]')) {
-                        return { ...msg, isSearchResult: true };
-                      }
-                      return msg;
-                    });
+                    // First identify any AI disclaimer messages that need to be removed
+                    const messagesToRemove = refreshedChat.data.messages.filter(msg => 
+                      msg.role === 'assistant' && 
+                      !msg.isSearchResult && 
+                      (/I['']m sorry, but as an AI|As of my last update in (?:September|October) 2021|I don't have (?:access|the ability|information beyond)/i.test(msg.content))
+                    );
                     
-                    // Set current chat with search results flagged
-                    setCurrentChat({
-                      ...refreshedChat.data,
-                      messages: updatedMessages
-                    });
+                    if (messagesToRemove.length > 0) {
+                      console.log(`🚨 [CRITICAL] Found ${messagesToRemove.length} new AI disclaimer messages after adding search results - removing them`);
+                      
+                      // Delete each new disclaimer message
+                      for (const msg of messagesToRemove) {
+                        if (msg.id) {
+                          try {
+                            await chatService.deleteMessage(chatIdToUse, msg.id);
+                            console.log(`🚫 [SEARCH] Deleted AI disclaimer message: ${msg.id}`);
+                          } catch (deleteError) {
+                            console.error(`❌ [SEARCH] Failed to delete AI disclaimer message: ${msg.id}`, deleteError);
+                          }
+                        }
+                      }
+                    }
+                    
+                    // Now get a fresh copy of the chat with the disclaimers removed
+                    const finalRefreshedChat = await chatService.getChat(chatIdToUse);
+                    if (finalRefreshedChat?.data) {
+                      // Preserve any search result messages and ensure they're flagged
+                      const updatedMessages = finalRefreshedChat.data.messages.map(msg => {
+                        if (msg.content && (msg.content.startsWith('🔍 [SEARCH_RESULTS]') || 
+                            msg.content.includes('[SEARCH_RESULTS]'))) {
+                          return { ...msg, isSearchResult: true };
+                        }
+                        return msg;
+                      });
+                      
+                      // Set current chat with search results flagged
+                      setCurrentChat({
+                        ...finalRefreshedChat.data,
+                        messages: updatedMessages
+                      });
+                    }
                   }
                   
                   console.log(`✅ [SEARCH][${searchId}] Successfully added search results to chat`);

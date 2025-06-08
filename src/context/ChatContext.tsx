@@ -410,12 +410,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     // Skip processing for null messages or non-assistant messages
     if (!msg || msg.role !== 'assistant') return msg;
     
-    // Always keep search result messages
+    // Always keep search result messages (CRITICAL for UI display)
     if (msg.content.startsWith('[SEARCH_RESULTS]') || 
         msg.content.startsWith('🔍') || 
+        msg.isSearchResult === true ||
         (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
-      console.log("✅ [ChatContext] Keeping search results message");
-      return msg;
+      console.log("✅ [ChatContext][CRITICAL] Preserving search results message: ", msg.id);
+      // CRITICAL: Force this message to always display
+      return { ...msg, isSearchResult: true }; // Force flag the message
     }
     
     // When in internet search mode, pre-process all assistant messages
@@ -441,8 +443,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         // Temporal limitation patterns
         /(information|data|knowledge|training|awareness)\s+(only|just)\s+(goes|extends|up)\s+(to|through|until)/i,
         /(trained|last updated|knowledge cutoff|data cutoff)\s+(is|was|in|on|as of|date|point)/i,
-        /(cutoff|cut-off|cut\s+off)\s+date\s+of\s+September\s+2021/i,  // Specific to September 2021
-        /(September\s+2021)/i,  // Direct match for the date
+        /(cutoff|cut-off|cut\s+off)\s+date\s+of\s+October\s+2021/i,  // Specific to September 2021
+        /(October\s+2021)/i,  // Direct match for the date
         /(training|knowledge)\s+data\s+(only)?\s+includes/i,  // Matches "training data only includes"
         /unable\s+to\s+provide\s+information/i,  // Common phrase in disclaimers
         /cannot\s+predict\s+(future|upcoming)\s+events/i,  // Prediction limitation
@@ -467,11 +469,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         /my\s+(knowledge|training|data)\s+(is|was)\s+(limited|cut off|only up to|current as of)/i.test(content),
         // Direct mention of specific cutoff dates (occurs frequently in disclaimers)
         /training data only includes information up to/i.test(content),
-        /information up to september 2021/i.test(content),
+        /information up to October 2021/i.test(content),
         // OpenAI specific cutoff language
         /developed by openai/i.test(content) && /don't have real-time capabilities/i.test(content),
         // Very specific to the issue you're seeing - broad match for the exact message
-        content.includes("september 2021") ? 3 : 0 // High weight for mentions of September 2021
+        content.includes("October 2021") ? 3 : 0 // High weight for mentions of September 2021
       ].filter(Boolean).length;
       
       // Check for phrases suggesting checking external sources
@@ -573,19 +575,82 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 // When internet search is enabled, filter out generic AI messages
                 if (internetSearchEnabled) {
                   console.log('🔍 [ChatContext] Filtering messages during chat refresh');
+                  
+                  // First, identify any search result messages that need to be preserved
+                  const searchResultMessages = response.data.messages.filter(msg => {
+                    return (
+                      (msg.content && (msg.content.startsWith('🔍') || msg.content.includes('[SEARCH_RESULTS]'))) || 
+                      msg.isSearchResult === true || 
+                      (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))
+                    );
+                  }).map(msg => ({ ...msg, isSearchResult: true }));
+                  
+                  // CRITICAL: Check if we have search results but also have a knowledge cutoff message
+                  // This pattern exactly matches the message seen in the screenshots
+                  const hasKnowledgeCutoffMessage = response.data.messages.some(msg => 
+                    msg.role === 'assistant' && 
+                    /I['']m sorry, but as an AI developed by OpenAI.*October 2021.*information about this specific event is not available/i.test(msg.content)
+                  );
+                  
+                  console.log(`✅ [ChatContext] Found ${searchResultMessages.length} search result messages to preserve`);
+                  if (hasKnowledgeCutoffMessage && searchResultMessages.length > 0) {
+                    console.log('🚨 [CRITICAL] Detected both search results and knowledge cutoff message - removing knowledge cutoff message');
+                  }
+                  
                   // Filter out any unwanted AI disclaimer messages
-                  const filteredMessages = response.data.messages.filter(msg => {
-                    const processedMsg = processIncomingMessage(msg);
-                    return processedMsg !== null;
-                  });
+                  const filteredNonSearchMessages = response.data.messages
+                    .filter(msg => {
+                      // Skip filtering search result messages
+                      if ((msg.content && (msg.content.startsWith('🔍') || msg.content.includes('[SEARCH_RESULTS]'))) || 
+                          msg.isSearchResult === true || 
+                          (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
+                        return true; // Always keep search results
+                      }
+                      
+                      // CRITICAL FIX: If we have search results, remove ANY AI disclaimer messages about knowledge cutoffs
+                      // This is the critical problem shown in the screenshot - knowledge cutoff message alongside search results
+                      if (searchResultMessages.length > 0 && msg.role === 'assistant') {
+                        const knownDisclaimerPatterns = [
+                          /I['']m sorry, but as an AI developed by OpenAI.*(?:October|September) 2021.*information about this specific event is not available/i,
+                          /As of my last update in (?:October|September) 2021/i,
+                          /(?:knowledge|training|data) (?:cutoff|cut off|cut-off)/i,
+                          /(?:cannot|can't|unable to|don't have|do not have) (?:access|provide|browse|search)/i
+                        ];
+                        
+                        // Check if any of the patterns match
+                        if (knownDisclaimerPatterns.some(pattern => pattern.test(msg.content))) {
+                          console.log('🚫 [ChatContext] REMOVED AI disclaimer message when search results are available');
+                          return false;
+                        }
+                      }
+                      
+                      // For other assistant messages, use our processing logic
+                      if (msg.role === 'assistant') {
+                        const processedMsg = processIncomingMessage(msg);
+                        return processedMsg !== null;
+                      }
+                      
+                      return true; // Keep all other messages
+                    });
+                  
+                  // Combine all messages - both filtered non-search messages and preserved search results
+                  // IMPORTANT: Ensure search results are actually included in the final messages list
+                  const allMessages = searchResultMessages.length > 0 ? 
+                    // If we have search results, ensure they're included
+                    [...filteredNonSearchMessages.filter(msg => 
+                      // Exclude AI disclaimer messages if we have search results
+                      !(msg.role === 'assistant' && /I['']m sorry, but as an AI developed by OpenAI/i.test(msg.content))
+                    ), ...searchResultMessages] :
+                    // Otherwise, just use the filtered messages
+                    filteredNonSearchMessages;
                   
                   // Set current chat with filtered messages
                   setCurrentChat({
                     ...response.data,
-                    messages: filteredMessages
+                    messages: allMessages
                   });
                   
-                  console.log(`🔍 [ChatContext] Filtered ${response.data.messages.length - filteredMessages.length} messages during refresh`);
+                  console.log(`🔍 [ChatContext] Filtered ${response.data.messages.length - allMessages.length} messages during refresh`);
                 } else {
                   // Normal mode - don't filter messages
                   setCurrentChat(response.data);
@@ -647,8 +712,24 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
               
               // For assistant messages, process through our filter
               if (msg.role === 'assistant') {
-                const processedMsg = processIncomingMessage(msg);
-                return processedMsg !== null;
+                // When in internet search mode, apply aggressive filtering to AI disclaimer messages
+                if (internetSearchEnabled) {
+                  // Detect the exact pattern seen in the screenshots (October 2021 knowledge cutoff message)
+                  const knownDisclaimerPattern = /I('m| am) sorry, but as an AI developed by OpenAI.*October 2021.*information about this specific event is not available/i;
+                  
+                  if (knownDisclaimerPattern.test(msg.content)) {
+                    console.log('🚫 [CRITICAL] Blocked exact match AI knowledge cutoff disclaimer');
+                    // Return null to completely remove this message
+                    return null;
+                  }
+                  
+                  // Apply standard pattern-based filtering for other cases
+                  const preprocessed = processIncomingMessage(msg);
+                  return preprocessed !== null;
+                }
+                
+                // Default case for non-search mode
+                return msg !== null;
               }
               
               // Always keep user messages
@@ -867,9 +948,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                     ).join('\n');
                   
                   // Add formatted search results as an assistant message with special metadata
-                  await chatService.addMessage(chatIdToUse, {
+                  // CRITICAL: Include isSearchResult flag directly in the message object
+                  const searchResultMessage = await chatService.addMessage(chatIdToUse, {
                     role: 'assistant',
                     content: searchResultsContent,
+                    isSearchResult: true, // Direct flag for search result
+                    suppressAiResponse: true, // Prevent further AI responses
                     metadata: JSON.stringify({
                       isSearchResult: true,
                       searchId: searchId,
@@ -877,6 +961,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                       query: query
                     })
                   });
+                  
+                  console.log(`✅ [SEARCH][${searchId}] Search result message added with ID: ${searchResultMessage?.data?.id || 'unknown'}`);
+                  
+                  // Force an immediate refresh to ensure search results are displayed
+                  const refreshedChat = await chatService.getChat(chatIdToUse);
+                  if (refreshedChat?.data) {
+                    // Preserve any search result messages
+                    const updatedMessages = refreshedChat.data.messages.map(msg => {
+                      if (msg.content.startsWith('🔍 [SEARCH_RESULTS]')) {
+                        return { ...msg, isSearchResult: true };
+                      }
+                      return msg;
+                    });
+                    
+                    // Set current chat with search results flagged
+                    setCurrentChat({
+                      ...refreshedChat.data,
+                      messages: updatedMessages
+                    });
+                  }
                   
                   console.log(`✅ [SEARCH][${searchId}] Successfully added search results to chat`);
                 } catch (addMessageError) {

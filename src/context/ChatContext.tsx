@@ -409,7 +409,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     if (!msg || msg.role !== 'assistant') return msg;
     
     // Always keep search result messages
-    if (msg.content.startsWith('[SEARCH_RESULTS]')) {
+    if (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.startsWith('🔍')) {
       console.log("✅ [ChatContext] Keeping search results message");
       return msg;
     }
@@ -437,6 +437,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         // Temporal limitation patterns
         /(information|data|knowledge|training|awareness)\s+(only|just)\s+(goes|extends|up)\s+(to|through|until)/i,
         /(trained|last updated|knowledge cutoff|data cutoff)\s+(is|was|in|on|as of|date|point)/i,
+        /(cutoff|cut-off|cut\s+off)\s+date\s+of\s+September\s+2021/i,  // Specific to September 2021
+        /(September\s+2021)/i,  // Direct match for the date
+        /(training|knowledge)\s+data\s+(only)?\s+includes/i,  // Matches "training data only includes"
+        /unable\s+to\s+provide\s+information/i,  // Common phrase in disclaimers
+        /cannot\s+predict\s+(future|upcoming)\s+events/i,  // Prediction limitation
         
         // Request for external verification patterns
         /(please|would need to|you('d| would) (need|have) to)\s+(check|verify|consult|refer to|look at)\s+(official|current|latest|up-to-date|recent)/i,
@@ -452,8 +457,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const patternMatches = limitationPatterns.filter(pattern => pattern.test(content)).length;
       
       // Check for specific temporal indicators (especially knowledge cutoff dates)
-      const temporalIndicators = [/(20\d\d|knowledge cutoff|training|data cutoff|last updated|information up to|not include|after|post-|only have information up to)/i.test(content)]
-                              .filter(Boolean).length;
+      const temporalIndicators = [
+        /(20\d\d|knowledge cutoff|training|data cutoff|last updated|information up to|not include|after|post-|only have information up to)/i.test(content),
+        /(as of|until|up to|through)\s+(20\d\d|january|february|march|april|may|june|july|august|september|october|november|december)/i.test(content),
+        /my\s+(knowledge|training|data)\s+(is|was)\s+(limited|cut off|only up to|current as of)/i.test(content)
+      ].filter(Boolean).length;
       
       // Check for phrases suggesting checking external sources
       const externalSourceReferences = [/check\s+(with|the|official|latest|current|recent)\s+(sources|website|information|data)/i.test(content),
@@ -476,7 +484,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Messages containing search responses generally don't have these disclaimer patterns
-      if (disclaimerScore >= 2) {
+      // Use a lower threshold (1.5) to be more aggressive with filtering when internet search is enabled
+      if (disclaimerScore >= 1.5) {
         console.log(`🚫 [ChatContext] BLOCKED AI disclaimer message (score: ${disclaimerScore})`);
         console.log(`   - Starts with apology/limitation: ${startsWithApology || startsWithLimitation}`);
         console.log(`   - Limitation patterns: ${patternMatches}`);

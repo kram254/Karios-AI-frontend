@@ -16,6 +16,9 @@ export interface ChatMessage {
   content: string;
   created_at: string;
   attachments?: Attachment[];
+  isSearchResult?: boolean;
+  metadata?: string | Record<string, any>;
+  timestamp?: string;
 }
 
 export interface Chat {

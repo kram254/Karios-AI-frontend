@@ -35,6 +35,8 @@ interface Message {
   created_at?: string;
   chat_id?: string;
   attachments?: Attachment[];
+  isSearchResult?: boolean;
+  metadata?: string | Record<string, any>;
 }
 
 interface Chat {
@@ -409,7 +411,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     if (!msg || msg.role !== 'assistant') return msg;
     
     // Always keep search result messages
-    if (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.startsWith('🔍')) {
+    if (msg.content.startsWith('[SEARCH_RESULTS]') || 
+        msg.content.startsWith('🔍') || 
+        (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
       console.log("✅ [ChatContext] Keeping search results message");
       return msg;
     }
@@ -460,7 +464,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       const temporalIndicators = [
         /(20\d\d|knowledge cutoff|training|data cutoff|last updated|information up to|not include|after|post-|only have information up to)/i.test(content),
         /(as of|until|up to|through)\s+(20\d\d|january|february|march|april|may|june|july|august|september|october|november|december)/i.test(content),
-        /my\s+(knowledge|training|data)\s+(is|was)\s+(limited|cut off|only up to|current as of)/i.test(content)
+        /my\s+(knowledge|training|data)\s+(is|was)\s+(limited|cut off|only up to|current as of)/i.test(content),
+        // Direct mention of specific cutoff dates (occurs frequently in disclaimers)
+        /training data only includes information up to/i.test(content),
+        /information up to september 2021/i.test(content),
+        // OpenAI specific cutoff language
+        /developed by openai/i.test(content) && /don't have real-time capabilities/i.test(content),
+        // Very specific to the issue you're seeing - broad match for the exact message
+        content.includes("september 2021") ? 3 : 0 // High weight for mentions of September 2021
       ].filter(Boolean).length;
       
       // Check for phrases suggesting checking external sources
@@ -629,7 +640,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             console.log(`🔍 [SEARCH][${searchId}] Filtering messages during user message refresh`);
             const filteredMessages = updatedChat.data.messages.filter(msg => {
               // Always keep search results messages
-              if (msg.content.startsWith('[SEARCH_RESULTS]')) {
+              if (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.startsWith('🔍') || msg.isSearchResult === true) {
+                console.log("✅ [ChatContext] Keeping search results message during refresh");
                 return true;
               }
               
@@ -842,6 +854,35 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
                 url: result.url
               })).slice(0, 7); // Limit to top 7
               setAccessedWebsites(topWebsites);
+              
+              // CRITICAL: Add search results as a formatted message to the chat
+              if (chatIdToUse && mappedResults.length > 0) {
+                console.log(`🔍 [SEARCH][${searchId}] Adding search results to chat ${chatIdToUse}`);
+                try {
+                  // Format search results for display - ensure they start with the search identifier
+                  // Add an additional emoji at the very beginning to ensure it's recognized by our filters
+                  const searchResultsContent = `🔍 [SEARCH_RESULTS] Found ${mappedResults.length} results for "${query}":\n\n` + 
+                    mappedResults.map((result: SearchResult, index: number) => 
+                      `${index + 1}. **${result.title}**\n   ${result.url}\n   ${result.snippet}\n`
+                    ).join('\n');
+                  
+                  // Add formatted search results as an assistant message with special metadata
+                  await chatService.addMessage(chatIdToUse, {
+                    role: 'assistant',
+                    content: searchResultsContent,
+                    metadata: JSON.stringify({
+                      isSearchResult: true,
+                      searchId: searchId,
+                      resultCount: mappedResults.length,
+                      query: query
+                    })
+                  });
+                  
+                  console.log(`✅ [SEARCH][${searchId}] Successfully added search results to chat`);
+                } catch (addMessageError) {
+                  console.error(`❌ [SEARCH][${searchId}] Error adding search results to chat:`, addMessageError);
+                }
+              }
             } else {
               // Handle empty results
               console.warn(`⚠️ [SEARCH][${searchId}] Search returned empty results array`);
@@ -919,7 +960,65 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         if (chatIdToUse) {
           const refreshResponse = await chatService.getChat(chatIdToUse);
           if (refreshResponse?.data) {
-            setCurrentChat(refreshResponse.data);
+            // When internet search is enabled, filter out generic AI messages
+            if (internetSearchEnabled) {
+              console.log(`🔍 [SEARCH][${searchId}] Filtering messages during final refresh`);
+              
+              // Filter out any unwanted AI disclaimer messages
+              const filteredMessages = refreshResponse.data.messages.filter(msg => {
+                // Always keep search result messages
+                if (msg.content.startsWith('[SEARCH_RESULTS]') || 
+                    msg.content.startsWith('🔍') || 
+                    msg.isSearchResult === true || 
+                    (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
+                  console.log("✅ [ChatContext] Keeping search results message during final refresh");
+                  return true;
+                }
+                
+                // For assistant messages, process through our filter
+                if (msg.role === 'assistant') {
+                  const processedMsg = processIncomingMessage(msg);
+                  return processedMsg !== null;
+                }
+                
+                // Always keep user messages
+                return msg.role === 'user';
+              });
+              
+              // Special handling: if we filtered out all assistant messages (including search results),
+              // it means something is wrong - the search results message isn't being properly identified
+              // In this case, add a backup search results message if we have results
+              const hasAssistantMessages = filteredMessages.some(msg => msg.role === 'assistant');
+              if (!hasAssistantMessages && searchResults && searchResults.length > 0) {
+                console.log(`⚠️ [SEARCH][${searchId}] No assistant messages found after filtering, adding backup search results message`);
+                
+                // Add search results from our state directly to the filtered messages
+                filteredMessages.push({
+                  id: `backup-search-${Date.now()}`,
+                  role: 'assistant',
+                  content: `🔍 [SEARCH_RESULTS] Found ${searchResults.length} results for "${query}":\n\n` + 
+                    searchResults.map((result: SearchResult, index: number) => 
+                      `${index + 1}. **${result.title}**\n   ${result.url}\n   ${result.snippet}\n`
+                    ).join('\n'),
+                  created_at: new Date().toISOString(),
+                  isSearchResult: true
+                });
+                
+                console.log(`✅ [SEARCH][${searchId}] Added backup search results message to chat`);
+              }
+              
+              // Set current chat with filtered messages
+              setCurrentChat({
+                ...refreshResponse.data,
+                messages: filteredMessages
+              });
+              
+              console.log(`🔍 [SEARCH][${searchId}] Filtered ${refreshResponse.data.messages.length - filteredMessages.length} messages during final refresh`);
+            } else {
+              // Normal mode - don't filter messages
+              setCurrentChat(refreshResponse.data);
+            }
+            
             console.log(`🏁 [SEARCH][${searchId}] Successfully refreshed chat ${chatIdToUse} with ${refreshResponse.data.messages?.length} messages`);
           }
         }

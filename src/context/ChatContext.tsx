@@ -1,6 +1,7 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { filterDisclaimerMessages } from '../utils/messageFilters';
 
-// Extend the Window interface to include custom properties// Types for storing debug info on window object
+// Extend the Window interface to include custom properties for search debugging
 declare global {
   interface Window {
     _lastSearchUrl?: string;
@@ -8,6 +9,7 @@ declare global {
     _lastSearchError?: any;
     _lastSearchErrorText?: string;
     _lastSearchErrorResponse?: any;
+    _debugChatState?: any;
   }
 }
 
@@ -17,6 +19,7 @@ import { generateTitleFromMessage } from '../utils/titleGenerator';
 import { Agent } from '../types/agent';
 import { useLanguage } from './LanguageContext';
 import { checkApiEndpoint } from '../utils/apiUtils';
+
 
 interface Attachment {
   id?: string;
@@ -254,7 +257,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const addMessage = async ({ role, content }: { role: 'user' | 'assistant' | 'system'; content: string }) => {
     let chatToUse = currentChat;
     
-    // If we don't have a current chat, create one and ensure it's set in state
+    // If we don't have a current chat, create one, but ONLY IF NECESSARY
     if (!chatToUse) {
       console.log('[ChatContext][addMessage] No current chat found. Creating a new chat first.');
       try {
@@ -394,532 +397,599 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Toggle search mode
+  // Toggle the search mode and ensure we maintain state properly
   const toggleSearchMode = (): void => {
-    setIsSearchMode(!isSearchMode);
-    if (!isSearchMode) {
+    const newSearchModeValue = !isSearchMode;
+    console.debug(`🔍 [DEBUG][ChatContext] Toggling search mode from ${isSearchMode} to ${newSearchModeValue}`);
+    
+    // Set internet search enabled when turning on search mode
+    if (newSearchModeValue) {
+      console.debug('🔍 [DEBUG][ChatContext] Enabling internet search with search mode');
+      setInternetSearchEnabled(true);
+      
+      // Safe access to window._debugChatState to avoid TypeScript errors
+      try {
+        if (typeof window !== 'undefined') {
+          window._debugChatState = {
+            ...(window._debugChatState || {}),
+            internetSearchEnabled: true,
+            toggledAt: new Date().toISOString(),
+            searchModeEnabled: true
+          };
+        }
+      } catch (error) {
+        console.error('Error updating debug state:', error);
+      }
+    }
+    
+    setIsSearchMode(newSearchModeValue);
+    
+    if (!newSearchModeValue) {
+      console.debug('🔍 [DEBUG][ChatContext] Clearing search results when disabling search mode');
       setSearchResults([]);
     }
   };
 
   // Toggle search sidebar visibility
   const toggleSearchSidebar = () => {
-    setIsSearchSidebarOpen(!isSearchSidebarOpen);
+    const newValue = !isSearchSidebarOpen;
+    console.debug(`🔍 [DEBUG][ChatContext] Toggling search sidebar from ${isSearchSidebarOpen} to ${newValue}`);
+    setIsSearchSidebarOpen(newValue);
   };
-
-  // Pre-filter function to detect and block generic AI disclaimers
-  const processIncomingMessage = (msg: Message | null) => {
-    // Skip processing for null messages or non-assistant messages
-    if (!msg || msg.role !== 'assistant') return msg;
-    
-    // Always keep search result messages (CRITICAL for UI display)
-    if (msg.content.startsWith('[SEARCH_RESULTS]') || 
-        msg.content.startsWith('🔍') || 
-        msg.isSearchResult === true ||
-        (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
-      console.log("✅ [ChatContext][CRITICAL] Preserving search results message: ", msg.id);
-      // CRITICAL: Force this message to always display
-      return { ...msg, isSearchResult: true }; // Force flag the message
-    }
-    
-    // When in internet search mode, pre-process all assistant messages
-    if (internetSearchEnabled) {
-      const content = msg.content.toLowerCase();
-      
-      // STRUCTURAL PATTERNS that identify disclaimers (not topic specific)
-      // Pattern 1: Starts with apology or limitations
-      const startsWithApology = /^(i['']m sorry|i apologize|sorry)/i.test(content);
-      const startsWithLimitation = /^(as|being)\s+(an|a)\s+(ai|assistant|language model)/i.test(content);
-      
-      // Pattern 2: Contains limitation statements (more comprehensive patterns)
-      const limitationPatterns = [
-        // AI identity patterns
-        /(as|being)\s+(an|a)\s+(ai|assistant|language model|artificial intelligence)/i,
-        
-        // Knowledge limitation patterns
-        /(cannot|can't|unable to|don't have|do not have|lacks?|without)\s+(access|provide|predict|browse|search|see|know|tell|determine|check|verify)/i,
-        /(my|the)\s+(knowledge|data|training|information|database)\s+(is|was|has been|are|were)\s+(limited|outdated|restricted|updated|only|up to|as of|current|cut off|not current)/i,
-        /(no|without|lack\s+of)\s+(access|ability|capability|way)\s+to\s+(current|real-time|latest|future|upcoming|live|internet|web)/i,
-        /I\s+(don't|do not|cannot|can't)\s+(access|browse|search|retrieve|get)\s+(the internet|current|future|real-time|live data|post-\w+|after\s+\w+)/i,
-        
-        // Temporal limitation patterns
-        /(information|data|knowledge|training|awareness)\s+(only|just)\s+(goes|extends|up)\s+(to|through|until)/i,
-        /(trained|last updated|knowledge cutoff|data cutoff)\s+(is|was|in|on|as of|date|point)/i,
-        /(cutoff|cut-off|cut\s+off)\s+date\s+of\s+October\s+2021/i,  // Specific to September 2021
-        /(October\s+2021)/i,  // Direct match for the date
-        /(training|knowledge)\s+data\s+(only)?\s+includes/i,  // Matches "training data only includes"
-        /unable\s+to\s+provide\s+information/i,  // Common phrase in disclaimers
-        /cannot\s+predict\s+(future|upcoming)\s+events/i,  // Prediction limitation
-        
-        // Request for external verification patterns
-        /(please|would need to|you('d| would) (need|have) to)\s+(check|verify|consult|refer to|look at)\s+(official|current|latest|up-to-date|recent)/i,
-        /(recommend|suggest|advise)\s+(checking|visiting|consulting|referring to)\s+(official|recent|current|latest)/i,
-        
-        // Future event patterns
-        /(hasn't|has not|have not|haven't)\s+(happened|occurred|taken place|been|started)/i,
-        /(future|upcoming|scheduled|not yet|after my|beyond my)\s+(event|information|data|release|update|knowledge)/i,
-        /(would need|need)\s+(real-time|current|more recent|up-to-date)\s+(information|data|sources)/i
-      ];
-      
-      // Count how many limitation patterns are in the message
-      const patternMatches = limitationPatterns.filter(pattern => pattern.test(content)).length;
-      
-      // Check for specific temporal indicators (especially knowledge cutoff dates)
-      const temporalIndicators = [
-        /(20\d\d|knowledge cutoff|training|data cutoff|last updated|information up to|not include|after|post-|only have information up to)/i.test(content),
-        /(as of|until|up to|through)\s+(20\d\d|january|february|march|april|may|june|july|august|september|october|november|december)/i.test(content),
-        /my\s+(knowledge|training|data)\s+(is|was)\s+(limited|cut off|only up to|current as of)/i.test(content),
-        // Direct mention of specific cutoff dates (occurs frequently in disclaimers)
-        /training data only includes information up to/i.test(content),
-        /information up to (?:September|October) 2021/i.test(content),
-        // OpenAI specific cutoff language
-        /developed by openai/i.test(content) && /don't have real-time capabilities/i.test(content),
-        // Very specific to the issue you're seeing - broad match for the exact message
-        content.includes("October 2021") ? 3 : 0, // High weight for mentions of October 2021
-        content.includes("September 2021") ? 3 : 0 // High weight for mentions of September 2021
-      ].filter(Boolean).length;
-      
-      // Check for phrases suggesting checking external sources
-      const externalSourceReferences = [/check\s+(with|the|official|latest|current|recent)\s+(sources|website|information|data)/i.test(content),
-                                      /visit\s+(the|official|their)\s+website/i.test(content),
-                                      /refer\s+to\s+(the|official|authoritative|up-to-date)/i.test(content)]
-                                    .filter(Boolean).length;
-      
-      // Calculate pattern strength score based on combined factors
-      let disclaimerScore = 0;
-      if (startsWithApology) disclaimerScore += 2;
-      if (startsWithLimitation) disclaimerScore += 2;
-      disclaimerScore += patternMatches * 1.5;
-      disclaimerScore += temporalIndicators * 2; // Stronger weight for temporal indicators
-      disclaimerScore += externalSourceReferences * 1.5;
-      
-      // Additional detection: Disclaimer-like structure
-      if (content.length > 50 && content.includes('please') && 
-          (content.includes('check') || content.includes('refer'))) {
-        disclaimerScore += 1;
+  
+  /**
+   * Refresh chat with filtering functionality
+   * This is a helper method used during search operations to refresh
+   * the chat and apply filtering to remove AI disclaimers
+   */
+  const refreshChatWithFiltering = async (chatId: string, searchOpId: string): Promise<void> => {
+    try {
+      if (!chatId) {
+        console.error(`❌ [FINAL REFRESH][${searchOpId}] No chat ID provided for refresh`);
+        return;
       }
       
-      // Messages containing search responses generally don't have these disclaimer patterns
-      // Use a lower threshold (1.5) to be more aggressive with filtering when internet search is enabled
-      if (disclaimerScore >= 1.5) {
-        console.log(`🚫 [ChatContext] BLOCKED AI disclaimer message (score: ${disclaimerScore})`);
-        console.log(`   - Starts with apology/limitation: ${startsWithApology || startsWithLimitation}`);
-        console.log(`   - Limitation patterns: ${patternMatches}`);
-        console.log(`   - Temporal indicators: ${temporalIndicators}`);
-        console.log(`   - External source references: ${externalSourceReferences}`);
-        console.log(`   - Preview: ${msg.content.substring(0, 50)}...`);
-        
-        // Return null to indicate this message should be filtered out
-        return null;
+      const refreshResponse = await chatService.getChat(chatId);
+      if (!refreshResponse?.data) {
+        console.error(`❌ [FINAL REFRESH][${searchOpId}] Failed to fetch chat data`);
+        return;
       }
       
-      // Double-check for classic disclaimer opening followed by any limitation pattern
-      // This catches subtler cases that might slip through scoring
-      if ((content.startsWith("i'm sorry") || content.startsWith("i apologize") || content.startsWith("sorry")) && 
-          patternMatches > 0) {
-        console.log(`🚫 [ChatContext] BLOCKED AI disclaimer message (direct pattern match)`);
-        console.log(`   - Preview: ${msg.content.substring(0, 50)}...`);
-        return null;
-      }
-      
-      // CRITICAL: Add ultra-specific matcher for the exact message pattern seen in logs
-      // This is a direct, targeted filter for the specific AI disclaimer causing problems
-      if (/I['']m sorry, but as an AI model developed by OpenAI and last trained on data up to (?:September|October) 2021/i.test(msg.content)) {
-        console.log(`🚨 [CRITICAL] BLOCKED specific AI knowledge cutoff disclaimer about September/October 2021`);
-        console.log(`   - Content: ${msg.content}`);
+      // Apply one last round of filtering when internet search is enabled
+      // This catches any late-arriving AI disclaimers
+      if (internetSearchEnabled) {
+        console.log(`🔍 [FINAL REFRESH][${searchOpId}] Filtering messages during final refresh`);
         
-        // If this message is already in the chat and has an ID, we need to delete it immediately
-        if (msg.id && currentChat?.id) {
-          try {
-            // Attempt to delete from the chat service
-            chatService.deleteMessage(currentChat.id, msg.id)
-              .then(() => console.log(`🚫 Successfully deleted AI disclaimer message: ${msg.id}`))
-              .catch(err => console.error(`Failed to delete AI disclaimer: ${err}`));
-          } catch (e) {
-            console.error('Error attempting to delete AI disclaimer message', e);
+        // First, identify and preserve any search result messages
+        const preservedMessages = preserveSearchResultMessages(refreshResponse.data.messages);
+        console.log(`🔍 [FINAL REFRESH][${searchOpId}] Found ${preservedMessages.length} search result messages to preserve`);
+        
+        // Filter out unwanted AI messages one last time
+        const finalFilteredMessages = refreshResponse.data.messages.filter(msg => {
+          // Always keep search results
+          if ((msg.content && (msg.content.startsWith('🔍') || msg.content.includes('[SEARCH_RESULTS]'))) || 
+              msg.isSearchResult === true || 
+              (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
+            return true; // Always preserve search results
           }
-        }
+          
+          if (msg.role === 'assistant') {
+            const processedMsg = processIncomingMessage(msg);
+            return processedMsg !== null;
+          }
+          
+          // Keep user messages
+          return msg.role === 'user';
+        });
         
-        return null; // Completely block the message
+        // Set the current chat with filtered messages
+        setCurrentChat({
+          ...refreshResponse.data,
+          messages: finalFilteredMessages
+        });
+        
+        console.log(`🔍 [FINAL REFRESH][${searchOpId}] Filtered ${refreshResponse.data.messages.length - finalFilteredMessages.length} messages during final refresh`);
+      } else {
+        // Normal mode - don't filter messages
+        setCurrentChat(refreshResponse.data);
       }
+      
+      console.log(`🏁 [SEARCH][${searchOpId}] Successfully refreshed chat ${chatId} with ${refreshResponse.data.messages?.length || 0} messages`);
+    } catch (error) {
+      console.error(`❌ [FINAL REFRESH][${searchOpId}] Error during final refresh:`, error);
     }
-    
-    return msg;
   };
 
-  // Perform web search using the Brave Search API
+  /**
+   * Pre-filter function with enhanced pattern matching to detect and block generic AI disclaimers
+   * Also provides detailed debug logging to track message processing flow
+   */
+  const processIncomingMessage = (msg: Message | null) => {
+    console.debug(`📝 [MESSAGE FILTER][Process] Processing message ID: ${msg?.id}, role: ${msg?.role}`); 
+    
+    // Use our enhanced filter utility to handle message filtering
+    const filteredMsg = filterDisclaimerMessages(msg, internetSearchEnabled);
+    
+    // Add tracking for message filtering decisions
+    if (filteredMsg === null && msg) {
+      console.debug(`🚫 [MESSAGE FILTER][Rejected] Message blocked: ${msg.id}`);
+      console.debug(`🧾 [MESSAGE FILTER][Content] Preview: "${msg.content?.substring(0, 50)}..."`); 
+      
+      // Handle server-side deletion of filtered messages for cleaner UI
+      if (msg.id && currentChat?.id) {
+        try {
+          // Attempt to delete from the chat service to keep database clean
+          chatService.deleteMessage(currentChat.id, msg.id)
+            .then(() => console.log(`🚫 [MESSAGE FILTER][Delete] Successfully removed AI disclaimer: ${msg.id}`))
+            .catch(err => console.error(`❌ [MESSAGE FILTER][Error] Failed to delete AI disclaimer: ${err}`));
+        } catch (e) {
+          console.error('❌ [MESSAGE FILTER][Error] Error attempting to delete AI disclaimer message', e);
+        }
+      }
+    } else if (msg) {
+      console.debug(`✅ [MESSAGE FILTER][Accepted] Message passed filtering: ${msg.id}`);
+    }
+    
+    return filteredMsg;
+  };
+
+  /**
+   * Robust function to identify and preserve search result messages that shouldn't be filtered
+   * This ensures search results are properly maintained in the chat
+   */
+  const preserveSearchResultMessages = (messages: Message[]): Message[] => {
+    if (!messages || !Array.isArray(messages)) {
+      console.error('❌ [PRESERVE] Invalid messages array provided', messages);
+      return [];
+    }
+    
+    console.debug(`🔍 [SEARCH][Preserve] Analyzing ${messages.length} messages for search results`); 
+    
+    const updatedMessages = [...messages];
+    
+    const searchResults = updatedMessages.filter(msg => 
+      msg.content && (
+        msg.content.startsWith('🔍') || 
+        msg.content.includes('[SEARCH_RESULTS]') ||
+        msg.content.includes('Search results for:') ||
+        msg.content.includes('Here are some search results')
+      ) ||
+      msg.isSearchResult === true || 
+      (msg.metadata && (
+        (typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult')) ||
+        (typeof msg.metadata === 'object' && msg.metadata.isSearchResult)
+      ))
+    );
+    
+    searchResults.forEach(msg => {
+      const index = updatedMessages.findIndex(m => m.id === msg.id);
+      if (index !== -1) {
+        updatedMessages[index] = {
+          ...updatedMessages[index],
+          isSearchResult: true,
+          metadata: updatedMessages[index].metadata 
+            ? typeof updatedMessages[index].metadata === 'string'
+              ? updatedMessages[index].metadata + ';isSearchResult=true'
+              : { ...updatedMessages[index].metadata, isSearchResult: true }
+            : 'isSearchResult=true'
+        };
+        console.debug(`✅ [SEARCH][Preserve] Found search result to preserve: ${msg.id}`);
+      }
+    });
+    
+    console.log(`🔍 [PRESERVE] Marked ${searchResults.length} messages as search results`);
+    return updatedMessages;
+  };
+  
+  // Perform web search using the Search API
   // This function handles search functionality and returns search results
   // Explicitly declare return type to resolve type issues
   const performSearchInternal = async (query: string, addUserMessage = true): Promise<SearchResult[]> => {
-    // Generate a unique search ID for this search operation
-    const searchId = `websearch-${Date.now()}`;
-    const searchStartTime = Date.now(); // Used in finally block for duration calculation
-    
-    // Define chatIdToUse here so it's available throughout the function
-    let chatIdToUse = currentChat?.id;
-    
-    // Initialize searchResults at the top level so it's available throughout the function
-    let searchResults: SearchResult[] = [];
-    
-    if (!query.trim()) {
-        console.log(`[ChatContext][performSearch][${searchId}] Empty query, aborting search`);
-        setSearchResults([]);
-        return [];
+    // Don't allow searches if there's no current chat or if already searching
+    if (!currentChat || isSearching) {
+      console.log('⚠️ [SEARCH] Cannot search, no current chat or search already in progress');
+      return [];
     }
     
-    // Set search query for UI components to use
-    setSearchQuery(query);
+    // Start a new search operation with unique ID
+    const searchId = `search-${Date.now()}`;
+    const searchStartTime = Date.now();
+    let chatIdToUse = currentChat?.id;
+    let searchResults: SearchResult[] = [];
+    let extractedResults: SearchResult[] = [];
     
-    // Set searching state to true to show loading indicators
-    setIsSearching(true);
-    setInternetSearchEnabled(true); // Mark that internet search is active
-    console.log(`[ChatContext][performSearch][${searchId}] Internet search enabled for query: "${query}"`);
+    console.log(`🔍 [SEARCH][${searchId}] Starting search for: "${query}"`);
     
-    // We're fixing the structure of the try-catch blocks
-    try {
-        // CRITICAL: Store the chat ID at the beginning of the process
-        // and use this same chat throughout the entire search process
-        let chatToUse = currentChat;
-        chatIdToUse = currentChat?.id;
-    
-        // If there's no current chat, create one, but ONLY IF NECESSARY
-        if (!chatToUse) {
-            console.log(`[ChatContext][performSearch][${searchId}] No current chat, creating one first`);
-            // Generate a title based on the search query
-            const chatTitle = `Search: ${query.slice(0, 30)}${query.length > 30 ? '...' : ''}`;
-            const newChat = await createNewChat(chatTitle);
-            
-            if (newChat && newChat.id) {
-                chatToUse = newChat;
-                chatIdToUse = newChat.id;
-                setCurrentChat(newChat); // Important: update the current chat in state
-
-                // Define a helper function to refresh the chat
-                const refreshChat = async (chatId: string) => {
-                    try {
-                        const response = await chatService.getChat(chatId);
-                        if (response?.data) {
-                            // When internet search is enabled, filter out generic AI messages
-                            if (internetSearchEnabled) {
-                                console.log('🔍 [ChatContext] Filtering messages during chat refresh');
-                                
-                                // First, identify any search result messages that need to be preserved
-                                const searchResultMessages = response.data.messages.filter(msg => {
-                                    return (
-                                        (msg.content && (msg.content.startsWith('🔍') || msg.content.includes('[SEARCH_RESULTS]'))) || 
-                                        msg.isSearchResult === true || 
-                                        (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))
-                                    );
-                                }).map(msg => ({ ...msg, isSearchResult: true }));
-                                
-                                // CRITICAL: Check if we have search results but also have a knowledge cutoff message
-                                // This pattern exactly matches the message seen in the screenshots
-                                const hasKnowledgeCutoffMessage = response.data.messages.some(msg => 
-                                    msg.role === 'assistant' && 
-                                    /I['']m sorry, but as an AI developed by OpenAI.*October 2021.*information about this specific event is not available/i.test(msg.content)
-                                );
-                                
-                                console.log(`✅ [ChatContext] Found ${searchResultMessages.length} search result messages to preserve`);
-                                if (hasKnowledgeCutoffMessage && searchResultMessages.length > 0) {
-                                    console.log('🚨 [CRITICAL] Detected both search results and knowledge cutoff message - removing knowledge cutoff message');
-                                }
-                                
-                                // Filter out any unwanted AI disclaimer messages
-                                const filteredNonSearchMessages = response.data.messages
-                                    .filter(msg => {
-                                        // Skip filtering search result messages
-                                        if ((msg.content && (msg.content.startsWith('🔍') || msg.content.includes('[SEARCH_RESULTS]'))) || 
-                                            msg.isSearchResult === true || 
-                                            (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))) {
-                                            return true; // Always keep search results
-                                        }
-                                        
-                                        // CRITICAL FIX: If we have search results, remove ANY AI disclaimer messages about knowledge cutoffs
-                                        // This is the critical problem shown in the screenshot - knowledge cutoff message alongside search results
-                                        if (searchResultMessages.length > 0 && msg.role === 'assistant') {
-                                            const knownDisclaimerPatterns = [
-                                                /I['']m sorry, but as an AI developed by OpenAI.*(?:October|September) 2021.*information about this specific event is not available/i,
-                                                /As of my last update in (?:October|September) 2021/i,
-                                                /(?:knowledge|training|data) (?:cutoff|cut off|cut-off)/i,
-                                                /(?:cannot|can't|unable to|don't have|do not have) (?:access|provide|browse|search)/i
-                                            ];
-                                            
-                                            // Check if any of the patterns match
-                                            if (knownDisclaimerPatterns.some(pattern => pattern.test(msg.content))) {
-                                                console.log('🚫 [ChatContext] REMOVED AI disclaimer message when search results are available');
-                                                return false;
-                                            }
-                                        }
-                                        
-                                        // For other assistant messages, use our processing logic
-                                        if (msg.role === 'assistant') {
-                                            const processedMsg = processIncomingMessage(msg);
-                                            return processedMsg !== null;
-                                        }
-                                        
-                                        return true; // Keep all other messages
-                                    });
-                                
-                                // Combine all messages - both filtered non-search messages and preserved search results
-                                // IMPORTANT: Ensure search results are actually included in the final messages list
-                                const allMessages = searchResultMessages.length > 0 ? 
-                                    // If we have search results, ensure they're included
-                                    [...filteredNonSearchMessages.filter(msg => 
-                                        // Exclude AI disclaimer messages if we have search results
-                                        !(msg.role === 'assistant' && /I['']m sorry, but as an AI developed by OpenAI/i.test(msg.content))
-                                    ), ...searchResultMessages] :
-                                    // Otherwise, just use the filtered messages
-                                    filteredNonSearchMessages;
-                                
-                                // Set current chat with filtered messages
-                                setCurrentChat({
-                                    ...response.data,
-                                    messages: allMessages
-                                });
-                                
-                                console.log(`🔍 [ChatContext] Filtered ${response.data.messages.length - allMessages.length} messages during refresh`);
-                            } else {
-                                // Normal mode - don't filter messages
-                                setCurrentChat(response.data);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('❌ [ChatContext] Error refreshing chat:', error);
-                    }
-                };
-
-                await refreshChat(chatIdToUse);
-                
-                // Refresh the chats list
-                const chatsResponse = await chatService.getChats();
-                if (chatsResponse?.data) {
-                    setChats(chatsResponse.data);
-                }
-                
-                // Small delay to ensure chat creation is complete
-                await new Promise(resolve => setTimeout(resolve, 500));
-                console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatIdToUse}`);
-            } else {
-                console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
-                setInternetSearchEnabled(false);
-                setIsSearching(false);
-                return [];
-            }
-        } else {
-            console.log(`[ChatContext][performSearch][${searchId}] Using existing chat with ID: ${chatIdToUse}`);
-        }
-        
-        // Check if user message should be added
-        if (addUserMessage && chatToUse && chatIdToUse) {
-            console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse} with AI response suppressed`);
-            try {
-                // Send the user message directly to the chat service with suppressAiResponse=true
-                await chatService.addMessage(chatIdToUse, { 
-                    role: 'user', 
-                    content: query,
-                    suppressAiResponse: true,
-                    searchModeActive: true,
-                });
-                
-                // Refresh the chat to make sure we have the latest messages
-                const updatedChat = await chatService.getChat(chatIdToUse);
-                if (updatedChat?.data) {
-                    // Filter messages to ensure no disclaimers appear
-                    if (internetSearchEnabled) {
-                        console.log(`🔍 [SEARCH][${searchId}] Filtering messages during user message refresh`);
-                        const filteredMessages = updatedChat.data.messages.filter(msg => {
-                            // Always keep search results messages
-                            if (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.startsWith('🔍') || msg.isSearchResult === true) {
-                                console.log("✅ [ChatContext] Keeping search results message during refresh");
-                                return true;
-                            }
-                            
-                            // For assistant messages, process through our filter
-                            if (msg.role === 'assistant') {
-                                // When in internet search mode, apply aggressive filtering
-                                if (internetSearchEnabled) {
-                                    // Detect the exact pattern seen in the screenshots
-                                    const knownDisclaimerPattern = /I('m| am) sorry, but as an AI (?:model )?developed by OpenAI and last trained on data up to (?:September|October) 2021, I don't have (?:the ability to provide|access to|information about)/i;
-                                    
-                                    if (knownDisclaimerPattern.test(msg.content)) {
-                                        console.log('🚨 [CRITICAL] Blocked exact match AI knowledge cutoff disclaimer');
-                                        // Try to delete the message if it has an ID
-                                        if (msg.id && chatIdToUse) {
-                                            try {
-                                                chatService.deleteMessage(chatIdToUse, msg.id)
-                                                    .then(() => console.log(`🚫 [CRITICAL] Successfully deleted AI disclaimer message during refresh: ${msg.id}`))
-                                                    .catch(e => console.error('Error deleting disclaimer message', e));
-                                            } catch (e) {
-                                                console.error('Failed to delete AI disclaimer message', e);
-                                            }
-                                        }
-                                        // Return null to completely remove this message
-                                        return null;
-                                    }
-                                    
-                                    // Apply standard pattern-based filtering for other cases
-                                    const preprocessed = processIncomingMessage(msg);
-                                    return preprocessed !== null;
-                                }
-                                
-                                // Default case for non-search mode
-                                return msg !== null;
-                            }
-                            
-                            // Always keep user messages
-                            return msg.role === 'user';
-                        });
-                        
-                        const filteredChat = {
-                            ...updatedChat.data,
-                            messages: filteredMessages
-                        };
-                        
-                        setCurrentChat(filteredChat);
-                        console.log(`🔍 [SEARCH][${searchId}] Filtered ${updatedChat.data.messages.length - filteredMessages.length} messages`);
-                        
-                        // Log if any generic AI messages are still present
-                        const genericMessages = filteredMessages.filter(msg => {
-                            if (msg.role !== 'assistant') return false;
-                            const content = msg.content?.toLowerCase() || '';
-                            return content.includes("i'm sorry") && content.includes("as an ai");
-                        });
-                        
-                        if (genericMessages.length > 0) {
-                            console.warn(`⚠️ [SEARCH][${searchId}] ${genericMessages.length} generic AI messages found in chat after filtering. These should be hidden in UI.`);
-                        }
-                    } else {
-                        setCurrentChat(updatedChat.data);
-                    }
-                }
-                
-                console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${chatToUse?.messages?.length}`);
-            } catch (error) {
-                console.error(`[ChatContext][performSearch][${searchId}] Error adding user message:`, error);
-            }
-        }
-
-        // Outer try block for API endpoint check and URL preparation
+    if (!query || query.trim() === '') {
+      // Empty query, just refresh the chat
+      console.log(`ℹ️ [SEARCH][${searchId}] Empty search query. Refreshing chat.`);
+      
+      // For empty query, still perform refresh with filtering if internet search is enabled
+      if (internetSearchEnabled) {
+        console.log(`ℹ️ [SEARCH][${searchId}] Internet search mode enabled. Refreshing with filtering.`);
         try {
-            // ... search API implementation ...
-        } catch (error: unknown) {
-            console.error(`❌ [SEARCH][${searchId}] Failed to fetch or process search results:`, error);
-            // On error, set empty results and clear search state
-            setSearchResults([]);
-            searchResults = [];
-            
-            // In development mode, provide mock results on error for testing
-            if (process.env.NODE_ENV === 'development') {
-                try {
-                    console.log(`💭 [SEARCH][${searchId}] Using mock search results after error in development`);
-                    const mockResults: SearchResult[] = [
-                        {
-                            title: 'Error Recovery Mock Result for "' + query + '"',
-                            url: 'https://example.com/error',
-                            snippet: 'This is shown because an error occurred: ' + (error instanceof Error ? error.message : 'Unknown error')
-                        }
-                    ];
-                    setSearchResults(mockResults);
-                    searchResults = mockResults;
-                    console.log(`💭 [SEARCH][${searchId}] Mock results set after error:`, mockResults);
-                } catch (devMockError) {
-                    console.error(`❌ [SEARCH][${searchId}] Error setting mock results:`, devMockError);
-                    searchResults = [];
-                }
-            } else {
-                // For production, just set empty results
-                searchResults = [];
-            }
-            
-            // Log detailed error information
-            console.error(`🔴 [SEARCH][${searchId}] Details for error in performSearch:`, error);
-            if (error instanceof Error) {
-                console.error(`🔴 [SEARCH][${searchId}] Error type: ${error.constructor.name}`);
-                console.error(`🔴 [SEARCH][${searchId}] Error message: ${error.message}`);
-                if (error.stack) {
-                    console.error(`🔴 [SEARCH][${searchId}] Stack trace:`, error.stack);
-                }
-            } else {
-                console.error(`🔴 [SEARCH][${searchId}] Unknown error type`); 
-            }
-            
-            // Clear search results
-            setSearchResults([]);
-            searchResults = [];
-            
-            // Show user-friendly error message
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`🔴 [SEARCH][${searchId}] Showing error toast: ${errorMessage}`);
-            toast.error('Search failed: ' + errorMessage);
-            
-            // Save error for debugging
-            window._lastSearchError = {
-                error: error instanceof Error ? error : { message: String(error) },
-                searchId,
-                timestamp: new Date().toISOString(),
-                query
-            };
+          setLoading(true);
+          if (chatIdToUse) {
+            await refreshChatWithFiltering(chatIdToUse, searchId);
+          }
+          
+          // Refresh the chats list from the API
+          const chatsResponse = await chatService.getChats();
+          if (chatsResponse?.data) {
+            setChats(chatsResponse.data);
+          }
+        } finally {
+          setLoading(false);
+          // Reset internet search mode since we're done
+          setInternetSearchEnabled(false);
+          console.log(`⚠️ [SEARCH][${searchId}] Empty query. Search mode disabled.`);
         }
-    } catch (error) {
-        // Handle parsing or fetch errors
-        console.error(`❌ [SEARCH][${searchId}] Error performing search:`, error);
-        setSearchResults([]);
-        
-        // In development mode, provide mock results on error for testing
-        if (process.env.NODE_ENV === 'development') {
-            try {
-                console.log(`💭 [SEARCH][${searchId}] Using mock search results after error in development`);
-                const mockResults: SearchResult[] = [
-                    {
-                        title: 'Error Recovery Mock Result for "' + query + '"',
-                        url: 'https://example.com/error',
-                        snippet: 'This is shown because an error occurred: ' + (error instanceof Error ? error.message : 'Unknown error')
-                    }
-                ];
-                setSearchResults(mockResults);
-                searchResults = mockResults;
-            } catch (devMockError) {
-                console.error(`❌ [SEARCH][${searchId}] Error setting mock results:`, devMockError);
-                searchResults = [];
-            }
+      }
+      return [];
+    }
+    
+    // Ensure we have a valid chat to use
+    if (!chatIdToUse) {
+      console.log(`[ChatContext][performSearch][${searchId}] No chat ID available for search, creating new chat`);
+      
+      // Create a new chat if needed
+      try {
+        const newChat = await createNewChat(`Search: ${query}`);
+        if (newChat && newChat.id) {
+          chatIdToUse = newChat.id;
+          console.log(`✅ [SEARCH][${searchId}] Successfully created new chat ${chatIdToUse} for search`);
         } else {
-            // For production, just set empty results
-            searchResults = [];
+          console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
+          setInternetSearchEnabled(false);
+          setIsSearching(false);
+          return [];
         }
-    } finally {
-        // Always set isSearching to false when search completes or fails
+      } catch (error) {
+        console.error(`❌ [SEARCH][${searchId}] Error creating new chat:`, error);
+        setInternetSearchEnabled(false);
         setIsSearching(false);
-        setInternetSearchEnabled(false); // CRITICAL: Reset internet search flag to prevent duplicate chats
+        return [];
+      }
+    } else {
+      console.log(`[ChatContext][performSearch][${searchId}] Using existing chat with ID: ${chatIdToUse}`);
+    }
+    
+    // Add the user message if requested
+    if (addUserMessage && chatIdToUse) {
+      console.log(`[ChatContext][performSearch][${searchId}] Adding user query to chat ${chatIdToUse} with AI response suppressed`);
+      try {
+        // Send the user message directly to the chat service with suppressAiResponse=true
+        await chatService.addMessage(chatIdToUse, { 
+          role: 'user', 
+          content: query,
+          suppressAiResponse: true,
+          searchModeActive: true,
+        });
         
-        // Calculate search duration using the searchStartTime from the beginning of the function
-        const searchDuration = Date.now() - searchStartTime;
-        
-        // Final refresh of the chat to ensure UI is up to date
-        try {
-            if (chatIdToUse) {
-                const refreshResponse = await chatService.getChat(chatIdToUse);
-                if (refreshResponse?.data) {
-                    setCurrentChat(refreshResponse.data);
-                    console.log(`🏁 [SEARCH][${searchId}] Successfully refreshed chat ${chatIdToUse} with ${refreshResponse.data.messages?.length || 0} messages`);
+        // Refresh the chat to make sure we have the latest messages
+        const updatedChat = await chatService.getChat(chatIdToUse);
+        if (updatedChat?.data) {
+          // Filter messages to ensure no disclaimers appear
+          if (internetSearchEnabled) {
+            console.log(`🔍 [SEARCH][${searchId}] Filtering messages during user message refresh`);
+            const filteredMessages = updatedChat.data.messages.filter(msg => {
+              // Always keep search results messages
+              if (msg.content && (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.startsWith('🔍') || msg.isSearchResult === true)) {
+                console.log("✅ [ChatContext] Keeping search results message during refresh");
+                return true;
+              }
+              
+              // For assistant messages, process through our filter
+              if (msg.role === 'assistant') {
+                // When in internet search mode, apply aggressive filtering
+                if (internetSearchEnabled) {
+                  // Detect the exact pattern seen in the screenshots
+                  const knownDisclaimerPattern = /I('m| am) sorry, but as an AI (?:model )?developed by OpenAI and last trained on data up to (?:September|October) 2021, I don't have (?:the ability to provide|access to|information about)/i;
+                  
+                  if (knownDisclaimerPattern.test(msg.content)) {
+                    console.log('🚨 [CRITICAL] Blocked exact match AI knowledge cutoff disclaimer');
+                    // Try to delete the message if it has an ID
+                    if (msg.id && chatIdToUse) {
+                      try {
+                        chatService.deleteMessage(chatIdToUse, msg.id)
+                          .then(() => console.log(`🚫 [CRITICAL] Successfully deleted AI disclaimer message during refresh: ${msg.id}`))
+                          .catch(e => console.error('Error deleting disclaimer message', e));
+                      } catch (e) {
+                        console.error('Failed to delete AI disclaimer message', e);
+                      }
+                    }
+                    // Return null to completely remove this message
+                    return false;
+                  }
+                  
+                  // Apply standard pattern-based filtering for other cases
+                  const preprocessed = processIncomingMessage(msg);
+                  return preprocessed !== null;
                 }
+                
+                // Default case for non-search mode
+                return true;
+              }
+              
+              // Always keep user messages
+              return msg.role === 'user';
+            });
+            
+            const filteredChat = {
+              ...updatedChat.data,
+              messages: filteredMessages
+            };
+            
+            setCurrentChat(filteredChat);
+            console.log(`🔍 [SEARCH][${searchId}] Filtered ${updatedChat.data.messages.length - filteredMessages.length} messages`);
+            
+            // Log if any generic AI messages are still present
+            const genericMessages = filteredMessages.filter(msg => {
+              if (msg.role !== 'assistant') return false;
+              const content = msg.content?.toLowerCase() || '';
+              return content.includes("i'm sorry") && content.includes("as an ai");
+            });
+            
+            if (genericMessages.length > 0) {
+              console.warn(`⚠️ [SEARCH][${searchId}] ${genericMessages.length} generic AI messages found in chat after filtering. These should be hidden in UI.`);
             }
-        } catch (refreshError) {
-            console.error(`🛑 [SEARCH][${searchId}] Error refreshing chat after search:`, refreshError);
+          } else {
+            setCurrentChat(updatedChat.data);
+          }
         }
         
-        console.log(`🏁 [SEARCH][${searchId}] Loading state reset to false`);
-        console.log(`🏁 [SEARCH][${searchId}] Search operation COMPLETED in ${searchDuration}ms`);
+        console.log(`[ChatContext][performSearch][${searchId}] After adding user query. Messages count: ${updatedChat?.data?.messages?.length}`);
+      } catch (error) {
+        console.error(`[ChatContext][performSearch][${searchId}] Error adding user message:`, error);
+      }
+    }
+
+    // Main search API request try block
+    try {
+      // Define the variable to store search results
+      let extractedResults: SearchResult[] = [];
+      
+      // Check if the API endpoint is available - this prevents the entire app from crashing
+      const apiEndpointAvailable = await checkApiEndpoint('/api/search');
+      if (!apiEndpointAvailable) {
+        console.error(`❌ [SEARCH][${searchId}] Search API endpoint unavailable`); 
+        toast.error('Search is currently unavailable. Please try again later.');
+        throw new Error(`Search API unavailable`); 
+      }
+      
+      console.log(`[ChatContext][performSearch][${searchId}] Preparing search URL for query: "${query}"`); 
+      
+      // Debug logging
+      try {
+        if (typeof window !== 'undefined') {
+          window._debugChatState = {
+            ...(window._debugChatState || {}),
+            lastSearchStarted: new Date().toISOString(),
+            searchQuery: query,
+            internetSearchEnabled: internetSearchEnabled
+          };
+        }
+      } catch (error) {
+        console.error('[DEBUG] Error updating debug state:', error);
+      }
+      
+      // Create a URL for the search API request
+      const searchUrl = `/api/search?q=${encodeURIComponent(query)}${internetSearchEnabled ? '&internet=true' : ''}`;
+      
+      // Set debug information for troubleshooting
+      try {
+        if (typeof window !== 'undefined') {
+          window._lastSearchUrl = searchUrl;
+          window._lastSearchQuery = query;
+        }
+      } catch (error) {
+        console.error('Error setting debug data:', error);
+      }
+      
+      // The main search function - fetch results from the API
+      console.log(`[ChatContext][performSearch][${searchId}] Fetching search results from: ${searchUrl}`);
+      const response = await fetch(searchUrl);
+      
+      if (!response.ok) {
+        // Handle error response with safe window access
+        try {
+          if (typeof window !== 'undefined') {
+            window._lastSearchErrorResponse = response;
+            window._lastSearchErrorText = await response.text();
+          }
+        } catch (error) {
+          console.error('Error setting error response debug data:', error);
+        }
+        throw new Error(`Search API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      // Parse the search results
+      let searchData;
+      try {
+        searchData = await response.json();
+        console.log(`[ChatContext][performSearch][${searchId}] Search response received:`, searchData);
+      } catch (parseError) {
+        console.error(`[ChatContext][performSearch][${searchId}] Error parsing search results:`, parseError);
+        throw new Error('Invalid search results format');
+      }
+      
+      // Process the search results based on multiple possible response formats
+      // Handle various response structures we might get from different APIs
+      
+      if (searchData) {
+        // First format: Direct SearchResult[] array
+        if (Array.isArray(searchData) && searchData.length > 0 && 
+          typeof searchData[0].title === 'string' && 
+          typeof searchData[0].url === 'string' &&
+          typeof searchData[0].snippet === 'string') {
+          extractedResults = searchData as SearchResult[];
+          console.log(`[ChatContext][performSearch][${searchId}] Direct array format detected with ${extractedResults.length} results`);
+        } 
+        // Second format: { results: SearchResult[] }
+        else if (searchData.results && Array.isArray(searchData.results)) {
+          extractedResults = searchData.results;
+          console.log(`[ChatContext][performSearch][${searchId}] Results property format detected with ${extractedResults.length} results`);
+        }
+        // Third format: { organic: { results: {...}[] } } (like Brave Search API)
+        else if (searchData.organic && Array.isArray(searchData.organic.results)) {
+          extractedResults = searchData.organic.results.map((item: any) => ({
+            title: item.title || '',
+            url: item.url || '',
+            snippet: item.description || ''
+          }));
+          console.log(`[ChatContext][performSearch][${searchId}] Brave Search format detected with ${extractedResults.length} results`);
+        }
+        // Fourth format: { items: [...] } (like Google Search API)
+        else if (searchData.items && Array.isArray(searchData.items)) {
+          extractedResults = searchData.items.map((item: any) => ({
+            title: item.title || '',
+            url: item.link || item.url || '',
+            snippet: item.snippet || item.description || ''
+          }));
+          console.log(`[ChatContext][performSearch][${searchId}] Google-like format detected with ${extractedResults.length} results`);
+        }
+        else {
+          console.error(`[ChatContext][performSearch][${searchId}] Unrecognized search results format:`, searchData);
+          throw new Error('Unrecognized search results format');
+        }
+      } else {
+        console.error(`[ChatContext][performSearch][${searchId}] Empty search data returned`);
+        throw new Error('No search results returned');
+      }
+      
+      // Update state with the search results
+      searchResults = extractedResults;
+      setSearchResults(extractedResults);
+      console.log(`[ChatContext][performSearch][${searchId}] Search results set in state:`, extractedResults);
+      
+      // Update accessedWebsites for the search sidebar
+      if (extractedResults.length > 0) {
+        const websites = extractedResults.map(result => ({
+          title: result.title,
+          url: result.url
+        }));
+        setAccessedWebsites(websites);
+        console.log(`[ChatContext][performSearch][${searchId}] Updated accessed websites:`, websites);
+      }
+      
+      // If we have search results, add them to the chat as a message
+      if (extractedResults.length > 0 && chatIdToUse) {
+        try {
+          // Prepare search result display information
+          const searchResultsFormatted = extractedResults.map(r => `- [${r.title}](${r.url})\n${r.snippet}\n`).join('\n');
+          
+          const searchResultMessage = {
+            role: 'assistant' as const,
+            content: `🔍 [SEARCH_RESULTS] Search results for: "${query}"\n\n${searchResultsFormatted}`,
+            metadata: 'isSearchResult=true;noFiltering=true'
+          };
+          
+          console.log(`🔍 [SEARCH][${searchId}] Adding ${extractedResults.length} search results to chat ${chatIdToUse}`);
+          
+          // Add search result message to the chat
+          await chatService.addMessage(chatIdToUse, searchResultMessage);
+          
+          // Set search query for UI
+          setSearchQuery(query);
+        } catch (searchResultError) {
+          console.error(`❌ [SEARCH][${searchId}] Error adding search results:`, searchResultError);
+        }
+      }
+    } catch (error) {
+      console.error(`[ChatContext][performSearch][${searchId}] Error during search:`, error);
+      
+      // Save error for debugging with safe window access
+      try {
+        if (typeof window !== 'undefined') {
+          window._lastSearchError = {
+            error: error instanceof Error ? error : { message: String(error) },
+            searchId,
+            timestamp: new Date().toISOString(),
+            query
+          };
+        }
+      } catch (debugError) {
+        console.error('Error setting search error debug data:', debugError);
+      }
+      
+      // Reset search results and error state
+      setSearchResults([]);
+      setError('Failed to retrieve search results');
+    } finally {
+      // Always set isSearching to false when search completes or fails
+      setIsSearching(false);
+      
+      // Calculate search duration for logging
+      const searchDuration = Date.now() - searchStartTime;
+      console.log(`🔍 [SEARCH][${searchId}] Search operation took ${searchDuration}ms, keeping internet search mode active until refresh`);
+      
+      // Call our helper method to perform final chat refresh with filtering
+      // This is in a setTimeout to ensure it runs in a separate tick after all other state updates
+      setTimeout(async () => {
+        try {
+          if (chatIdToUse && searchId) {
+            // IMPORTANT: We need to keep internetSearchEnabled flag active until after the final refresh
+            await refreshChatWithFiltering(chatIdToUse, searchId);
+            
+            // Only reset internetSearchEnabled after the final refresh
+            // This avoids the critical bug where searchMode is disabled too early
+            console.log(`🔍 [SEARCH][${searchId}] Final refresh complete, turning off internet search mode`);
+            setInternetSearchEnabled(false);
+          }
+        } catch (finalError) {
+          console.error(`❌ [SEARCH][${searchId}] Error in final refresh:`, finalError);
+          // Also reset search mode in case of error
+          setInternetSearchEnabled(false);
+        }
+      }, 100);
+      
+      console.log(`🏁 [SEARCH][${searchId}] Loading state reset to false`);
+      console.log(`🏁 [SEARCH][${searchId}] Search operation COMPLETED in ${searchDuration}ms`);
+      
+      // CRITICAL: Only reset internet search flag AFTER the chat has been fully refreshed
+      // Fixed critical bug where internetSearchEnabled flag was reset too early
+      // This ensures all filters have been applied to any incoming messages
+      console.log(`🔍 [SEARCH][${searchId}] Keeping internet search mode enabled until all messages processed`);
+      
+      // Add detailed logging to track search mode state changes
+      console.log(`🔄 [SEARCH][${searchId}] Internet search enabled: ${internetSearchEnabled} → false`);
+      setInternetSearchEnabled(false);
+      console.log(`🔍 [SEARCH][${searchId}] Internet search mode disabled after final refresh`);
+      
+      // Update debug state with final status
+      try {
+        if (typeof window !== 'undefined') {
+          window._debugChatState = {
+            ...(window._debugChatState || {}),
+            lastSearchResults: extractedResults.slice(0, 3), // Store first 3 results for debugging
+            searchCompleted: true,
+            completedAt: new Date().toISOString(),
+            chatId: chatIdToUse
+          };
+        }
+      } catch (error) {
+        console.error('Error updating final debug state:', error);
+      }
     }
     
     // Explicitly return the search results array to satisfy TypeScript
-    return searchResults as SearchResult[];
-};
+    return searchResults;
+  };
+
   // Create a wrapper function that uses the internal implementation
   // This ensures we correctly expose the function in the context while preserving the return type
   const performSearch = async (query: string, addUserMessage = true): Promise<SearchResult[]> => {
-    // Call our internal implementation and ensure we return a SearchResult[] 
-    const results = await performSearchInternal(query, addUserMessage);
-    return results;
+    // Set search mode on when performing a search
+    setInternetSearchEnabled(true);
+    setIsSearching(true);
+    
+    try {
+      return await performSearchInternal(query, addUserMessage);
+    } catch (error) {
+      console.error('[ChatContext][performSearch] Error in search:', error);
+      setInternetSearchEnabled(false);
+      return [];
+    }
   };
 
   // Make ChatProvider return a JSX element, not SearchResult[]
@@ -966,4 +1036,3 @@ export const useChat = (): ChatContextType => {
 
 // Export the hook as default export
 export default useChat;
-

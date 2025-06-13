@@ -999,6 +999,8 @@ export const _useChatExport = useChat;
 // import React, { createContext, useContext, useState, useEffect } from 'react';
 // import { filterDisclaimerMessages } from '../utils/messageFilters';
 
+// Import for direct message filtering during search operations
+
 // // Extend the Window interface to include custom properties for search debugging
 // declare global {
 //   interface Window {

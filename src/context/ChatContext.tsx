@@ -102,7 +102,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [accessedWebsites, setAccessedWebsites] = useState<{title: string, url: string}[]>([]);
-  const [searchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
   const [internetSearchEnabled, setInternetSearchEnabled] = useState(false); // Track if internet search is active
 
@@ -874,11 +874,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   // This function handles search functionality and returns search results
   // Explicitly declare return type to resolve type issues
   const performSearchInternal = async (query: string, addUserMessage = true): Promise<SearchResult[]> => {
-    // Don't allow searches if there's no current chat or if already searching
-    if (!currentChat || isSearching) {
-      console.log('⚠️ [SEARCH] Cannot search, no current chat or search already in progress');
+    // Don't allow searches if already searching
+    if (isSearching) {
+      console.log('⚠️ [SEARCH] Cannot search, search already in progress');
       return [];
     }
+    
+    // We can proceed even without a current chat - we'll create one
 
     // Declare all shared variables at the top
     const searchId = `search-${Date.now()}`;
@@ -917,9 +919,18 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       console.log(`[ChatContext][performSearch][${searchId}] No chat ID available for search, creating new chat`);
       // Create a new chat if needed
       try {
-        const newChat = await createNewChat(`Search: ${query}`);
-        if (newChat && newChat.id) {
-          chatIdToUse = newChat.id;
+        // Force create a new chat for search with proper title
+        const newChat = await chatService.createChat({
+          title: `Search: ${query.slice(0, 40)}${query.length > 40 ? '...' : ''}`,
+          chat_type: 'default',
+          language: language.code
+        });
+        
+        if (newChat?.data && newChat.data.id) {
+          chatIdToUse = newChat.data.id;
+          // Update the chats list and set current chat
+          setChats(prev => [newChat.data, ...prev]);
+          setCurrentChat(newChat.data);
           console.log(`✅ [SEARCH][${searchId}] Successfully created new chat ${chatIdToUse} for search`);
         } else {
           console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
@@ -949,9 +960,14 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
           suppressAiResponse: true,
           searchModeActive: true,
         });
+        
         // Refresh the chat to make sure we have the latest messages
         const updatedChat = await chatService.getChat(chatIdToUse);
         if (updatedChat?.data) {
+          // Update the current chat to show the user message immediately
+          setCurrentChat(updatedChat.data);
+          console.log(`✅ [SEARCH][${searchId}] Updated current chat with user message`);
+          
           // Filter messages to ensure no disclaimers appear
           if (internetSearchEnabled) {
             console.log(`🔍 [SEARCH][${searchId}] Filtering messages during user message refresh`);
@@ -1155,7 +1171,56 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       const searchDuration = Date.now() - searchStartTime;
       console.log(`🔍 [SEARCH][${searchId}] Search operation took ${searchDuration}ms, keeping internet search mode active until refresh`);
       
-      // ENHANCED: Mark all recent messages as search results to prevent them from being filtered
+      // Add search results as an assistant message
+      if (extractedResults.length > 0) {
+        try {
+          if (chatIdToUse) {
+            console.log(`🔍 [SEARCH][${searchId}] Adding search results as assistant message to chat ${chatIdToUse}`);
+            
+            // Format search results for display
+            const formattedResults = extractedResults.map((result, index) => {
+              return `${index + 1}. **[${result.title}](${result.url})**\n${result.snippet}\n`;
+            }).join('\n');
+            
+            // Add the search results as an assistant message
+            // Use the correct type format expected by chatService.addMessage
+            const searchResultMessage = {
+              role: 'assistant' as 'assistant', // Type assertion to match expected role type
+              content: `🔍 **Search Results for "${query}"**\n\n${formattedResults}`,
+              searchModeActive: true // Use the supported property
+            };
+            
+            // Add the search results message to the chat
+            await chatService.addMessage(chatIdToUse, searchResultMessage);
+            console.log(`✅ [SEARCH][${searchId}] Successfully added search results message to chat`);
+            
+            // Get the latest messages including our new search results
+            const latestChatResponse = await chatService.getChat(chatIdToUse);
+            if (latestChatResponse?.data) {
+              // Mark the search result messages with isSearchResult flag
+              const updatedMessages = latestChatResponse.data.messages.map(msg => {
+                // If this is a recent assistant message that contains search results, mark it
+                if (msg.role === 'assistant' && 
+                    msg.content && 
+                    msg.content.includes('Search Results for') && 
+                    new Date(msg.created_at).getTime() > Date.now() - 30000) {
+                  return {...msg, isSearchResult: true};
+                }
+                return msg;
+              });
+              
+              // Update the current chat with the modified messages
+              const updatedChat = {...latestChatResponse.data, messages: updatedMessages};
+              setCurrentChat(updatedChat);
+              console.log(`✅ [SEARCH][${searchId}] Updated current chat with search results and marked them`);
+            }
+          }
+        } catch (error) {
+          console.error(`❌ [SEARCH][${searchId}] Error adding search results message:`, error);
+        }
+      }
+      
+      // Mark any existing assistant messages as search results to prevent filtering
       console.log(`🔍 [SEARCH][${searchId}] Marking recent messages as search results to prevent filtering`);
       
       try {
@@ -1211,9 +1276,18 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
             // Double-check that search results are preserved after filtering
             const finalCheckResponse = await chatService.getChat(chatIdToUse);
             if (finalCheckResponse?.data?.messages) {
-              const searchResultCount = finalCheckResponse.data.messages.filter(msg => msg.isSearchResult === true).length;
+              const searchResultCount = finalCheckResponse.data.messages.filter(msg => 
+                msg.isSearchResult === true || 
+                (msg.content && msg.content.includes('Search Results for'))
+              ).length;
               console.log(`🔍 [SEARCH][${searchId}] Final check: ${searchResultCount} search result messages preserved`);
+              
+              // Update the current chat one last time to ensure we have the latest state
+              setCurrentChat(finalCheckResponse.data);
             }
+            
+            // Reset search state
+            setIsSearching(false);
             
             // Only reset internetSearchEnabled after the final refresh
             // This avoids the critical bug where searchMode is disabled too early
@@ -1223,11 +1297,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (finalError) {
           console.error(`❌ [SEARCH][${searchId}] Error in final refresh:`, finalError);
           // Also reset search mode in case of error
+          setIsSearching(false);
           setInternetSearchEnabled(false);
         }
-      }, 500); // Increased timeout to ensure all operations complete
+      }, 1000); // Increased timeout to ensure all operations complete
       
       console.log(`🏁 [SEARCH][${searchId}] Loading state reset to false`);
+      setLoading(false); // Explicitly reset loading state
       console.log(`🏁 [SEARCH][${searchId}] Search operation COMPLETED in ${searchDuration}ms`);
       
       // CRITICAL: We're NOT disabling internet search mode here anymore
@@ -1261,6 +1337,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     // Set search mode on when performing a search
     setInternetSearchEnabled(true);
     setIsSearching(true);
+    setSearchQuery(query); // Store the search query for reference
+    
+    // Open the search sidebar to show results
+    if (!isSearchSidebarOpen) {
+      setIsSearchSidebarOpen(true);
+      console.log('[ChatContext][performSearch] Opening search sidebar to show results');
+    }
     
     try {
       console.log('[ChatContext][performSearch] Starting search for:', query);
@@ -1272,11 +1355,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('[ChatContext][performSearch] Error in search:', error);
       setInternetSearchEnabled(false);
       setIsSearching(false); // Make sure to reset search state
+      setLoading(false); // Also reset loading state in case of error
       return [];
     }
-    
-    // Explicitly return the search results array to satisfy TypeScript
-    return Array.isArray(searchResults) ? searchResults : [];
   };
 
   // Return context provider with all state and functions

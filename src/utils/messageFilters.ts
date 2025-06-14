@@ -16,15 +16,32 @@ export interface FilterableMessage {
  * Process incoming messages and filter out AI knowledge cutoff disclaimers
  * specifically targeting responses that mention knowledge cutoff or inability to access recent information
  */
+/**
+ * This function is the primary filter for AI disclaimer messages.
+ * When internet search is enabled, it aggressively filters out any message
+ * that resembles a knowledge cutoff disclaimer.
+ */
 export const filterDisclaimerMessages = (
   msg: FilterableMessage | null,
   internetSearchEnabled: boolean
 ): FilterableMessage | null => {
-  // For search results, immediately filter out the first assistant message if it's not marked as a search result
-  // This is the most aggressive approach to ensure the knowledge cutoff message never appears
-  if (internetSearchEnabled && msg && msg.role === 'assistant' && !msg.isSearchResult) {
-    console.debug(`🚫 [DEBUG][MessageFilter] SUPPRESSING non-search result assistant message during internet search`);  
-    return null;
+  // HIGHEST PRIORITY FILTER: When internet search is enabled, ONLY allow messages explicitly marked as search results
+  // This is the most aggressive approach and will ensure ONLY search results are displayed
+  if (internetSearchEnabled && msg && msg.role === 'assistant') {
+    // If the message is not explicitly marked as a search result, filter it out completely
+    if (!msg.isSearchResult) {
+      console.debug(`🚫 [DEBUG][MessageFilter] SUPPRESSING non-search result assistant message during internet search`);  
+      console.debug(`💥 [DEBUG][MessageFilter] CRITICAL: Blocked non-search result message with ID: ${msg.id}`);  
+      return null;
+    }
+    
+    // Even for search result messages, check for disclaimer content and filter if found
+    if (msg.content.includes("Sorry, as an AI") || 
+        msg.content.includes("I don't have real-time data") ||
+        msg.content.includes("As of my last update")) {
+      console.debug(`🚫 [DEBUG][MessageFilter] SUPPRESSING search result with disclaimer content`);  
+      return null;
+    }
   }
   // Debug log: Track when filter is called
   console.debug(`🔍 [DEBUG][MessageFilter] Processing message: ${msg?.id || 'null'}, internetSearchEnabled=${internetSearchEnabled}`);
@@ -35,22 +52,51 @@ export const filterDisclaimerMessages = (
     return msg;
   }
   
-  // AGGRESSIVE FILTERING: When internet search is enabled, apply strict filtering to AI disclaimer messages
+  // ULTRA-AGGRESSIVE FILTERING: When internet search is enabled, block ALL disclaimer messages
   if (internetSearchEnabled) {
-    // Filter out common knowledge cutoff disclaimers
+    // EXACT MATCH for the specific disclaimer seen in the screenshots
+    // This is the highest priority filter that will catch the exact message shown in the screenshots
+    if (msg.content.includes("Sorry, as an AI developed by OpenAI") ||
+        msg.content.includes("I don't have real-time data") ||
+        msg.content.includes("As of my last update") ||
+        msg.content.includes("Please check the latest and most accurate information") ||
+        (msg.content.includes("Sorry") && msg.content.includes("OpenAI") && msg.content.includes("real-time data"))) {
+      console.debug(`🚫 [DEBUG][MessageFilter] BLOCKING EXACT MATCH disclaimer message: "${msg.content.substring(0, 100)}..."`);
+      console.debug(`💥 [DEBUG][MessageFilter] CRITICAL: Blocked exact match disclaimer`);
+      return null;
+    }
+    
+    // Filter out common knowledge cutoff disclaimers - expanded patterns
     const knowledgeCutoffPatterns = [
+      // Exact patterns from the screenshot
+      /Sorry, as an AI developed by OpenAI/i,
+      /I don't have real-time data or future predictions abilities/i,
+      /As of my last update in .* I can't provide/i,
+      /Please check the latest and most accurate information from a reliable source/i,
+      
+      // General patterns
       /my (knowledge|information|training)( data| corpus)? (is limited to|only goes up to|cuts off|has a cutoff|only includes information up to)/i,
       /my (knowledge|training|data) (cutoff|cut-off|cut off)/i,
       /I don't have (access to|information about) (events|information|data|knowledge) (after|beyond|later than)/i,
       /I (cannot|can't) (browse|search|access) the (internet|web)/i,
       /I (don't|do not) have the ability to (search|browse|access) the (internet|web)/i,
       /I'm (not able to|unable to) (search|browse|access) the (internet|web)/i,
-      /I (don't|do not) have (real-time|current|up-to-date|the latest) information/i
+      /I (don't|do not) have (real-time|current|up-to-date|the latest) information/i,
+      /As an (AI|artificial intelligence)( model| assistant)?, I (don't|do not|cannot|can't) (access|browse|search)/i,
+      /I (don't|do not) have access to real-time information/i,
+      /My (knowledge|information|training) (is limited to|only includes|has a cutoff|cuts off at)/i
     ];
     
     // Check if the message matches any knowledge cutoff pattern
     if (knowledgeCutoffPatterns.some(pattern => pattern.test(msg.content))) {
       console.debug(`🛑 [DEBUG][MessageFilter] BLOCKING knowledge cutoff disclaimer: "${msg.content.substring(0, 100)}..."`);
+      return null;
+    }
+    
+    // Block any message that starts with an apology and mentions knowledge/data limitations
+    if (/^(Sorry|I apologize|I'm sorry)/i.test(msg.content.trim()) && 
+        (/knowledge|information|data|update|access|real-time|current/i.test(msg.content))) {
+      console.debug(`🛑 [DEBUG][MessageFilter] BLOCKING apology + knowledge limitation message`);
       return null;
     }
   }

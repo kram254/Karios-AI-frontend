@@ -17,6 +17,7 @@ import { generateTitleFromMessage } from '../utils/titleGenerator';
 import { Agent } from '../types/agent';
 import { useLanguage } from './LanguageContext';
 import { checkApiEndpoint } from '../utils/apiUtils';
+import { filterDisclaimerMessages } from '../utils/messageFilters';
 
 interface Attachment {
   id?: string;
@@ -902,8 +903,28 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (chatIdToUse) {
           const refreshResponse = await chatService.getChat(chatIdToUse);
           if (refreshResponse?.data) {
-            setCurrentChat(refreshResponse.data);
-            console.log(`🏁 [SEARCH][${searchId}] Successfully refreshed chat ${chatIdToUse} with ${refreshResponse.data.messages?.length} messages`);
+            // Apply aggressive filtering to remove AI disclaimer messages
+            const filteredChat = {
+              ...refreshResponse.data,
+              messages: refreshResponse.data.messages.filter(msg => {
+                // Skip filtering for non-assistant messages
+                if (msg.role !== 'assistant') return true;
+                
+                // Filter out any assistant message that contains disclaimer text
+                if (msg.content.includes("Sorry, as an AI developed by OpenAI") ||
+                    msg.content.includes("I don't have real-time data") ||
+                    msg.content.includes("As of my last update")) {
+                  console.log(`🚫 [SEARCH][${searchId}] FILTERED OUT disclaimer message: "${msg.content.substring(0, 50)}..."`);
+                  return false;
+                }
+                
+                // Keep all other messages
+                return true;
+              })
+            };
+            
+            setCurrentChat(filteredChat);
+            console.log(`🏁 [SEARCH][${searchId}] Successfully refreshed chat ${chatIdToUse} with ${filteredChat.messages?.length} messages after filtering`);
           }
         }
       } catch (refreshError) {

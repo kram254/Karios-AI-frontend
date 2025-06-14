@@ -904,18 +904,28 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const refreshResponse = await chatService.getChat(chatIdToUse);
           if (refreshResponse?.data) {
             // Apply aggressive filtering to remove AI disclaimer messages
+            // Use our imported filterDisclaimerMessages utility for consistent filtering
             const filteredChat = {
               ...refreshResponse.data,
               messages: refreshResponse.data.messages.filter(msg => {
-                // Skip filtering for non-assistant messages
-                if (msg.role !== 'assistant') return true;
-                
-                // Filter out any assistant message that contains disclaimer text
-                if (msg.content.includes("Sorry, as an AI developed by OpenAI") ||
-                    msg.content.includes("I don't have real-time data") ||
-                    msg.content.includes("As of my last update")) {
-                  console.log(`🚫 [SEARCH][${searchId}] FILTERED OUT disclaimer message: "${msg.content.substring(0, 50)}..."`);
-                  return false;
+                // First apply our imported filterDisclaimerMessages utility
+                // This ensures consistent filtering across the application
+                if (msg.role === 'assistant') {
+                  // Use the imported utility to check if this message should be filtered
+                  const filteredMsg = filterDisclaimerMessages(msg, true); // Force internetSearchEnabled to true
+                  if (filteredMsg === null) {
+                    console.log(`🚫 [SEARCH][${searchId}] FILTERED OUT by utility: "${msg.content.substring(0, 50)}..."`);
+                    return false;
+                  }
+                  
+                  // Additional direct filtering for the specific message shown in the UI
+                  if (msg.content.includes("I'm sorry, but as an AI") ||
+                      msg.content.includes("I can't predict future events") ||
+                      msg.content.trim().startsWith("I'm sorry") ||
+                      (msg.content.toLowerCase().includes("sorry") && msg.content.includes("AI"))) {
+                    console.log(`💥 [SEARCH][${searchId}] CRITICAL: Blocked exact disclaimer message from UI`);
+                    return false;
+                  }
                 }
                 
                 // Keep all other messages

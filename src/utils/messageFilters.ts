@@ -38,8 +38,11 @@ export const filterDisclaimerMessages = (
     // Even for search result messages, check for disclaimer content and filter if found
     if (msg.content.includes("Sorry, as an AI") || 
         msg.content.includes("I don't have real-time data") ||
-        msg.content.includes("As of my last update")) {
+        msg.content.includes("As of my last update") ||
+        msg.content.includes("I'm sorry, but as an AI") ||
+        msg.content.includes("I can't predict future events")) {
       console.debug(`🚫 [DEBUG][MessageFilter] SUPPRESSING search result with disclaimer content`);  
+      console.debug(`💥 [DEBUG][MessageFilter] CRITICAL: Blocked exact disclaimer from UI: "${msg.content.substring(0, 100)}..."`);
       return null;
     }
   }
@@ -53,6 +56,7 @@ export const filterDisclaimerMessages = (
   }
   
   // ULTRA-AGGRESSIVE FILTERING: When internet search is enabled, block ALL disclaimer messages
+  // This is the primary defense against AI knowledge cutoff disclaimers
   if (internetSearchEnabled) {
     // EXACT MATCH for the specific disclaimer seen in the screenshots
     // This is the highest priority filter that will catch the exact message shown in the screenshots
@@ -60,6 +64,10 @@ export const filterDisclaimerMessages = (
         msg.content.includes("I don't have real-time data") ||
         msg.content.includes("As of my last update") ||
         msg.content.includes("Please check the latest and most accurate information") ||
+        msg.content.includes("I'm sorry, but as an AI") ||
+        msg.content.includes("I can't predict future events") ||
+        msg.content.trim().startsWith("I'm sorry") ||
+        (msg.content.includes("Sorry") && msg.content.includes("AI")) ||
         (msg.content.includes("Sorry") && msg.content.includes("OpenAI") && msg.content.includes("real-time data"))) {
       console.debug(`🚫 [DEBUG][MessageFilter] BLOCKING EXACT MATCH disclaimer message: "${msg.content.substring(0, 100)}..."`);
       console.debug(`💥 [DEBUG][MessageFilter] CRITICAL: Blocked exact match disclaimer`);

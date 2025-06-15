@@ -33,23 +33,10 @@ export const filterDisclaimerMessages = (
   // Debug log: Track when filter is called
   console.debug(`🔍 [DEBUG][MessageFilter] Processing message: ${msg.id || 'null'}, internetSearchEnabled=${internetSearchEnabled}`);
   
-  // Check if this message was received during internet search mode
-  // This ensures messages are consistently filtered even if internet search is later disabled
-  const wasReceivedDuringSearch = 
-    (msg.metadata && typeof msg.metadata === 'object' && 'wasReceivedDuringSearch' in msg.metadata) ? 
-    !!msg.metadata.wasReceivedDuringSearch : false;
-    
-  // If internet search is not currently enabled AND this message wasn't received during search,
-  // then don't filter anything
-  if (!internetSearchEnabled && !wasReceivedDuringSearch) {
-    console.debug(`⏩ [DEBUG][MessageFilter] Internet search not enabled and message not from search mode, skipping filtering`);
-    return msg;
-  }
-  
-  // Log when we're filtering a message that was received during search even though search is now disabled
-  if (!internetSearchEnabled && wasReceivedDuringSearch) {
-    console.debug(`🔄 [DEBUG][MessageFilter] Internet search is disabled but filtering message from search mode`);
-  }
+  // Always filter disclaimer messages regardless of internet search state
+  // This ensures consistent behavior across all chats
+  // Log the filtering operation
+  console.debug(`🔍 [DEBUG][MessageFilter] Always filtering disclaimer messages regardless of internet search state`);
   
   // PRESERVE SEARCH RESULTS: Always keep messages with [SEARCH_RESULTS] tag or isSearchResult flag
   if (msg.isSearchResult === true || 

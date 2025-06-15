@@ -78,6 +78,7 @@ interface ChatContextType {
   isSearchSidebarOpen: boolean;
   toggleSearchSidebar: () => void;
   internetSearchEnabled: boolean; // Indicates if internet search is currently active
+  toggleInternetSearch: (newState?: boolean) => void; // Function to toggle internet search with persistence
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -99,10 +100,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
   const [internetSearchEnabled, setInternetSearchEnabled] = useState(false); // Track if internet search is active
+  const [internetEnabledChatIds, setInternetEnabledChatIds] = useState<Set<string>>(new Set()); // Track which chats have had internet search enabled
 
   useEffect(() => {
     loadChats();
   }, []);
+  
+  // Update internet search state when current chat changes
+  useEffect(() => {
+    if (currentChat?.id) {
+      // Check if this chat has previously had internet search enabled
+      const shouldEnableInternetSearch = internetEnabledChatIds.has(currentChat.id);
+      
+      if (shouldEnableInternetSearch) {
+        console.log(`[ChatContext] Enabling internet search for chat ${currentChat.id} based on previous usage`);
+        toggleInternetSearch(true);
+      }
+    }
+  }, [currentChat?.id, internetEnabledChatIds]);
 
   const loadChats = async () => {
     try {
@@ -419,7 +434,18 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // Set searching state to true to show loading indicators
     setIsSearching(true);
-    setInternetSearchEnabled(true); // Mark that internet search is active
+    toggleInternetSearch(true); // Mark that internet search is active
+    
+    // If we have a current chat, add its ID to the set of internet-enabled chats
+    if (currentChat?.id) {
+      setInternetEnabledChatIds(prevIds => {
+        const newIds = new Set(prevIds);
+        newIds.add(currentChat.id);
+        console.log(`[ChatContext][performSearch][${searchId}] Added chat ${currentChat.id} to internet-enabled chats`);
+        return newIds;
+      });
+    }
+    
     console.log(`[ChatContext][performSearch][${searchId}] Internet search enabled for query: "${query}"`);
     
     // CRITICAL: Store the chat ID at the beginning of the process
@@ -434,10 +460,21 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const chatTitle = `Search: ${query.slice(0, 30)}${query.length > 30 ? '...' : ''}`;
       const newChat = await createNewChat(chatTitle);
       
-      if (newChat && newChat.id) {
+      if (newChat) {
         chatToUse = newChat;
         chatIdToUse = newChat.id;
         setCurrentChat(newChat); // Important: update the current chat in state
+        
+        // Add the new chat ID to the set of internet-enabled chats
+        if (chatIdToUse) {
+          const chatId = chatIdToUse; // Create a stable reference to the ID
+          setInternetEnabledChatIds(prevIds => {
+            const newIds = new Set(prevIds);
+            newIds.add(chatId);
+            console.log(`[ChatContext][performSearch][${searchId}] Added new chat ${chatId} to internet-enabled chats`);
+            return newIds;
+          });
+        }
         
         // Refresh the chats list
         const chatsResponse = await chatService.getChats();
@@ -450,7 +487,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log(`[ChatContext][performSearch][${searchId}] New chat created with ID: ${chatIdToUse}`);
       } else {
         console.error(`[ChatContext][performSearch][${searchId}] Failed to create new chat`);
-        setInternetSearchEnabled(false);
+        // Only disable internet search if we don't have a current chat or if it's a new chat
+        // that hasn't been added to the internet-enabled chats list yet
+        toggleInternetSearch(false);
         setIsSearching(false);
         return;
       }
@@ -896,7 +935,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       // Always set isSearching to false when search completes or fails
       setIsSearching(false);
-      setInternetSearchEnabled(false); // CRITICAL: Reset internet search flag to prevent duplicate chats
+      
+      // CRITICAL: Check if the current chat ID is in the set of internet-enabled chats
+      // If it is, keep internet search enabled for this chat
+      if (chatIdToUse && internetEnabledChatIds.has(chatIdToUse)) {
+        console.log(`[ChatContext][performSearch][${searchId}] Keeping internet search enabled for chat ${chatIdToUse}`);
+        // Internet search remains enabled for this chat
+      } else {
+        console.log(`[ChatContext][performSearch][${searchId}] Resetting internet search flag`);
+        toggleInternetSearch(false); // Reset internet search flag to prevent duplicate chats
+      }
       
       // Calculate search duration using the searchStartTime from the beginning of the function
       const searchDuration = Date.now() - searchStartTime;
@@ -944,14 +992,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 
                 // For non-search result assistant messages, apply filtering
                 if (msg.role === 'assistant') {
-                  // Store a flag on the message to track if it was received during internet search mode
-                  // This ensures messages are consistently filtered even if internet search is later disabled
-                  const wasReceivedDuringSearch = 
-                    (msg.metadata && typeof msg.metadata === 'object' && 'wasReceivedDuringSearch' in msg.metadata) ? 
-                    !!msg.metadata.wasReceivedDuringSearch : internetSearchEnabled;
-                  
                   // PERMANENT SUPPRESSION: Always filter out AI disclaimer messages regardless of current search state
-                  // This ensures messages stay filtered even when internet search is toggled off
                   if (msg.content.includes("I'm sorry, but as an AI") ||
                       msg.content.includes("I can't predict future events") ||
                       msg.content.trim().startsWith("I'm sorry") ||
@@ -964,26 +1005,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     return false;
                   }
                   
-                  // Use the imported utility as a fallback filter
-                  // Pass wasReceivedDuringSearch instead of current internetSearchEnabled state
-                  // This ensures consistent filtering behavior regardless of current search state
-                  const filteredMsg = filterDisclaimerMessages(msg, wasReceivedDuringSearch);
+                  // Always use the filter utility regardless of internet search state
+                  // This ensures consistent filtering behavior for all chats
+                  const filteredMsg = filterDisclaimerMessages(msg, true);
                   if (filteredMsg === null) {
                     console.log(`🚫 [SEARCH][${searchId}] FILTERED OUT by utility: "${msg.content.substring(0, 50)}..."`);
                     return false;
-                  }
-                  
-                  // Preserve the wasReceivedDuringSearch metadata when returning the filtered message
-                  // This ensures the metadata persists through chat refreshes
-                  if (wasReceivedDuringSearch && filteredMsg && (!filteredMsg.metadata || 
-                      (typeof filteredMsg.metadata === 'object' && !('wasReceivedDuringSearch' in filteredMsg.metadata)))) {
-                    // Add or update metadata to preserve the wasReceivedDuringSearch flag
-                    const updatedMetadata = typeof filteredMsg.metadata === 'object' ? 
-                      { ...filteredMsg.metadata, wasReceivedDuringSearch: true } : 
-                      { wasReceivedDuringSearch: true };
-                    
-                    // Update the message with the preserved metadata
-                    filteredMsg.metadata = updatedMetadata;
                   }
                 }
                 
@@ -1013,6 +1040,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Function to toggle internet search that respects the persistent state
+  const toggleInternetSearch = (newState?: boolean) => {
+    // If explicitly setting to false, check if the current chat has had internet search enabled
+    if (newState === false && currentChat?.id && internetEnabledChatIds.has(currentChat.id)) {
+      console.log(`[ChatContext] Cannot disable internet search for chat ${currentChat.id} as it has been previously enabled`);
+      // Don't allow disabling internet search for this chat
+      return;
+    }
+    
+    // Otherwise, set the state as requested
+    setInternetSearchEnabled(newState !== undefined ? newState : !internetSearchEnabled);
+  };
+  
   // Return the chat context provider
   return (
     <ChatContext.Provider value={{
@@ -1038,7 +1078,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       searchQuery,
       isSearchSidebarOpen,
       toggleSearchSidebar,
-      internetSearchEnabled // Add to context so components can access this
+      internetSearchEnabled, // Add to context so components can access this
+      toggleInternetSearch // Add the new function to toggle internet search
     }}>
       {children}
     </ChatContext.Provider>

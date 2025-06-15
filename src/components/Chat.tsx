@@ -41,7 +41,8 @@ const Chat: React.FC = () => {
     setCurrentChat, 
     createNewChat,
     internetSearchEnabled, // Get the internet search status from context
-    toggleSearchMode, // Add this to fix the TypeScript errors
+    toggleInternetSearch, // Use the new function that respects persistent internet search state
+    toggleSearchMode // Keep this for backward compatibility
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -409,6 +410,7 @@ const Chat: React.FC = () => {
                       
                       // Toggle search mode using the context function
                       toggleSearchMode();
+                      toggleInternetSearch(!internetSearchEnabled);
                       console.log('🌐 INTERNET SEARCH READY - Type a search query and press Send to search the web');
                     }}
                     aria-pressed={isSearchMode}
@@ -770,7 +772,11 @@ const Chat: React.FC = () => {
             <button 
               type="button" 
               className={`search-text-button ${isSearchMode ? 'search-active' : ''}`}
-              onClick={toggleSearchMode}
+              onClick={() => {
+                // Use both toggles to maintain compatibility
+                toggleSearchMode();
+                toggleInternetSearch(!internetSearchEnabled);
+              }}
             >
               <Search className="w-4 h-4 mr-2" />
               Search

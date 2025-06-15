@@ -469,7 +469,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await chatService.addMessage(chatIdToUse, { 
           role: 'user', 
           content: query,
-          suppressAiResponse: true // CRITICAL: Suppress the standard AI response during search
+          suppressAiResponse: true, // CRITICAL: Suppress the standard AI response during search
+          metadata: { wasReceivedDuringSearch: true } // Add metadata to track this was during search
         });
         
         // Refresh the chat to make sure we have the latest messages
@@ -789,7 +790,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               role: 'assistant', 
               content: `[SEARCH_RESULTS] ${searchResponseMessage}`, // Prefix to help identify search results
               suppressAiResponse: true, // Prevent additional AI responses
-              isSearchResult: true // Explicitly mark as search result to prevent filtering
+              isSearchResult: true, // Explicitly mark as search result to prevent filtering
+              metadata: { wasReceivedDuringSearch: true } // Add metadata to track this was during search
             });
             
             // Now refresh the chat to get the latest messages
@@ -942,20 +944,46 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 
                 // For non-search result assistant messages, apply filtering
                 if (msg.role === 'assistant') {
-                  // Filter out AI disclaimer messages
+                  // Store a flag on the message to track if it was received during internet search mode
+                  // This ensures messages are consistently filtered even if internet search is later disabled
+                  const wasReceivedDuringSearch = 
+                    (msg.metadata && typeof msg.metadata === 'object' && 'wasReceivedDuringSearch' in msg.metadata) ? 
+                    !!msg.metadata.wasReceivedDuringSearch : internetSearchEnabled;
+                  
+                  // PERMANENT SUPPRESSION: Always filter out AI disclaimer messages regardless of current search state
+                  // This ensures messages stay filtered even when internet search is toggled off
                   if (msg.content.includes("I'm sorry, but as an AI") ||
                       msg.content.includes("I can't predict future events") ||
                       msg.content.trim().startsWith("I'm sorry") ||
-                      (msg.content.toLowerCase().includes("sorry") && msg.content.includes("AI"))) {
+                      (msg.content.toLowerCase().includes("sorry") && msg.content.includes("AI")) ||
+                      msg.content.includes("knowledge cutoff") ||
+                      msg.content.includes("I cannot browse") ||
+                      msg.content.includes("I don't have access to") ||
+                      msg.content.includes("I don't have the ability")) {
                     console.log(`💥 [SEARCH][${searchId}] CRITICAL: Blocked exact disclaimer message from UI`);
                     return false;
                   }
                   
                   // Use the imported utility as a fallback filter
-                  const filteredMsg = filterDisclaimerMessages(msg, true); // Force internetSearchEnabled to true
+                  // Pass wasReceivedDuringSearch instead of current internetSearchEnabled state
+                  // This ensures consistent filtering behavior regardless of current search state
+                  const filteredMsg = filterDisclaimerMessages(msg, wasReceivedDuringSearch);
                   if (filteredMsg === null) {
                     console.log(`🚫 [SEARCH][${searchId}] FILTERED OUT by utility: "${msg.content.substring(0, 50)}..."`);
                     return false;
+                  }
+                  
+                  // Preserve the wasReceivedDuringSearch metadata when returning the filtered message
+                  // This ensures the metadata persists through chat refreshes
+                  if (wasReceivedDuringSearch && filteredMsg && (!filteredMsg.metadata || 
+                      (typeof filteredMsg.metadata === 'object' && !('wasReceivedDuringSearch' in filteredMsg.metadata)))) {
+                    // Add or update metadata to preserve the wasReceivedDuringSearch flag
+                    const updatedMetadata = typeof filteredMsg.metadata === 'object' ? 
+                      { ...filteredMsg.metadata, wasReceivedDuringSearch: true } : 
+                      { wasReceivedDuringSearch: true };
+                    
+                    // Update the message with the preserved metadata
+                    filteredMsg.metadata = updatedMetadata;
                   }
                 }
                 

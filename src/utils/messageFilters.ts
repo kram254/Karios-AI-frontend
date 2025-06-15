@@ -33,10 +33,22 @@ export const filterDisclaimerMessages = (
   // Debug log: Track when filter is called
   console.debug(`🔍 [DEBUG][MessageFilter] Processing message: ${msg.id || 'null'}, internetSearchEnabled=${internetSearchEnabled}`);
   
-  // If internet search is not enabled, don't filter anything
-  if (!internetSearchEnabled) {
-    console.debug(`⏩ [DEBUG][MessageFilter] Internet search not enabled, skipping filtering`);
+  // Check if this message was received during internet search mode
+  // This ensures messages are consistently filtered even if internet search is later disabled
+  const wasReceivedDuringSearch = 
+    (msg.metadata && typeof msg.metadata === 'object' && 'wasReceivedDuringSearch' in msg.metadata) ? 
+    !!msg.metadata.wasReceivedDuringSearch : false;
+    
+  // If internet search is not currently enabled AND this message wasn't received during search,
+  // then don't filter anything
+  if (!internetSearchEnabled && !wasReceivedDuringSearch) {
+    console.debug(`⏩ [DEBUG][MessageFilter] Internet search not enabled and message not from search mode, skipping filtering`);
     return msg;
+  }
+  
+  // Log when we're filtering a message that was received during search even though search is now disabled
+  if (!internetSearchEnabled && wasReceivedDuringSearch) {
+    console.debug(`🔄 [DEBUG][MessageFilter] Internet search is disabled but filtering message from search mode`);
   }
   
   // PRESERVE SEARCH RESULTS: Always keep messages with [SEARCH_RESULTS] tag or isSearchResult flag
@@ -53,7 +65,8 @@ export const filterDisclaimerMessages = (
     msg.content.includes('Here are the search results') ||
     msg.content.includes('Based on my search') ||
     msg.content.includes('According to the search results') ||
-    (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult'))
+    (msg.metadata && typeof msg.metadata === 'string' && msg.metadata.includes('isSearchResult')) ||
+    (msg.metadata && typeof msg.metadata === 'object' && msg.metadata.isSearchResult === true)
   ) {
     console.debug(`✅ [DEBUG][MessageFilter] PRESERVING detected search results message: ${msg.id}`);
     // Force this message to always display by adding isSearchResult flag

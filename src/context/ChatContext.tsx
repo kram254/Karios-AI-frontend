@@ -792,8 +792,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           topWebsites.map(site => site.title).join(', ') || 'None')
         
         // Format search results for display in chat - clean format like in the second image
-        // First limit to top relevant results to not overwhelm the chat
-        const topResults = results.slice(0, 5);
+        // Show top 10 relevant results as requested by the user
+        const topResults = results.slice(0, 10);
         
         // Format the message that shows in the chat bubble with a clean header
         const searchSummary = `Here's a comprehensive overview of the ${query}, including key details about the results:`;
@@ -829,7 +829,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }).join('\n\n');
         
         // Add a footnote with search results count and view all option
-        const footnote = `\n\n*Found ${results.length} results for "${query}". Click the search button to view all results.*`;
+        const footnote = `\n\n*Found ${results.length} results for "${query}". Showing top 10 results. Click the search button to view all results.*`;
         
         // Create a clean message that matches the second image style (including the footnote)
         const searchResponseMessage = `${searchSummary}${dividerLine}${formattedResults}${footnote}`;

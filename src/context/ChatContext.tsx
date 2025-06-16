@@ -793,7 +793,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Format search results for display in chat - clean format like in the second image
         // Show top 10 relevant results as requested by the user
-        const topResults = results.slice(0, 10);
+        console.log(`🔍 [SEARCH][${searchId}] Total results available: ${results.length}`);
+        
+        // Ensure we get up to 10 results, but don't try to show more than we have
+        const maxResults = Math.min(10, results.length);
+        const topResults = results.slice(0, maxResults);
+        console.log(`🔍 [SEARCH][${searchId}] Displaying ${topResults.length} results`);
         
         // Format the message that shows in the chat bubble with a clean header
         const searchSummary = `Here's a comprehensive overview of the ${query}, including key details about the results:`;

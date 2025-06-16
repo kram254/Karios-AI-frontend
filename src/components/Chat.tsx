@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
-import { MessageSquare, Send, Plus, Search, X } from "lucide-react";
+import { MessageSquare, Send, Plus, Search, X, Globe } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import { motion } from "framer-motion";
@@ -778,7 +778,7 @@ const Chat: React.FC = () => {
                 toggleInternetSearch(!internetSearchEnabled);
               }}
             >
-              <Search className="w-4 h-4 mr-2" />
+              <Globe className="w-4 h-4 mr-2" />
               Search
             </button>
           </div>

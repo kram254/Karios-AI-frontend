@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import './AgentCreationWizard.css';
 import './dropdownFix.css';
 import { KnowledgeSelector } from '../knowledge/KnowledgeSelector';
-import { buildAgentSystemPrompt, ROLE_SYSTEM_PROMPTS } from '../../utils/agentSystemPrompts';
+import { generateSystemPrompt } from '../../utils/agentRolePrompts';
+import { AGENT_ROLE_DESCRIPTIONS, getRoleDescription } from '../../utils/agentRoleDescriptions';
 
 // Material UI components
 import Box from '@mui/material/Box';
@@ -23,7 +24,6 @@ import Checkbox from '@mui/material/Checkbox';
 import Slider from '@mui/material/Slider';
 import Tooltip from '@mui/material/Tooltip';
 import InputAdornment from '@mui/material/InputAdornment';
-import RefreshIcon from '@mui/icons-material/Refresh';
 
 // Material UI icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -72,10 +72,7 @@ export default function AgentCreationWizard({
         language: 'en',
         mode: AgentMode.TEXT,
         response_style: 0.5,
-        response_length: 150,
-        config: {
-            system_prompt: buildAgentSystemPrompt(AgentRole.CUSTOMER_SUPPORT)
-        }
+        response_length: 150
     });
     
     const [selectedKnowledgeIds, setSelectedKnowledgeIds] = useState<number[]>([]);
@@ -84,7 +81,6 @@ export default function AgentCreationWizard({
     const [languageSelectOpen, setLanguageSelectOpen] = useState(false);
     const [customRole, setCustomRole] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [systemPromptEdited, setSystemPromptEdited] = useState(false);
 
     // Function to handle opening the modal
     useEffect(() => {
@@ -99,15 +95,11 @@ export default function AgentCreationWizard({
                 language: 'en',
                 mode: AgentMode.TEXT,
                 response_style: 0.5,
-                response_length: 150,
-                config: {
-                    system_prompt: buildAgentSystemPrompt(AgentRole.CUSTOMER_SUPPORT)
-                }
+                response_length: 150
             });
             setSelectedKnowledgeIds([]);
             setCustomRole(false);
             setIsLoading(false);
-            setSystemPromptEdited(false);
         }
     }, [open, initialData]);
 
@@ -127,146 +119,10 @@ export default function AgentCreationWizard({
     }, [initialData]);
 
     // Function to handle input changes
-    const handleInputChange = (field: string, value: any) => {
-        // Special handling for role changes to update system prompt
-        if (field === 'ai_role' && !systemPromptEdited) {
-            const newRole = value as AgentRole;
-            const customRoleDescription = formData.custom_role || '';
-            const responseStyle = formData.response_style || 0.5;
-            const responseLength = formData.response_length || 150;
-            
-            // Generate new system prompt based on role
-            const newSystemPrompt = buildAgentSystemPrompt(
-                newRole, 
-                customRoleDescription,
-                responseStyle,
-                responseLength
-            );
-            
-            setFormData(prev => ({
-                ...prev,
-                [field]: value,
-                config: {
-                    ...prev.config,
-                    system_prompt: newSystemPrompt
-                }
-            }));
-            
-            // Update parent component
-            onDataChange({
-                ...formData,
-                [field]: value,
-                config: {
-                    ...formData.config,
-                    system_prompt: newSystemPrompt
-                }
-            });
-        } 
-        // Special handling for response style and length to update system prompt
-        else if ((field === 'response_style' || field === 'response_length') && !systemPromptEdited) {
-            const role = formData.ai_role as AgentRole || AgentRole.CUSTOMER_SUPPORT;
-            const customRoleDescription = formData.custom_role || '';
-            const responseStyle = field === 'response_style' ? value : formData.response_style || 0.5;
-            const responseLength = field === 'response_length' ? value : formData.response_length || 150;
-            
-            // Generate new system prompt based on updated style/length
-            const newSystemPrompt = buildAgentSystemPrompt(
-                role, 
-                customRoleDescription,
-                responseStyle,
-                responseLength
-            );
-            
-            setFormData(prev => ({
-                ...prev,
-                [field]: value,
-                config: {
-                    ...prev.config,
-                    system_prompt: newSystemPrompt
-                }
-            }));
-            
-            // Update parent component
-            onDataChange({
-                ...formData,
-                [field]: value,
-                config: {
-                    ...formData.config,
-                    system_prompt: newSystemPrompt
-                }
-            });
-        }
-        // Special handling for custom role description to update system prompt
-        else if (field === 'custom_role' && !systemPromptEdited && formData.ai_role === AgentRole.CUSTOM) {
-            const customRoleDescription = value;
-            const responseStyle = formData.response_style || 0.5;
-            const responseLength = formData.response_length || 150;
-            
-            // Generate new system prompt based on custom role description
-            const newSystemPrompt = buildAgentSystemPrompt(
-                AgentRole.CUSTOM, 
-                customRoleDescription,
-                responseStyle,
-                responseLength
-            );
-            
-            setFormData(prev => ({
-                ...prev,
-                [field]: value,
-                config: {
-                    ...prev.config,
-                    system_prompt: newSystemPrompt
-                }
-            }));
-            
-            // Update parent component
-            onDataChange({
-                ...formData,
-                [field]: value,
-                config: {
-                    ...formData.config,
-                    system_prompt: newSystemPrompt
-                }
-            });
-        }
-        // Handle system prompt direct edits
-        else if (field === 'system_prompt') {
-            setSystemPromptEdited(true);
-            setFormData(prev => ({
-                ...prev,
-                config: {
-                    ...prev.config,
-                    system_prompt: value
-                }
-            }));
-            
-            // Update parent component
-            onDataChange({
-                ...formData,
-                config: {
-                    ...formData.config,
-                    system_prompt: value
-                }
-            });
-        }
-        // Default handling for other fields
-        else {
-            setFormData(prev => ({
-                ...prev,
-                [field]: value
-            }));
-            
-            // Update parent component
-            onDataChange({
-                ...formData,
-                [field]: value
-            });
-        }
-        
-        // Handle special case for custom role
-        if (field === 'ai_role') {
-            setCustomRole(value === AgentRole.CUSTOM);
-        }
+    const handleInputChange = (field: keyof Agent, value: any) => {
+        const updatedData = { ...formData, [field]: value };
+        setFormData(updatedData);
+        onDataChange(updatedData);
     };
     
     // Function to handle submit
@@ -322,6 +178,41 @@ export default function AgentCreationWizard({
             setCustomRole(false);
         }
     }, [formData.ai_role]);
+    
+    // Automatically generate and set system prompt when relevant fields change
+    useEffect(() => {
+        // Only generate if we have the necessary data
+        if (formData.ai_role) {
+            const systemPrompt = generateSystemPrompt(
+                formData.ai_role,
+                formData.custom_role, // Pass custom role description if available
+                formData.response_style,
+                formData.response_length
+            );
+            
+            // Update the form data with the generated system prompt
+            setFormData(prevData => {
+                // Create a properly typed config object
+                const updatedConfig: AgentConfig = {
+                    ...(prevData.config || {}),
+                    system_prompt: systemPrompt,
+                    // Ensure required fields have default values if they don't exist
+                    language: prevData.config?.language || 'en',
+                    mode: prevData.config?.mode || AgentMode.TEXT,
+                    response_style: prevData.config?.response_style || 0.5,
+                    response_length: prevData.config?.response_length || 150
+                };
+                
+                // Return the updated form data
+                return {
+                    ...prevData,
+                    config: updatedConfig
+                };
+            });
+            
+            console.log('Generated system prompt for role:', formData.ai_role);
+        }
+    }, [formData.ai_role, formData.custom_role, formData.response_style, formData.response_length]);
 
     // Add console logs for debugging
     useEffect(() => {
@@ -605,9 +496,10 @@ export default function AgentCreationWizard({
                                                 '& .MuiMenuItem-root.Mui-selected': {
                                                     bgcolor: 'rgba(0, 243, 255, 0.15)',
                                                 },
-                                                maxHeight: 300,
+                                                maxHeight: 400,
                                                 overflow: 'auto',
-                                                mt: 1
+                                                mt: 1,
+                                                width: 400
                                             }
                                         },
                                         slotProps: {
@@ -644,12 +536,52 @@ export default function AgentCreationWizard({
                                         },
                                     }}
                                 >
-                                    <MenuItem value={AgentRole.CUSTOMER_SUPPORT}>Customer Support</MenuItem>
-                                    <MenuItem value={AgentRole.SALES_ASSISTANT}>Sales Assistant</MenuItem>
-                                    <MenuItem value={AgentRole.TECHNICAL_SUPPORT}>Technical Support</MenuItem>
-                                    <MenuItem value={AgentRole.CONSULTING}>Consulting Services</MenuItem>
-                                    <MenuItem value={AgentRole.SALES_SERVICES}>Sales Services</MenuItem>
-                                    <MenuItem value={AgentRole.CUSTOM}>Custom...</MenuItem>
+                                    {Object.values(AgentRole).map((role) => {
+                                        const roleInfo = AGENT_ROLE_DESCRIPTIONS[role];
+                                        return (
+                                            <MenuItem 
+                                                key={role} 
+                                                value={role}
+                                                sx={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'flex-start',
+                                                    padding: '12px 16px',
+                                                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                                                    '&:last-child': {
+                                                        borderBottom: 'none'
+                                                    }
+                                                }}
+                                            >
+                                                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 1 }}>
+                                                    <Typography sx={{ fontSize: '18px', mr: 1 }}>{roleInfo.icon}</Typography>
+                                                    <Typography sx={{ fontWeight: 'bold', color: '#00F3FF' }}>
+                                                        {roleInfo.title}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography sx={{ fontSize: '0.85rem', color: '#CCC', mb: 1 }}>
+                                                    {roleInfo.description}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                    {roleInfo.specialties.map((specialty, idx) => (
+                                                        <Box 
+                                                            key={idx}
+                                                            sx={{ 
+                                                                fontSize: '0.7rem', 
+                                                                bgcolor: 'rgba(0, 243, 255, 0.1)', 
+                                                                color: '#00F3FF',
+                                                                borderRadius: '4px',
+                                                                px: 1,
+                                                                py: 0.25
+                                                            }}
+                                                        >
+                                                            {specialty}
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            </MenuItem>
+                                        );
+                                    })}
                                 </Select>
                                 {formData.ai_role === AgentRole.CUSTOM && (
                                     <TextField
@@ -682,75 +614,92 @@ export default function AgentCreationWizard({
                                         }}
                                     />
                                 )}
+                                
+                                {/* Role Information Display */}
+                                {formData.ai_role && (
+                                    <Box 
+                                        sx={{
+                                            mt: 3,
+                                            p: 2,
+                                            borderRadius: 2,
+                                            bgcolor: 'rgba(0, 243, 255, 0.05)',
+                                            border: '1px solid rgba(0, 243, 255, 0.2)',
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                                            {formData.ai_role !== AgentRole.CUSTOM ? (
+                                                <>
+                                                    <Typography sx={{ fontSize: '24px', mr: 1.5 }}>
+                                                        {AGENT_ROLE_DESCRIPTIONS[formData.ai_role].icon}
+                                                    </Typography>
+                                                    <Typography variant="h6" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
+                                                        {AGENT_ROLE_DESCRIPTIONS[formData.ai_role].title}
+                                                    </Typography>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Typography sx={{ fontSize: '24px', mr: 1.5 }}>
+                                                        {AGENT_ROLE_DESCRIPTIONS[AgentRole.CUSTOM].icon}
+                                                    </Typography>
+                                                    <Typography variant="h6" sx={{ color: '#00F3FF', fontWeight: 'bold' }}>
+                                                        {formData.custom_role || 'Custom Role'}
+                                                    </Typography>
+                                                </>
+                                            )}
+                                        </Box>
+                                        
+                                        <Typography sx={{ color: '#DDD', mb: 2 }}>
+                                            {formData.ai_role !== AgentRole.CUSTOM 
+                                                ? AGENT_ROLE_DESCRIPTIONS[formData.ai_role].description
+                                                : 'Your custom agent role with specialized functionality.'}
+                                        </Typography>
+                                        
+                                        <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 1 }}>
+                                            Key Capabilities:
+                                        </Typography>
+                                        
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                            {formData.ai_role !== AgentRole.CUSTOM 
+                                                ? AGENT_ROLE_DESCRIPTIONS[formData.ai_role].specialties.map((specialty, idx) => (
+                                                    <Box 
+                                                        key={idx}
+                                                        sx={{ 
+                                                            bgcolor: 'rgba(0, 243, 255, 0.1)', 
+                                                            color: '#FFF',
+                                                            borderRadius: '4px',
+                                                            px: 1.5,
+                                                            py: 0.5,
+                                                            fontSize: '0.85rem'
+                                                        }}
+                                                    >
+                                                        {specialty}
+                                                    </Box>
+                                                ))
+                                                : formData.custom_role ? [
+                                                    'Specialized Knowledge',
+                                                    'Custom Behavior',
+                                                    'Tailored Responses',
+                                                    'Domain Expertise'
+                                                  ].map((specialty, idx) => (
+                                                    <Box 
+                                                        key={idx}
+                                                        sx={{ 
+                                                            bgcolor: 'rgba(0, 243, 255, 0.1)', 
+                                                            color: '#FFF',
+                                                            borderRadius: '4px',
+                                                            px: 1.5,
+                                                            py: 0.5,
+                                                            fontSize: '0.85rem'
+                                                        }}
+                                                    >
+                                                        {specialty}
+                                                    </Box>
+                                                  )) : null
+                                            }
+                                        </Box>
+                                    </Box>
+                                )}
                             </FormControl>
-                            
-                            <Box sx={{ mt: 2, mb: 3 }}>
-                                <Typography variant="subtitle1" sx={{ color: '#FFFFFF', mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    System Prompt
-                                    <Tooltip title="Reset to default prompt for selected role">
-                                        <IconButton 
-                                            size="small" 
-                                            sx={{ color: systemPromptEdited ? '#00F3FF' : '#555' }}
-                                            disabled={!systemPromptEdited}
-                                            onClick={() => {
-                                                const role = formData.ai_role as AgentRole || AgentRole.CUSTOMER_SUPPORT;
-                                                const customRoleDescription = formData.custom_role || '';
-                                                const responseStyle = formData.response_style || 0.5;
-                                                const responseLength = formData.response_length || 150;
-                                                
-                                                const defaultPrompt = buildAgentSystemPrompt(
-                                                    role, 
-                                                    customRoleDescription,
-                                                    responseStyle,
-                                                    responseLength
-                                                );
-                                                
-                                                handleInputChange('system_prompt', defaultPrompt);
-                                                setSystemPromptEdited(false);
-                                            }}
-                                        >
-                                            <RefreshIcon fontSize="small" />
-                                        </IconButton>
-                                    </Tooltip>
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#AAAAAA', mb: 1, display: 'block' }}>
-                                    This prompt defines how your agent behaves and responds. It's automatically generated based on the selected role,
-                                    but you can customize it to fine-tune your agent's behavior.
-                                </Typography>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={10}
-                                    value={formData.config?.system_prompt || ''}
-                                    onChange={(e) => handleInputChange('system_prompt', e.target.value)}
-                                    variant="outlined"
-                                    placeholder="Enter system prompt..."
-                                    InputProps={{
-                                        style: { 
-                                            color: '#FFFFFF',
-                                            fontFamily: 'monospace',
-                                            fontSize: '0.85rem'
-                                        },
-                                    }}
-                                    sx={{
-                                        mt: 1,
-                                        '.MuiOutlinedInput-root': {
-                                            bgcolor: '#333',
-                                            '.MuiOutlinedInput-notchedOutline': {
-                                                borderColor: systemPromptEdited ? '#00F3FF' : '#555',
-                                            },
-                                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#00F3FF',
-                                                boxShadow: '0 0 8px rgba(0, 243, 255, 0.5)',
-                                            },
-                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                borderColor: '#00F3FF',
-                                                boxShadow: '0 0 8px rgba(0, 243, 255, 0.7)',
-                                            },
-                                        },
-                                    }}
-                                />
-                            </Box>
 
                             <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
                                 <InputLabel id="agent-mode-label" sx={{ 
@@ -1253,30 +1202,6 @@ export default function AgentCreationWizard({
                                             {formData.response_length} words
                                         </Typography>
                                     </Box>
-                                </Box>
-                            </Paper>
-                            
-                            <Paper sx={{ p: 2, bgcolor: 'rgba(0, 0, 0, 0.4)', borderRadius: 2, mt: 2 }}>
-                                <Typography variant="subtitle1" sx={{ color: '#00F3FF', mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    System Prompt
-                                    {systemPromptEdited && (
-                                        <Typography variant="caption" sx={{ color: '#00F3FF', fontStyle: 'italic' }}>
-                                            (Customized)
-                                        </Typography>
-                                    )}
-                                </Typography>
-                                <Box sx={{ bgcolor: '#222', p: 2, borderRadius: 1, maxHeight: '200px', overflow: 'auto' }}>
-                                    <Typography 
-                                        variant="body2" 
-                                        sx={{ 
-                                            color: '#FFFFFF', 
-                                            whiteSpace: 'pre-wrap',
-                                            fontFamily: 'monospace',
-                                            fontSize: '0.85rem'
-                                        }}
-                                    >
-                                        {formData.config?.system_prompt || 'No system prompt defined'}
-                                    </Typography>
                                 </Box>
                             </Paper>
                             

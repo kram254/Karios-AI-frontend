@@ -801,13 +801,31 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Add a divider line for cleaner separation
         const dividerLine = '\n\n---\n\n';
         
+        // Helper function to convert HTML tags to markdown
+        const convertHtmlToMarkdown = (text: string): string => {
+          // Replace common HTML tags with markdown equivalents
+          return text
+            .replace(/<strong>(.*?)<\/strong>/g, '**$1**') // Convert <strong> to **bold**
+            .replace(/<b>(.*?)<\/b>/g, '**$1**') // Convert <b> to **bold**
+            .replace(/<em>(.*?)<\/em>/g, '*$1*') // Convert <em> to *italic*
+            .replace(/<i>(.*?)<\/i>/g, '*$1*') // Convert <i> to *italic*
+            .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)') // Convert <a> to [text](url)
+            .replace(/<br\s*\/?>/g, '\n') // Convert <br> to newline
+            .replace(/<\/?p>/g, '\n\n') // Convert <p> to double newline
+            .replace(/<\/?[^>]+(>|$)/g, ''); // Remove any other HTML tags
+        };
+        
         // Format each result with a clean bullet point style matching image 2
         const formattedResults = topResults.map((result, index) => {
+          // Clean the title and snippet of HTML tags
+          const cleanTitle = convertHtmlToMarkdown(result.title);
+          const cleanSnippet = convertHtmlToMarkdown(result.snippet);
+          
           // Add a section header for each result type if needed
           if (index === 0) {
-            return `**${index + 1}. [${result.title}](${result.url})**\n${result.snippet}`;
+            return `**${index + 1}. [${cleanTitle}](${result.url})**\n${cleanSnippet}`;
           }
-          return `• **[${result.title}](${result.url})**\n${result.snippet}`;
+          return `• **[${cleanTitle}](${result.url})**\n${cleanSnippet}`;
         }).join('\n\n');
         
         // Add a footnote with search results count and view all option

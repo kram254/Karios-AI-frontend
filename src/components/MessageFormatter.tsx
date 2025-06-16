@@ -25,8 +25,25 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({ content, rol
       return content;
     }
     
-    // Fix double formatting issues
-    let fixed = content;
+    // Check if this is a search result message
+    const isSearchResult = content.startsWith('[SEARCH_RESULTS]');
+    
+    // Remove the [SEARCH_RESULTS] prefix if present
+    let fixed = isSearchResult ? content.replace('[SEARCH_RESULTS] ', '') : content;
+    
+    // Convert HTML tags to markdown for search results
+    if (isSearchResult) {
+      // Replace common HTML tags with markdown equivalents
+      fixed = fixed
+        .replace(/<strong>(.*?)<\/strong>/g, '**$1**') // Convert <strong> to **bold**
+        .replace(/<b>(.*?)<\/b>/g, '**$1**') // Convert <b> to **bold**
+        .replace(/<em>(.*?)<\/em>/g, '*$1*') // Convert <em> to *italic*
+        .replace(/<i>(.*?)<\/i>/g, '*$1*') // Convert <i> to *italic*
+        .replace(/<a href="(.*?)">(.*?)<\/a>/g, '[$2]($1)') // Convert <a> to [text](url)
+        .replace(/<br\s*\/?>/g, '\n') // Convert <br> to newline
+        .replace(/<\/?p>/g, '\n\n') // Convert <p> to double newline
+        .replace(/<\/?[^>]+(>|$)/g, ''); // Remove any other HTML tags
+    }
     
     // 1. Clean up multiple bold asterisks (turn ****text**** into **text**)
     fixed = fixed.replace(/\*{4,}/g, '**');

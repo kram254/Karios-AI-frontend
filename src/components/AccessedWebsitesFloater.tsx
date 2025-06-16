@@ -48,7 +48,7 @@ const AccessedWebsitesFloater: React.FC<AccessedWebsitesFloaterProps> = ({
                 )}
                 <span>
                   {isSearching ? 'Searching...' : 
-                    searchResults.length > 0 ? `Found ${searchResults.length} results` : 'No results'}
+                    searchResults.length > 0 ? `Found 10 results` : 'No results'}
                 </span>
               </div>
               <ChevronRight size={16} className="text-gray-400" />

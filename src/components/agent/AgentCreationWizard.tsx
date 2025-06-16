@@ -24,6 +24,7 @@ import Checkbox from '@mui/material/Checkbox';
 import Slider from '@mui/material/Slider';
 import Tooltip from '@mui/material/Tooltip';
 import InputAdornment from '@mui/material/InputAdornment';
+import FormGroup from '@mui/material/FormGroup';
 
 // Material UI icons
 import CloseIcon from '@mui/icons-material/Close';
@@ -31,6 +32,7 @@ import LanguageIcon from '@mui/icons-material/Language';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CheckIcon from '@mui/icons-material/Check';
+import InfoIcon from '@mui/icons-material/Info';
 
 // Define the props interface
 interface AgentCreationWizardProps {
@@ -239,6 +241,86 @@ export default function AgentCreationWizard({
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
     }, [open, currentStep, formData]);
+    
+    // Function to generate response examples based on role, style, and length settings
+    const renderResponseExample = (): React.ReactNode => {
+        // Default examples for each role
+        const roleExamples: Record<AgentRole, string> = {
+            [AgentRole.CUSTOMER_SUPPORT]: "I understand your concern with the product delivery. Let me help resolve this issue for you right away. Could you please provide your order number so I can track the status?",
+            [AgentRole.SALES_ASSISTANT]: "Based on your needs, I'd recommend our Premium package. It includes all the features you mentioned plus our enhanced support option. Would you like to see a quick demo?",
+            [AgentRole.TECHNICAL_SUPPORT]: "It looks like the error you're experiencing is related to your network configuration. Let's try a few troubleshooting steps to resolve this issue.",
+            [AgentRole.CONSULTING]: "After analyzing your current processes, I've identified three key areas for improvement that would increase efficiency by approximately 25%. Let's discuss each one in detail.",
+            [AgentRole.SALES_SERVICES]: "I noticed your team is primarily using our basic features. Upgrading to our Business tier would give you access to advanced analytics that could help with your reporting needs.",
+            [AgentRole.CUSTOM]: formData.custom_role ? `As a ${formData.custom_role}, I can provide specialized assistance tailored to your specific needs in this area.` : "I'm your custom assistant and I'll adapt my responses to your specific requirements and expertise needs."
+        };
+        
+        // Get base example for the selected role
+        let example = formData.ai_role ? roleExamples[formData.ai_role] : roleExamples[AgentRole.CUSTOMER_SUPPORT];
+        
+        // Adjust for formality based on response style
+        const style = formData.response_style || 0.5;
+        if (style <= 0.25) {
+            // More formal
+            example = example
+                .replace(/I'd/g, "I would")
+                .replace(/Let's/g, "Let us")
+                .replace(/you're/g, "you are")
+                .replace(/I'm/g, "I am");
+                
+            if (style === 0) { // Very formal
+                example = example
+                    .replace(/\./g, ".\n\n")
+                    .replace("right away", "immediately")
+                    .replace("quick demo", "comprehensive demonstration")
+                    .trim();
+            }
+        } else if (style >= 0.75) {
+            // More casual
+            example = example
+                .replace("I understand", "I see")
+                .replace("Let me help resolve", "I can fix")
+                .replace("I would recommend", "I think you'd love")
+                .replace("approximately", "about");
+                
+            if (style === 1) { // Very casual
+                example = example
+                    .replace("Could you please", "Can you")
+                    .replace("would like", "want")
+                    .replace("It looks like", "Seems like")
+                    .replace("I noticed", "I see")
+                    .trim();
+            }
+        }
+        
+        // Adjust length based on response_length
+        const length = formData.response_length || 150;
+        if (length <= 100) {
+            // Shorter response
+            example = example.split(".")[0] + ".";
+        } else if (length >= 350) {
+            // Longer response
+            const additionalContext = [
+                "I'm here to provide all the details you need.", 
+                "Our team is committed to your complete satisfaction.", 
+                "We have several additional options that might interest you as well.", 
+                "Feel free to ask any follow-up questions if you need more information."
+            ];
+            
+            const randomIndex = Math.floor(Math.random() * additionalContext.length);
+            example += " " + additionalContext[randomIndex];
+            
+            if (length >= 450) {
+                // Even longer response
+                example += " I'll be with you every step of the way to ensure all your questions are answered thoroughly and completely.";
+            }
+        }
+        
+        return (
+            <Typography sx={{ color: '#FFFFFF', whiteSpace: 'pre-line' }}>
+                {example}
+            </Typography>
+        );
+    };
     
     // Function to validate the current step
     const validateStep = (): boolean => {
@@ -905,23 +987,48 @@ export default function AgentCreationWizard({
                             </FormControl>
 
                             <Box sx={{ mt: 4, width: '100%' }}>
-                                <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
-                                    Response Style
+                                <Typography id="response-style-slider-label" gutterBottom sx={{ color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Response Style</span>
+                                    <Tooltip title="Controls how formal or casual the agent's responses will be">
+                                        <IconButton size="small" sx={{ color: '#AAAAAA' }}>
+                                            <InfoIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
                                 </Typography>
 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Formal</Typography>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Casual</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            color: (formData.response_style || 0.5) <= 0.25 ? '#00F3FF' : '#AAAAAA',
+                                            fontWeight: (formData.response_style || 0.5) <= 0.25 ? 'bold' : 'normal'
+                                        }}
+                                    >
+                                        Formal
+                                    </Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            color: (formData.response_style || 0.5) >= 0.75 ? '#00F3FF' : '#AAAAAA',
+                                            fontWeight: (formData.response_style || 0.5) >= 0.75 ? 'bold' : 'normal'
+                                        }}
+                                    >
+                                        Casual
+                                    </Typography>
                                 </Box>
-
-
 
                                 <Slider
                                     aria-labelledby="response-style-slider-label"
                                     value={formData.response_style || 0.5}
                                     onChange={(_, value) => handleInputChange('response_style', value as number)}
                                     step={0.25}
-                                    marks
+                                    marks={[
+                                        { value: 0, label: '' },
+                                        { value: 0.25, label: '' },
+                                        { value: 0.5, label: '' },
+                                        { value: 0.75, label: '' },
+                                        { value: 1, label: '' }
+                                    ]}
                                     min={0}
                                     max={1}
                                     valueLabelDisplay="auto"
@@ -936,7 +1043,12 @@ export default function AgentCreationWizard({
                                         color: '#00F3FF',
                                         '& .MuiSlider-rail': {
                                             opacity: 0.5,
-                                            backgroundColor: 'red',
+                                            backgroundColor: '#555',
+                                        },
+                                        '& .MuiSlider-track': {
+                                            height: 6,
+                                            borderRadius: 3,
+                                            backgroundImage: 'linear-gradient(to right, #0088cc, #00F3FF)',
                                         },
                                         '& .MuiSlider-mark': {
                                             backgroundColor: '#555',
@@ -958,38 +1070,112 @@ export default function AgentCreationWizard({
                                         '& .MuiSlider-valueLabel': {
                                             backgroundColor: '#00F3FF',
                                             color: '#000',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.85rem',
+                                            padding: '2px 6px',
                                         },
                                     }}
                                 />
+                                
+                                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_style || 0.5) === 0 ? 'bold' : 'normal',
+                                            color: (formData.response_style || 0.5) === 0 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Very Formal</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_style || 0.5) === 0.25 ? 'bold' : 'normal',
+                                            color: (formData.response_style || 0.5) === 0.25 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Formal</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_style || 0.5) === 0.5 ? 'bold' : 'normal',
+                                            color: (formData.response_style || 0.5) === 0.5 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Balanced</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_style || 0.5) === 0.75 ? 'bold' : 'normal',
+                                            color: (formData.response_style || 0.5) === 0.75 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Casual</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_style || 0.5) === 1 ? 'bold' : 'normal',
+                                            color: (formData.response_style || 0.5) === 1 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Very Casual</Typography>
+                                </Box>
                             </Box>
                             
 
                             <Box sx={{ mt: 4, width: '100%' }}>
-                                <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF' }}>
-                                    Response Length (words)
+                                <Typography id="response-length-slider-label" gutterBottom sx={{ color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Response Length (words)</span>
+                                    <Tooltip title="Controls how detailed the agent's responses will be">
+                                        <IconButton size="small" sx={{ color: '#AAAAAA' }}>
+                                            <InfoIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
                                 </Typography>
 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Short</Typography>
-                                    <Typography variant="caption" sx={{ color: '#AAAAAA' }}>Long</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            color: (formData.response_length || 150) <= 150 ? '#00F3FF' : '#AAAAAA',
+                                            fontWeight: (formData.response_length || 150) <= 150 ? 'bold' : 'normal'
+                                        }}
+                                    >
+                                        Concise
+                                    </Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            color: (formData.response_length || 150) >= 350 ? '#00F3FF' : '#AAAAAA',
+                                            fontWeight: (formData.response_length || 150) >= 350 ? 'bold' : 'normal'
+                                        }}
+                                    >
+                                        Detailed
+                                    </Typography>
                                 </Box>
                                 
-
                                 <Slider
                                     aria-labelledby="response-length-slider-label"
                                     value={formData.response_length || 150}
                                     onChange={(_, value) => handleInputChange('response_length', value as number)}
                                     step={50}
-                                    marks
+                                    marks={[
+                                        { value: 50, label: '' },
+                                        { value: 150, label: '' },
+                                        { value: 250, label: '' },
+                                        { value: 350, label: '' },
+                                        { value: 450, label: '' },
+                                        { value: 500, label: '' }
+                                    ]}
                                     min={50}
                                     max={500}
                                     valueLabelDisplay="auto"
+                                    valueLabelFormat={(value) => `${value} words`}
                                     sx={{
                                         width: '100%',
                                         color: '#00F3FF',
                                         '& .MuiSlider-rail': {
                                             opacity: 0.5,
-                                            backgroundColor: 'red',
+                                            backgroundColor: '#555',
+                                        },
+                                        '& .MuiSlider-track': {
+                                            height: 6,
+                                            borderRadius: 3,
+                                            backgroundImage: 'linear-gradient(to right, #0088cc, #00F3FF)',
                                         },
                                         '& .MuiSlider-mark': {
                                             backgroundColor: '#555',
@@ -1011,9 +1197,96 @@ export default function AgentCreationWizard({
                                         '& .MuiSlider-valueLabel': {
                                             backgroundColor: '#00F3FF',
                                             color: '#000',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.85rem',
+                                            padding: '2px 6px',
                                         },
                                     }}
                                 />
+                                
+                                <Box sx={{ mt: 1, mb: 2, display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_length || 150) === 50 ? 'bold' : 'normal',
+                                            color: (formData.response_length || 150) === 50 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Very Brief</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_length || 150) === 150 ? 'bold' : 'normal',
+                                            color: (formData.response_length || 150) === 150 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Brief</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_length || 150) === 250 ? 'bold' : 'normal',
+                                            color: (formData.response_length || 150) === 250 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Moderate</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_length || 150) === 350 ? 'bold' : 'normal',
+                                            color: (formData.response_length || 150) === 350 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Detailed</Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            fontWeight: (formData.response_length || 150) >= 450 ? 'bold' : 'normal',
+                                            color: (formData.response_length || 150) >= 450 ? '#00F3FF' : '#AAAAAA'
+                                        }}
+                                    >Comprehensive</Typography>
+                                </Box>
+                            </Box>
+                            
+                            {/* Response Preview Section */}
+                            <Box sx={{ mt: 4, p: 2, borderRadius: 2, bgcolor: 'rgba(0, 243, 255, 0.05)', border: '1px solid rgba(0, 243, 255, 0.2)' }}>
+                                <Typography variant="subtitle1" sx={{ color: '#00F3FF', mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Response Preview</span>
+                                    <Tooltip title="Preview of how your agent will respond based on current settings">
+                                        <IconButton size="small" sx={{ color: '#AAAAAA' }}>
+                                            <InfoIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Typography>
+                                
+                                <Box sx={{ mb: 2, display: 'flex', alignItems: 'flex-start' }}>
+                                    <Box 
+                                        sx={{ 
+                                            width: 28, 
+                                            height: 28, 
+                                            bgcolor: '#333', 
+                                            borderRadius: '50%', 
+                                            display: 'flex', 
+                                            justifyContent: 'center', 
+                                            alignItems: 'center',
+                                            mr: 1.5,
+                                            mt: 0.5
+                                        }}
+                                    >
+                                        <Typography fontSize="small">
+                                            {formData.ai_role ? AGENT_ROLE_DESCRIPTIONS[formData.ai_role].icon : '🤖'}
+                                        </Typography>
+                                    </Box>
+                                    
+                                    <Box>
+                                        <Typography sx={{ color: '#00F3FF', fontSize: '0.85rem', mb: 0.5 }}>
+                                            {formData.name || 'Your Agent'}
+                                        </Typography>
+                                        
+                                        <Box sx={{ p: 1.5, bgcolor: '#333', borderRadius: 2, maxWidth: '100%' }}>
+                                            {renderResponseExample()}
+                                        </Box>
+                                    </Box>
+                                </Box>
+                                
+                                <Typography variant="caption" sx={{ color: '#999', display: 'block', mt: 1 }}>
+                                    This preview illustrates how your agent will respond based on current role and style settings.
+                                </Typography>
                             </Box>
                         </Box>
                     )}

@@ -198,7 +198,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
         response = await chatService.queryWithKnowledge(
           chatId,
           input, 
-          selectedCategories.length > 0 ? selectedCategories : undefined
+          selectedCategories.length > 0 ? selectedCategories : []
         );
       } else {
         // Handle the case where we don't have a chatId yet

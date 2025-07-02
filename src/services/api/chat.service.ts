@@ -188,5 +188,20 @@ export const chatService = {
     
     console.log(`🔄 [chat.service] Adding message with attachments, searchModeActive=${searchModeActive}, suppressAiResponse=${suppressAiResponse}`);
     return api.post(`/api/chat/chats/${chatId}/messages`, payload);
+  },
+
+  // Agent and Knowledge Integration
+  chatWithAgent: (agentId: number | string, input: string) => {
+    console.log(`Chatting with agent ${agentId} with input: ${input}`);
+    return api.post(`/api/v1/agents/${agentId}/chat`, { input });
+  },
+  
+  queryWithKnowledge: (chatId: string, input: string, categories: number[]) => {
+    console.log(`Querying with knowledge for chat ${chatId} with categories: ${categories.join(', ')}`);
+    return api.post(`/api/chat/chats/${chatId}/query`, { 
+      input, 
+      categories,
+      role: 'user'
+    });
   }
 };

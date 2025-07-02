@@ -1139,8 +1139,8 @@ export default function AgentCreationWizard({
                                     <Typography 
                                         variant="caption" 
                                         sx={{ 
-                                            color: (formData.response_length || 150) >= 350 ? '#00F3FF' : '#AAAAAA',
-                                            fontWeight: (formData.response_length || 150) >= 350 ? 'bold' : 'normal'
+                                            color: (formData.response_length || 150) >= 700 ? '#00F3FF' : '#AAAAAA',
+                                            fontWeight: (formData.response_length || 150) >= 700 ? 'bold' : 'normal'
                                         }}
                                     >
                                         Detailed
@@ -1158,10 +1158,13 @@ export default function AgentCreationWizard({
                                         { value: 250, label: '' },
                                         { value: 350, label: '' },
                                         { value: 450, label: '' },
-                                        { value: 500, label: '' }
+                                        { value: 550, label: '' },
+                                        { value: 700, label: '' },
+                                        { value: 850, label: '' },
+                                        { value: 1000, label: '' }
                                     ]}
                                     min={50}
-                                    max={500}
+                                    max={1000}
                                     valueLabelDisplay="auto"
                                     valueLabelFormat={(value) => `${value} words`}
                                     sx={{

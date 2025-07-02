@@ -3,9 +3,9 @@ import {
   Box,
   Paper,
   Typography,
+  CircularProgress,
   TextField,
   IconButton,
-  CircularProgress,
   Divider,
   List,
   ListItem,
@@ -488,7 +488,8 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
         <div ref={messagesEndRef} />
         
         {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2 }}>
+            <CircularProgress size={24} sx={{ color: '#00F3FF', mr: 1.5 }} />
             <Typography variant="body2" sx={{ color: '#00F3FF' }}>
               Thinking...
             </Typography>
@@ -564,9 +565,12 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
               }}
             >
               {loading ? 
-                <Typography variant="body2" sx={{ px: 2, fontWeight: 'medium' }}>
-                  Thinking...
-                </Typography> : 
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
+                  <CircularProgress size={20} sx={{ color: '#000000', mr: 1 }} />
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    Thinking...
+                  </Typography>
+                </Box> : 
                 <SendIcon />
               }
             </IconButton>

@@ -246,13 +246,22 @@ RESPONSE LENGTH:
 - Focus on the most essential information
 - Use bullet points when appropriate
 - Prioritize brevity while maintaining clarity`;
-    } else if (responseLength <= 200) {
+    } else if (responseLength <= 350) {
       lengthGuidance = `
 RESPONSE LENGTH:
 - Provide moderately detailed responses
 - Include necessary context and explanation
 - Balance thoroughness with readability
 - Use paragraphs to organize information`;
+    } else if (responseLength <= 1000) {
+      lengthGuidance = `
+RESPONSE LENGTH:
+- Provide highly detailed and comprehensive responses
+- Synthesize and relate all extracted information from the knowledge base
+- Draw connections, patterns, and relationships between facts
+- Present a connected, narrative answer that goes beyond listing facts
+- Use clear headings, sections, and examples where helpful
+- Aim for up to 1000 words if content allows`;
     } else {
       lengthGuidance = `
 RESPONSE LENGTH:

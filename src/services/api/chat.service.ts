@@ -1,4 +1,5 @@
 import { api } from './index';
+import { ContextState } from './context.service';
 
 // Define interfaces for chat-related data
 export interface Attachment {
@@ -19,6 +20,8 @@ export interface ChatMessage {
   isSearchResult?: boolean;
   metadata?: string | Record<string, any>;
   timestamp?: string;
+  contextQuality?: number;
+  contextState?: string;
 }
 
 export interface Chat {
@@ -52,6 +55,11 @@ export interface AgentChatCreate {
 }
 
 // Export chatService object to fix the build error
+export interface ContextEnrichedResponse {
+  content: string;
+  contextState: ContextState;
+}
+
 export const chatService = {
   // Chat Management
   getChats: () => {
@@ -198,10 +206,45 @@ export const chatService = {
   
   queryWithKnowledge: (chatId: string, input: string, categories: number[]) => {
     console.log(`Querying with knowledge for chat ${chatId} with categories: ${categories.join(', ')}`);
-    return api.post(`/api/chat/chats/${chatId}/query`, { 
-      input, 
-      categories,
-      role: 'user'
+    return api.post(`/api/chat/chats/${chatId}/query`, {
+      query: input,
+      category_ids: categories.length > 0 ? categories : undefined
     });
-  }
+  },
+
+  // Context-aware message processing
+  addContextEnrichedMessage(chatId: string, content: string, enableContext: boolean = true) {
+    return api.post(`/api/chat/chats/${chatId}/context-message`, {
+      content,
+      enable_context: enableContext
+    });
+  },
+
+  // Get context-enriched response with quality metrics
+  getContextEnrichedResponse(chatId: string, input: string, includeContextDetails: boolean = true) {
+    return api.post<ContextEnrichedResponse>(`/api/chat/chats/${chatId}/context-response`, {
+      content: input,
+      include_context_details: includeContextDetails
+    });
+  },
+
+  // Get context information for a specific message
+  getMessageContext(chatId: string, messageId: string) {
+    return api.get(`/api/chat/chats/${chatId}/messages/${messageId}/context`);
+  },
+
+  // Get context state for the entire chat session
+  getChatContextState(chatId: string) {
+    return api.get(`/api/chat/chats/${chatId}/context-state`);
+  },
+
+  // Add feedback about context quality for specific message
+  addContextFeedback(chatId: string, messageId: string, feedback: { helpful: boolean; comments?: string }) {
+    return api.post(`/api/chat/chats/${chatId}/messages/${messageId}/context-feedback`, feedback);
+  },
+
+  // Get context summary statistics for all chats
+  getContextAnalytics() {
+    return api.get(`/api/chat/context-analytics`);
+  },
 };

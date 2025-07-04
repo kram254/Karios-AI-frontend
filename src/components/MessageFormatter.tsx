@@ -199,40 +199,35 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
         open={contextOpen}
         onClose={handleCloseContext}
         aria-labelledby="message-context-modal"
-          
-          // Style lists
-          ul: ({children}) => <ul className="message-list">{children}</ul>,
-          ol: ({children}) => <ol className="message-ordered-list">{children}</ol>,
-          li: ({children}) => <li className="message-list-item">{children}</li>,
-          
-          // Style code blocks
-          code: ({children, className}) => {
-            const isInline = !className || !className.includes('language-');
-            return isInline 
-              ? <code className="message-inline-code">{children}</code>
-              : <pre className="message-code-block"><code className="message-block-code">{children}</code></pre>;
-          },
-          
-          // Style tables
-          table: ({children}) => <table className="message-table">{children}</table>,
-          thead: ({children}) => <thead className="message-table-header">{children}</thead>,
-          tbody: ({children}) => <tbody className="message-table-body">{children}</tbody>,
-          tr: ({children}) => <tr className="message-table-row">{children}</tr>,
-          td: ({children}) => <td className="message-table-cell">{children}</td>,
-          th: ({children}) => <th className="message-table-header-cell">{children}</th>,
-          
-          // Style paragraphs and links
-          p: ({children}) => <p className="message-paragraph">{children}</p>,
-          a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>,
-          
-          // Style emphasis
-          em: ({children}) => <em className="message-emphasis">{children}</em>,
-          strong: ({children}) => <strong className="message-strong">{children}</strong>,
-        }}
       >
-        {processedContent}
-      </ReactMarkdown>
-    </div>
+        <Box sx={{ 
+          position: 'absolute', 
+          top: '50%', 
+          left: '50%', 
+          transform: 'translate(-50%, -50%)', 
+          width: '80%',
+          maxWidth: 900,
+          maxHeight: '90vh',
+          overflow: 'auto',
+          borderRadius: 2,
+          boxShadow: 24,
+          p: 0,
+          outline: 'none'
+        }}>
+          {contextData ? (
+            <ContextViewer 
+              quality={contextData.quality} 
+              layers={contextData.layers}
+              onClose={handleCloseContext} 
+            />
+          ) : (
+            <Box sx={{ bgcolor: '#1e1e2f', color: '#fff', p: 4, borderRadius: 2 }}>
+              Loading context information...
+            </Box>
+          )}
+        </Box>
+      </Modal>
+    </>
   );
 };
 

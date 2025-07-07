@@ -141,49 +141,55 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
     <>
       <div className="markdown-content">
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
-            components={{
-              // Style headers
-              h1: ({children}) => <h1 className="message-heading-1">{children}</h1>,
-              h2: ({children}) => <h2 className="message-heading-2">{children}</h2>,
-              h3: ({children}) => <h3 className="message-heading-3">{children}</h3>,
-              h4: ({children}) => <h4 className="message-heading-3">{children}</h4>,
-              h5: ({children}) => <h5 className="message-heading-3">{children}</h5>,
-              h6: ({children}) => <h6 className="message-heading-3">{children}</h6>,
-              
-              // Style lists
-              ul: ({children}) => <ul className="message-list">{children}</ul>,
-              ol: ({children}) => <ol className="message-ordered-list">{children}</ol>,
-              li: ({children}) => <li className="message-list-item">{children}</li>,
-              
-              // Style code blocks
-              code: ({children, className}) => {
-                const isInline = !className || !className.includes('language-');
-                return isInline 
-                  ? <code className="message-inline-code">{children}</code>
-                  : <pre className="message-code-block"><code className="message-block-code">{children}</code></pre>;
-              },
-              
-              // Style tables
-              table: ({children}) => <table className="message-table">{children}</table>,
-              thead: ({children}) => <thead className="message-table-header">{children}</thead>,
-              tbody: ({children}) => <tbody className="message-table-body">{children}</tbody>,
-              tr: ({children}) => <tr className="message-table-row">{children}</tr>,
-              td: ({children}) => <td className="message-table-cell">{children}</td>,
-              th: ({children}) => <th className="message-table-header-cell">{children}</th>,
-              
-              // Style paragraphs and links
-              p: ({children}) => <p className="message-paragraph">{children}</p>,
-              a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>,
-              
-              // Style emphasis
-              em: ({children}) => <em className="message-emphasis">{children}</em>,
-              strong: ({children}) => <strong className="message-strong">{children}</strong>,
-            }}
-          >
-            {processedContent}
-          </ReactMarkdown>
+          {role === 'assistant' ? (
+            // For assistant messages, render as plain text paragraph without markdown formatting
+            <p className="assistant-prose-paragraph">{processedContent}</p>
+          ) : (
+            // For user messages, continue using markdown rendering
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                // Style headers
+                h1: ({children}) => <h1 className="message-heading-1">{children}</h1>,
+                h2: ({children}) => <h2 className="message-heading-2">{children}</h2>,
+                h3: ({children}) => <h3 className="message-heading-3">{children}</h3>,
+                h4: ({children}) => <h4 className="message-heading-3">{children}</h4>,
+                h5: ({children}) => <h5 className="message-heading-3">{children}</h5>,
+                h6: ({children}) => <h6 className="message-heading-3">{children}</h6>,
+                
+                // Style lists
+                ul: ({children}) => <ul className="message-list">{children}</ul>,
+                ol: ({children}) => <ol className="message-ordered-list">{children}</ol>,
+                li: ({children}) => <li className="message-list-item">{children}</li>,
+                
+                // Style code blocks
+                code: ({children, className}) => {
+                  const isInline = !className || !className.includes('language-');
+                  return isInline 
+                    ? <code className="message-inline-code">{children}</code>
+                    : <pre className="message-code-block"><code className="message-block-code">{children}</code></pre>;
+                },
+                
+                // Style tables
+                table: ({children}) => <table className="message-table">{children}</table>,
+                thead: ({children}) => <thead className="message-table-header">{children}</thead>,
+                tbody: ({children}) => <tbody className="message-table-body">{children}</tbody>,
+                tr: ({children}) => <tr className="message-table-row">{children}</tr>,
+                td: ({children}) => <td className="message-table-cell">{children}</td>,
+                th: ({children}) => <th className="message-table-header-cell">{children}</th>,
+                
+                // Style paragraphs and links
+                p: ({children}) => <p className="message-paragraph">{children}</p>,
+                a: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer" className="message-link">{children}</a>,
+                
+                // Style emphasis
+                em: ({children}) => <em className="message-emphasis">{children}</em>,
+                strong: ({children}) => <strong className="message-strong">{children}</strong>,
+              }}
+            >
+              {processedContent}
+            </ReactMarkdown>
+          )}
           {role === 'assistant' && contextQuality !== undefined && (
             <MessageContextIndicator 
               quality={contextQuality} 

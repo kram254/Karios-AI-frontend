@@ -5,6 +5,20 @@
   width: 100%;
 }
 
+/* Assistant Prose Paragraph Style */
+.assistant-prose-paragraph {
+  font-family: inherit;
+  color: inherit;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
+  font-size: 1em;
+}
+
 /* Heading styles */
 .message-heading-1 {
   font-size: 1.5em;

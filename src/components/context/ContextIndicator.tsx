@@ -35,7 +35,8 @@ const ContextIndicator: React.FC<ContextIndicatorProps> = ({
     return <ErrorIcon fontSize={iconSize as any} />;
   };
 
-  const getStateIcon = () => {
+  // Explicitly type to React.ReactElement or undefined
+  const getStateIcon = (): React.ReactElement | undefined => {
     switch (quality.state) {
       case 'information_gathering':
         return <Memory fontSize={iconSize as any} />;
@@ -44,7 +45,7 @@ const ContextIndicator: React.FC<ContextIndicatorProps> = ({
       case 'solution_providing':
         return <Lightbulb fontSize={iconSize as any} />;
       default:
-        return null;
+        return undefined;
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, ChangeEvent } from "react";
 import { MessageSquare, Send, Plus, Search, X, Globe } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
+import SearchLockTooltip from "./SearchLockTooltip";
 import { motion } from "framer-motion";
 import toast from 'react-hot-toast';
 import AgentInfoBanner from "./agent/AgentInfoBanner";
@@ -644,9 +645,38 @@ const Chat: React.FC = () => {
                 >
                   <div className="message-text">
                     <>
-                      <MessageFormatter content={msg.content} role={msg.role} />
-                      
-                      {/* Display message attachments if any */}
+                       {/* Enhanced rendering for search result messages */}
+                       {msg.role === 'assistant' && (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.match(/https?:\/\//)) ? (
+                         <div className="search-result-message">
+                           <span className="search-result-badge">🌐 Search Result</span>
+                           {/* Attempt to parse [SEARCH_RESULTS] format: [SEARCH_RESULTS]\nTitle: ...\nURL: ...\nSnippet: ... */}
+                           {(() => {
+                             const lines = msg.content.split('\n');
+                             let title = '', url = '', snippet = '';
+                             lines.forEach(line => {
+                               if (line.startsWith('Title:')) title = line.replace('Title:', '').trim();
+                               else if (line.startsWith('URL:')) url = line.replace('URL:', '').trim();
+                               else if (line.startsWith('Snippet:')) snippet = line.replace('Snippet:', '').trim();
+                             });
+                             // Fallback: if content contains a URL but not in [SEARCH_RESULTS] format
+                             if (!title && !snippet && msg.content.match(/https?:\/\//)) {
+                               url = msg.content.match(/https?:\/\/[\w\-\.\/?#=&%]+/g)?.[0] || '';
+                               snippet = msg.content;
+                             }
+                             return (
+                               <>
+                                 {title && <div className="search-result-title">{title}</div>}
+                                 {snippet && <div className="search-result-snippet">{snippet}</div>}
+                                 {url && <div className="search-result-url"><a href={url} target="_blank" rel="noopener noreferrer">{url}</a></div>}
+                               </>
+                             );
+                           })()}
+                         </div>
+                       ) : (
+                         <MessageFormatter content={msg.content} role={msg.role} />
+                       )}
+                       
+                       {/* Display message attachments if any */}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div className="message-attachments">
                           {msg.attachments.map((attachment: Attachment, index: number) => (
@@ -769,19 +799,23 @@ const Chat: React.FC = () => {
           </div>
           
           <div className="chat-input-bottom-section">
-            <button 
-              type="button" 
-              className={`search-text-button ${isSearchMode ? 'search-active' : ''}`}
-              onClick={() => {
-                // Use both toggles to maintain compatibility
-                toggleSearchMode();
-                toggleInternetSearch(!internetSearchEnabled);
-              }}
-            >
-              <Globe className="w-4 h-4 mr-2" />
-              Search
-            </button>
-          </div>
+            <SearchLockTooltip show={currentChat?.chat_type === 'internet_search'}>
+               <button 
+                 type="button" 
+                 className={`search-text-button ${isSearchMode ? 'search-active' : ''}`}
+                 onClick={() => {
+                   if (currentChat?.chat_type === 'internet_search') return;
+                   toggleSearchMode();
+                   toggleInternetSearch(!internetSearchEnabled);
+                 }}
+                 disabled={currentChat?.chat_type === 'internet_search'}
+                 style={currentChat?.chat_type === 'internet_search' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+               >
+                 <Globe className="w-4 h-4 mr-2" />
+                 Search
+               </button>
+             </SearchLockTooltip>
+           </div>
         </form>
         
         {/* Image upload progress indicator */}

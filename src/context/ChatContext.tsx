@@ -46,6 +46,7 @@ interface Chat {
   updated_at?: string; // For backend compatibility
   agent_id?: string; // Add agent_id to Chat interface
   language?: string; // Add language property to Chat interface
+  chat_type?: string; // Add chat_type for context engineering
 }
 
 export interface SearchResult {
@@ -109,15 +110,32 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Update internet search state when current chat changes
   useEffect(() => {
     if (currentChat?.id) {
-      // Check if this chat has previously had internet search enabled
-      const shouldEnableInternetSearch = internetEnabledChatIds.has(currentChat.id);
-      
-      if (shouldEnableInternetSearch) {
-        console.log(`[ChatContext] Enabling internet search for chat ${currentChat.id} based on previous usage`);
-        toggleInternetSearch(true);
+      // Uniformly enforce internet search context based on chat_type
+      if (currentChat.chat_type === 'internet_search') {
+        if (!internetEnabledChatIds.has(currentChat.id)) {
+          setInternetEnabledChatIds(prev => new Set(prev).add(currentChat.id));
+        }
+        if (!internetSearchEnabled) {
+          setInternetSearchEnabled(true);
+        }
+      } else {
+        // For non-internet-search chats, allow toggling freely
+        setInternetSearchEnabled(false);
       }
     }
-  }, [currentChat?.id, internetEnabledChatIds]);
+  }, [currentChat?.id, currentChat?.chat_type, internetEnabledChatIds]);
+
+  // Modified toggleInternetSearch to prevent disabling for locked chats
+  const toggleInternetSearch = (newState?: boolean) => {
+    if (currentChat?.id && internetEnabledChatIds.has(currentChat.id)) {
+      // Once enabled for this chat, cannot be disabled
+      setInternetSearchEnabled(true);
+      return;
+    }
+    // Otherwise, allow toggling
+    setInternetSearchEnabled(prev => typeof newState === 'boolean' ? newState : !prev);
+  };
+
 
   const loadChats = async () => {
     try {
@@ -195,7 +213,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const response = await chatService.createChat({
         title: finalTitle,
-        chat_type: 'default',
+        chat_type: internetSearchEnabled ? 'internet_search' : 'default',
         language: language.code // Include the selected language
       });
       console.log('Chat created response:', response);
@@ -1063,18 +1081,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Function to toggle internet search that respects the persistent state
-  const toggleInternetSearch = (newState?: boolean) => {
-    // If explicitly setting to false, check if the current chat has had internet search enabled
-    if (newState === false && currentChat?.id && internetEnabledChatIds.has(currentChat.id)) {
-      console.log(`[ChatContext] Cannot disable internet search for chat ${currentChat.id} as it has been previously enabled`);
-      // Don't allow disabling internet search for this chat
-      return;
-    }
-    
-    // Otherwise, set the state as requested
-    setInternetSearchEnabled(newState !== undefined ? newState : !internetSearchEnabled);
-  };
+
   
   // Return the chat context provider
   return (

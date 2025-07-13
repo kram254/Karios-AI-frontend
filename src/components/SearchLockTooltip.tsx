@@ -27,7 +27,7 @@ const SearchLockTooltip: React.FC<SearchLockTooltipProps> = ({ children, show })
             zIndex: 1000,
           }}
         >
-          Internet search is permanently enabled for this chat
+          🌐
         </div>
       )}
     </div>

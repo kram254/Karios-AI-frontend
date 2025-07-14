@@ -447,6 +447,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     
+    // Check if current chat is already internet_search type
+    const isExistingInternetSearchChat = currentChat && currentChat.chat_type === 'internet_search';
+    console.log(`[ChatContext][performSearch][${searchId}] Is existing internet search chat: ${isExistingInternetSearchChat}`);
+    
+    
     // Set search query for UI components to use
     setSearchQuery(query);
     
@@ -543,8 +548,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
 
+    // If this is an existing internet search chat, we can skip the direct search API call
+    // because the backend will handle the search when we submit the message
+    if (isExistingInternetSearchChat) {
+      console.log(`[ChatContext][performSearch][${searchId}] Skipping frontend search API call for existing internet search chat`);
+      console.log(`[ChatContext][performSearch][${searchId}] The backend will handle search when processing this message`);
+      
+      // Update UI state to show search is complete
+      setIsSearching(false);
+      return;
+    }
+
     try {
-      // Check the API status first before attempting search
+      // Only perform direct API search for new chats or non-internet-search chats
       console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
       // Updated to use the correct production endpoint
       const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';

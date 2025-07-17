@@ -107,8 +107,8 @@ const Chat: React.FC = () => {
         toast.dismiss(loadingId);
         toast.success(`Search results added to chat`, { id: 'search-toast' });
       } catch (error) {
-        console.error("❌ SEARCH ERROR:", error);
-        toast.error(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'search-toast' });
+        console.error("", error);
+        toast.error(`${error instanceof Error ? error.message : ''}`, { id: 'search-toast' });
         console.log('💡 TROUBLESHOOTING TIPS: Check network connection, API endpoint, and server status');
       } finally {
         setIsProcessing(false);

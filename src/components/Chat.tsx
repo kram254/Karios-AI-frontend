@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
-import { MessageSquare, Send, Plus, Search, X, Globe } from "lucide-react";
+import { MessageSquare, Send, Plus, X, Globe } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import SearchLockTooltip from "./SearchLockTooltip";
@@ -10,6 +10,7 @@ import MessageFormatter from "./MessageFormatter";
 import { chatService, Attachment } from "../services/api/chat.service";
 import { generateTitleFromMessage } from "../utils/titleGenerator";
 import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
+import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -31,6 +32,11 @@ interface Chat {
   messages: Message[];
   created_at?: string;
   updated_at?: string;
+  agent_id?: string;
+  language?: string;
+  chat_type?: string;
+  type?: 'internet_search' | string;
+  internet_search?: boolean;
 }
 
 const Chat: React.FC = () => {
@@ -43,7 +49,9 @@ const Chat: React.FC = () => {
     createNewChat,
     internetSearchEnabled, // Get the internet search status from context
     toggleInternetSearch, // Use the new function that respects persistent internet search state
-    toggleSearchMode // Keep this for backward compatibility
+    toggleSearchMode, // Keep this for backward compatibility
+    searchResults, // Add searchResults from context
+    isSearching // Add isSearching from context
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -682,15 +690,28 @@ const Chat: React.FC = () => {
                           {msg.attachments.map((attachment: Attachment, index: number) => (
                             <div key={index} className="message-attachment">
                               {attachment.type === 'image' && (
-                                <img 
-                                  src={attachment.url || attachment.preview_url} 
-                                  alt={attachment.name} 
-                                  className="message-image"
-                                  onClick={() => window.open(attachment.url || attachment.preview_url, '_blank')}
-                                />
+                                <div className="text-xs text-gray-400 mt-2">
+                                  {msg.created_at ? format(new Date(msg.created_at), "h:mm a") : ""}
+                                </div>
                               )}
                             </div>
                           ))}
+                        </div>
+                      )}
+                      
+                      {/* Show collapsible search results after assistant messages when internet search is enabled */}
+                      {msg.role === 'assistant' && 
+                       !msg.content.startsWith('[SEARCH_RESULTS]') && 
+                       (internetSearchEnabled || currentChat?.chat_type === 'internet_search') && (
+                        <div className="mt-2">
+                          <CollapsibleSearchResults 
+                            results={searchResults && searchResults.length > 0 ? searchResults : []}
+                            isSearching={isSearching === true}
+                            onResultClick={(result) => {
+                              // Open the URL in a new tab when clicked
+                              window.open(result.url, '_blank', 'noopener,noreferrer');
+                            }}
+                          />
                         </div>
                       )}
                     </>

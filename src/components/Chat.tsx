@@ -50,8 +50,8 @@ const Chat: React.FC = () => {
     internetSearchEnabled, // Get the internet search status from context
     toggleInternetSearch, // Use the new function that respects persistent internet search state
     toggleSearchMode, // Keep this for backward compatibility
-    searchResults, // Add searchResults from context
-    isSearching // Add isSearching from context
+    isSearching, // Add isSearching from context
+    accessedWebsites // Add accessedWebsites from context
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -698,14 +698,18 @@ const Chat: React.FC = () => {
                           ))}
                         </div>
                       )}
-                      
                       {/* Show collapsible search results after assistant messages when internet search is enabled */}
                       {msg.role === 'assistant' && 
                        !msg.content.startsWith('[SEARCH_RESULTS]') && 
                        (internetSearchEnabled || currentChat?.chat_type === 'internet_search') && (
                         <div className="mt-2">
                           <CollapsibleSearchResults 
-                            results={searchResults && searchResults.length > 0 ? searchResults : []}
+                            results={accessedWebsites && accessedWebsites.length > 0 ? accessedWebsites.map(site => ({
+                              title: site.title,
+                              url: site.url,
+                              snippet: '', // accessedWebsites doesn't have snippets, but we can show the site
+                              source: new URL(site.url).hostname
+                            })) : []}
                             isSearching={isSearching === true}
                             onResultClick={(result) => {
                               // Open the URL in a new tab when clicked

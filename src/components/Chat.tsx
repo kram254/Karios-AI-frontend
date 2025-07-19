@@ -703,19 +703,36 @@ const Chat: React.FC = () => {
                        !msg.content.startsWith('[SEARCH_RESULTS]') && 
                        (internetSearchEnabled || currentChat?.chat_type === 'internet_search') && (
                         <div className="mt-2">
-                          <CollapsibleSearchResults 
-                            results={accessedWebsites && accessedWebsites.length > 0 ? accessedWebsites.map(site => ({
+                          {(() => {
+                            // Debug logging to see what data we have
+                            console.log('🔍 Chat.tsx rendering CollapsibleSearchResults with:', {
+                              accessedWebsitesCount: accessedWebsites?.length || 0,
+                              accessedWebsites: accessedWebsites,
+                              internetSearchEnabled,
+                              chatType: currentChat?.chat_type,
+                              isSearching
+                            });
+                            
+                            const mappedResults = accessedWebsites && accessedWebsites.length > 0 ? accessedWebsites.map(site => ({
                               title: site.title,
                               url: site.url,
                               snippet: '', // accessedWebsites doesn't have snippets, but we can show the site
                               source: new URL(site.url).hostname
-                            })) : []}
-                            isSearching={isSearching === true}
-                            onResultClick={(result) => {
-                              // Open the URL in a new tab when clicked
-                              window.open(result.url, '_blank', 'noopener,noreferrer');
-                            }}
-                          />
+                            })) : [];
+                            
+                            console.log('🔍 Chat.tsx mapped results:', mappedResults);
+                            
+                            return (
+                              <CollapsibleSearchResults 
+                                results={mappedResults}
+                                isSearching={isSearching === true}
+                                onResultClick={(result) => {
+                                  // Open the URL in a new tab when clicked
+                                  window.open(result.url, '_blank', 'noopener,noreferrer');
+                                }}
+                              />
+                            );
+                          })()}
                         </div>
                       )}
                     </>

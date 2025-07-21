@@ -61,7 +61,7 @@ interface ChatContextType {
   loading: boolean;
   error: string | null;
   createNewChat: (customTitle?: string) => Promise<Chat | null>;
-  createAgentChat: () => Promise<Chat | null>; // Update createAgentChat method
+  createAgentChat: (agent?: Agent) => Promise<Chat | null>; // Update createAgentChat method
   setCurrentChat: (chat: Chat) => void;
   addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string }) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
@@ -235,21 +235,30 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const createAgentChat = async () => {
-    if (!selectedAgent) {
-      console.error('');
-      toast.error('');
+  const createAgentChat = async (agent?: Agent) => {
+    // Use the provided agent parameter or fall back to selectedAgent
+    const agentToUse = agent || selectedAgent;
+    
+    if (!agentToUse) {
+      console.error('No agent selected for chat creation');
+      toast.error('Please select an agent first');
       return null;
     }
 
     try {
       setLoading(true);
-      console.log(`Creating a new chat with agent ${selectedAgent.id}...`);
+      console.log(`Creating a new chat with agent ${agentToUse.id}...`);
+      
+      // Update selectedAgent state if an agent was provided
+      if (agent) {
+        setSelectedAgent(agent);
+      }
+      
       const response = await chatService.createChat({
-        agent_id: selectedAgent.id.toString(),
-        title: `Chat with ${selectedAgent.name}`,
+        agent_id: agentToUse.id.toString(),
+        title: `Chat with ${agentToUse.name}`,
         chat_type: 'sales_agent',
-        language: selectedAgent.language || language.code
+        language: agentToUse.language || language.code
       });
       console.log('Agent chat created response:', response);
       
@@ -257,7 +266,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setChats(prev => [newChat, ...prev]);
       setCurrentChat(newChat);
       
-      toast.success(`Chat with ${selectedAgent.name} created`);
+      toast.success(`Chat with ${agentToUse.name} created`);
       setError(null);
       return newChat;
     } catch (err: unknown) {

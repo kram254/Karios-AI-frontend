@@ -19,7 +19,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCollapse,
   onSettingsClick,
 }) => {
-  const { chats, currentChat, createNewChat, setCurrentChat, createAgentChat, setSelectedAgent, deleteChat, updateChatTitle } = useChat();
+  const { chats, currentChat, createNewChat, setCurrentChat, createAgentChat, deleteChat, updateChatTitle } = useChat();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,13 +69,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleSelectAgent = async (agent: Agent) => {
     try {
       setCreatingChat(true);
-      setSelectedAgent(agent);
-      const chat = await createAgentChat();
+      console.log('Selected agent for chat creation:', agent);
+      
+      // Pass the agent directly to createAgentChat to avoid race condition
+      const chat = await createAgentChat(agent);
       if (chat) {
         setCurrentChat(chat);
+        navigate('/chat');
+        toast.success(`Started chat with ${agent.name}`);
+      } else {
+        throw new Error('Failed to create agent chat');
       }
-      navigate('/chat');
-      toast.success(`Started chat with ${agent.name}`);
     } catch (error) {
       console.error('Error creating agent chat:', error);
       toast.error('Failed to create agent chat. Please try again.');

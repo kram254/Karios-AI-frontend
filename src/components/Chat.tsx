@@ -49,7 +49,10 @@ const Chat: React.FC = () => {
     createNewChat,
     internetSearchEnabled, // Get the internet search status from context
     toggleInternetSearch, // Use the new function that respects persistent internet search state
-    toggleSearchMode // Keep this for backward compatibility
+    toggleSearchMode, // Keep this for backward compatibility
+    searchResults, // Add searchResults back for debugging
+    isSearching, // Add isSearching back for debugging
+    accessedWebsites // Add accessedWebsites back
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -696,37 +699,69 @@ const Chat: React.FC = () => {
                           ))}
                         </div>
                       )}
-                      {/* Show collapsible search results after assistant messages that contain search results */}
+                      {/* Show collapsible search results after assistant messages when internet search is enabled */}
                       {msg.role === 'assistant' && 
-                       msg.content.includes('[SEARCH_RESULTS]') && (
+                       !msg.content.startsWith('[SEARCH_RESULTS]') && 
+                       (internetSearchEnabled || currentChat?.chat_type === 'internet_search') && (
                         <div className="mt-2">
-                          <CollapsibleSearchResults 
-                            results={(() => {
-                              // Extract URLs from the search results message content
-                              const urlRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-                              const matches = [];
-                              let match;
-                              while ((match = urlRegex.exec(msg.content)) !== null) {
-                                matches.push({
-                                  title: match[1],
-                                  url: match[2],
-                                  snippet: `Visit ${match[1]}`,
+                          {(() => {
+                            // Debug logging to track accessedWebsites state
+                            console.log('🔍 DEBUG: CollapsibleSearchResults rendering check:', {
+                              messageId: msg.id,
+                              messageContent: msg.content.substring(0, 100) + '...',
+                              internetSearchEnabled,
+                              chatType: currentChat?.chat_type,
+                              accessedWebsitesCount: accessedWebsites?.length || 0,
+                              accessedWebsites: accessedWebsites,
+                              searchResultsCount: searchResults?.length || 0,
+                              searchResults: searchResults,
+                              isSearching
+                            });
+                            
+                            // Use accessedWebsites if available, otherwise fallback to searchResults
+                            const resultsToUse = accessedWebsites && accessedWebsites.length > 0 
+                              ? accessedWebsites.map(site => ({
+                                  title: site.title,
+                                  url: site.url,
+                                  snippet: `Visit ${site.title}`,
                                   source: (() => {
                                     try {
-                                      return new URL(match[2]).hostname;
+                                      return new URL(site.url).hostname;
                                     } catch {
-                                      return match[2];
+                                      return site.url;
                                     }
                                   })()
-                                });
-                              }
-                              return matches.slice(0, 7); // Limit to 7 results
-                            })()}
-                            isSearching={false}
-                            onResultClick={(result) => {
-                              window.open(result.url, '_blank', 'noopener,noreferrer');
-                            }}
-                          />
+                                }))
+                              : searchResults && searchResults.length > 0
+                                ? searchResults.map(result => ({
+                                    title: result.title,
+                                    url: result.url,
+                                    snippet: result.snippet || `Visit ${result.title}`,
+                                    source: (() => {
+                                      try {
+                                        return new URL(result.url).hostname;
+                                      } catch {
+                                        return result.url;
+                                      }
+                                    })()
+                                  }))
+                                : [];
+                            
+                            console.log('🔍 DEBUG: Final results for CollapsibleSearchResults:', {
+                              resultsCount: resultsToUse.length,
+                              results: resultsToUse
+                            });
+                            
+                            return (
+                              <CollapsibleSearchResults 
+                                results={resultsToUse}
+                                isSearching={isSearching || false}
+                                onResultClick={(result) => {
+                                  window.open(result.url, '_blank', 'noopener,noreferrer');
+                                }}
+                              />
+                            );
+                          })()}
                         </div>
                       )}
                     </>

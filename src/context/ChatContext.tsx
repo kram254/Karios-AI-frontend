@@ -813,13 +813,17 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Update search results in state
         setSearchResults(results);
+        console.log(`🔍 DEBUG: setSearchResults called with ${results.length} results:`, results);
         
         // Update accessed websites for monitoring and diagnostics
         const topWebsites = results.map(result => ({
           title: result.title,
           url: result.url
         })).slice(0, 7); // Limit to top 7 as requested
+        
+        console.log(`🔍 DEBUG: About to call setAccessedWebsites with ${topWebsites.length} websites:`, topWebsites);
         setAccessedWebsites(topWebsites);
+        console.log(`🔍 DEBUG: setAccessedWebsites called successfully`);
         
         // Log accessed websites for debugging
         console.log(`🔍 [SEARCH][${searchId}] Top websites accessed:`, 

@@ -27,6 +27,27 @@ export interface ActionType {
     name: string;
     description: string;
     enabled: boolean;
+    config?: any;
+}
+
+export interface EmailConfig {
+    email?: string;
+    verified?: boolean;
+    smtp_host?: string;
+    smtp_port?: number;
+    smtp_username?: string;
+    smtp_password?: string;
+    use_tls?: boolean;
+    verification_code?: string;
+    verification_expires?: string;
+}
+
+export interface SearchConfig {
+    search_depth?: 'quick' | 'standard' | 'comprehensive';
+    max_sources?: number;
+    enable_browser_automation?: boolean;
+    result_filtering?: 'basic' | 'advanced';
+    fact_checking?: boolean;
 }
 
 export interface AgentConfig {
@@ -42,6 +63,8 @@ export interface AgentConfig {
     system_prompt?: string;
     webhook_url?: string;
     additional_context?: string;
+    email_config?: EmailConfig;
+    search_config?: SearchConfig;
 }
 
 export interface Agent {

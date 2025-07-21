@@ -1323,6 +1323,7 @@ export default function AgentCreationWizard({
                             </Typography>
                             
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                {/* Text Output - Always enabled */}
                                 <Box 
                                     sx={{ 
                                         display: 'flex', 
@@ -1344,11 +1345,15 @@ export default function AgentCreationWizard({
                                     />
                                     <Box sx={{ ml: 1 }}>
                                         <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
-                                            Text Output
+                                            💬 Text Output
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#AAAAAA', display: 'block' }}>
+                                            Basic text responses (always enabled)
                                         </Typography>
                                     </Box>
                                 </Box>
                                 
+                                {/* Send File */}
                                 <Box 
                                     sx={{ 
                                         display: 'flex', 
@@ -1370,11 +1375,15 @@ export default function AgentCreationWizard({
                                     />
                                     <Box sx={{ ml: 1 }}>
                                         <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
-                                            Send File
+                                            📎 Send File
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#AAAAAA', display: 'block' }}>
+                                            Share files and documents with users
                                         </Typography>
                                     </Box>
                                 </Box>
                                 
+                                {/* Send Link */}
                                 <Box 
                                     sx={{ 
                                         display: 'flex', 
@@ -1396,9 +1405,376 @@ export default function AgentCreationWizard({
                                     />
                                     <Box sx={{ ml: 1 }}>
                                         <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
-                                            Send Link
+                                            🔗 Send Link
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#AAAAAA', display: 'block' }}>
+                                            Share relevant web links and resources
                                         </Typography>
                                     </Box>
+                                </Box>
+
+                                {/* SEND_MAIL Action */}
+                                <Box 
+                                    sx={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column',
+                                        p: 1.25,
+                                        bgcolor: isActionSelected('SEND_MAIL') ? 'rgba(0, 243, 255, 0.05)' : '#333',
+                                        borderRadius: 1,
+                                        border: isActionSelected('SEND_MAIL') ? '1px solid rgba(0, 243, 255, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Checkbox
+                                            checked={isActionSelected('SEND_MAIL')}
+                                            onChange={(e) => handleActionChange('SEND_MAIL', e.target.checked)}
+                                            sx={{
+                                                color: '#AAAAAA',
+                                                '&.Mui-checked': {
+                                                    color: '#00F3FF',
+                                                },
+                                            }}
+                                        />
+                                        <Box sx={{ ml: 1, flex: 1 }}>
+                                            <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
+                                                📧 Send Email
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: '#AAAAAA', display: 'block' }}>
+                                                Send responses and information via email
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    
+                                    {/* Email Configuration UI */}
+                                    {isActionSelected('SEND_MAIL') && (
+                                        <Box sx={{ mt: 2, pl: 5, pr: 1 }}>
+                                            <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 1.5 }}>
+                                                Email Configuration
+                                            </Typography>
+                                            
+                                            <TextField
+                                                fullWidth
+                                                label="Agent Email Address"
+                                                type="email"
+                                                value={formData.config?.email_config?.email || ''}
+                                                onChange={(e) => {
+                                                    const emailConfig = {
+                                                        ...formData.config?.email_config,
+                                                        email: e.target.value,
+                                                        verified: false
+                                                    };
+                                                    handleInputChange('config', {
+                                                        ...formData.config,
+                                                        email_config: emailConfig
+                                                    });
+                                                }}
+                                                margin="normal"
+                                                size="small"
+                                                InputLabelProps={{
+                                                    style: { color: '#AAAAAA' },
+                                                    shrink: true,
+                                                }}
+                                                InputProps={{
+                                                    style: { color: '#FFFFFF' },
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': {
+                                                            borderColor: '#555',
+                                                        },
+                                                        '&:hover fieldset': {
+                                                            borderColor: '#00F3FF',
+                                                        },
+                                                        '&.Mui-focused fieldset': {
+                                                            borderColor: '#00F3FF',
+                                                        },
+                                                    },
+                                                }}
+                                            />
+                                            
+                                            {formData.config?.email_config?.email && (
+                                                <Box sx={{ mt: 1, mb: 2 }}>
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        sx={{
+                                                            borderColor: '#00F3FF',
+                                                            color: '#00F3FF',
+                                                            '&:hover': {
+                                                                borderColor: '#00F3FF',
+                                                                bgcolor: 'rgba(0, 243, 255, 0.1)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        Send Verification Code
+                                                    </Button>
+                                                    <Typography variant="caption" sx={{ color: '#AAAAAA', ml: 2 }}>
+                                                        {formData.config?.email_config?.verified ? '✅ Verified' : '⚠️ Not verified'}
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                            
+                                            <FormGroup>
+                                                <Typography variant="caption" sx={{ color: '#AAAAAA', mb: 1 }}>
+                                                    Advanced SMTP Settings (Optional)
+                                                </Typography>
+                                                
+                                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1 }}>
+                                                    <TextField
+                                                        label="SMTP Host"
+                                                        size="small"
+                                                        value={formData.config?.email_config?.smtp_host || ''}
+                                                        onChange={(e) => {
+                                                            const emailConfig = {
+                                                                ...formData.config?.email_config,
+                                                                smtp_host: e.target.value
+                                                            };
+                                                            handleInputChange('config', {
+                                                                ...formData.config,
+                                                                email_config: emailConfig
+                                                            });
+                                                        }}
+                                                        InputLabelProps={{ style: { color: '#AAAAAA' } }}
+                                                        InputProps={{ style: { color: '#FFFFFF' } }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                '& fieldset': { borderColor: '#555' },
+                                                                '&:hover fieldset': { borderColor: '#00F3FF' },
+                                                                '&.Mui-focused fieldset': { borderColor: '#00F3FF' },
+                                                            },
+                                                        }}
+                                                    />
+                                                    
+                                                    <TextField
+                                                        label="SMTP Port"
+                                                        type="number"
+                                                        size="small"
+                                                        value={formData.config?.email_config?.smtp_port || ''}
+                                                        onChange={(e) => {
+                                                            const emailConfig = {
+                                                                ...formData.config?.email_config,
+                                                                smtp_port: parseInt(e.target.value) || undefined
+                                                            };
+                                                            handleInputChange('config', {
+                                                                ...formData.config,
+                                                                email_config: emailConfig
+                                                            });
+                                                        }}
+                                                        InputLabelProps={{ style: { color: '#AAAAAA' } }}
+                                                        InputProps={{ style: { color: '#FFFFFF' } }}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                '& fieldset': { borderColor: '#555' },
+                                                                '&:hover fieldset': { borderColor: '#00F3FF' },
+                                                                '&.Mui-focused fieldset': { borderColor: '#00F3FF' },
+                                                            },
+                                                        }}
+                                                    />
+                                                </Box>
+                                            </FormGroup>
+                                        </Box>
+                                    )}
+                                </Box>
+
+                                {/* SEARCH_INTERNET Action */}
+                                <Box 
+                                    sx={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column',
+                                        p: 1.25,
+                                        bgcolor: isActionSelected('SEARCH_INTERNET') ? 'rgba(0, 243, 255, 0.05)' : '#333',
+                                        borderRadius: 1,
+                                        border: isActionSelected('SEARCH_INTERNET') ? '1px solid rgba(0, 243, 255, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Checkbox
+                                            checked={isActionSelected('SEARCH_INTERNET')}
+                                            onChange={(e) => handleActionChange('SEARCH_INTERNET', e.target.checked)}
+                                            sx={{
+                                                color: '#AAAAAA',
+                                                '&.Mui-checked': {
+                                                    color: '#00F3FF',
+                                                },
+                                            }}
+                                        />
+                                        <Box sx={{ ml: 1, flex: 1 }}>
+                                            <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
+                                                🌐 Advanced Internet Search
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: '#AAAAAA', display: 'block' }}>
+                                                Comprehensive web research with browser automation
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                    
+                                    {/* Search Configuration UI */}
+                                    {isActionSelected('SEARCH_INTERNET') && (
+                                        <Box sx={{ mt: 2, pl: 5, pr: 1 }}>
+                                            <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 1.5 }}>
+                                                Search Configuration
+                                            </Typography>
+                                            
+                                            <FormControl fullWidth margin="normal" size="small">
+                                                <InputLabel sx={{ color: '#AAAAAA' }}>Search Depth</InputLabel>
+                                                <Select
+                                                    value={formData.config?.search_config?.search_depth || 'standard'}
+                                                    onChange={(e) => {
+                                                        const searchConfig = {
+                                                            ...formData.config?.search_config,
+                                                            search_depth: e.target.value as 'quick' | 'standard' | 'comprehensive'
+                                                        };
+                                                        handleInputChange('config', {
+                                                            ...formData.config,
+                                                            search_config: searchConfig
+                                                        });
+                                                    }}
+                                                    sx={{
+                                                        color: '#FFFFFF',
+                                                        '.MuiOutlinedInput-notchedOutline': { borderColor: '#555' },
+                                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#00F3FF' },
+                                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#00F3FF' },
+                                                        '.MuiSvgIcon-root': { color: '#FFFFFF' },
+                                                    }}
+                                                    MenuProps={{
+                                                        PaperProps: {
+                                                            sx: {
+                                                                bgcolor: '#333',
+                                                                color: '#FFFFFF',
+                                                                '& .MuiMenuItem-root:hover': {
+                                                                    bgcolor: 'rgba(0, 243, 255, 0.08)',
+                                                                },
+                                                            }
+                                                        }
+                                                    }}
+                                                >
+                                                    <MenuItem value="quick">⚡ Quick (1-3 sources)</MenuItem>
+                                                    <MenuItem value="standard">🔍 Standard (3-5 sources)</MenuItem>
+                                                    <MenuItem value="comprehensive">📚 Comprehensive (5-10 sources)</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                            
+                                            <TextField
+                                                fullWidth
+                                                label="Maximum Sources"
+                                                type="number"
+                                                value={formData.config?.search_config?.max_sources || 5}
+                                                onChange={(e) => {
+                                                    const searchConfig = {
+                                                        ...formData.config?.search_config,
+                                                        max_sources: parseInt(e.target.value) || 5
+                                                    };
+                                                    handleInputChange('config', {
+                                                        ...formData.config,
+                                                        search_config: searchConfig
+                                                    });
+                                                }}
+                                                margin="normal"
+                                                size="small"
+                                                InputLabelProps={{
+                                                    style: { color: '#AAAAAA' },
+                                                    shrink: true,
+                                                }}
+                                                InputProps={{
+                                                    style: { color: '#FFFFFF' },
+                                                    inputProps: { min: 1, max: 20 }
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': { borderColor: '#555' },
+                                                        '&:hover fieldset': { borderColor: '#00F3FF' },
+                                                        '&.Mui-focused fieldset': { borderColor: '#00F3FF' },
+                                                    },
+                                                }}
+                                            />
+                                            
+                                            <FormGroup sx={{ mt: 2 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                    <Checkbox
+                                                        checked={formData.config?.search_config?.enable_browser_automation !== false}
+                                                        onChange={(e) => {
+                                                            const searchConfig = {
+                                                                ...formData.config?.search_config,
+                                                                enable_browser_automation: e.target.checked
+                                                            };
+                                                            handleInputChange('config', {
+                                                                ...formData.config,
+                                                                search_config: searchConfig
+                                                            });
+                                                        }}
+                                                        sx={{
+                                                            color: '#AAAAAA',
+                                                            '&.Mui-checked': { color: '#00F3FF' },
+                                                        }}
+                                                    />
+                                                    <Typography variant="body2" sx={{ color: '#FFFFFF' }}>
+                                                        🤖 Enable Browser Automation
+                                                    </Typography>
+                                                </Box>
+                                                
+                                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                                    <Checkbox
+                                                        checked={formData.config?.search_config?.fact_checking !== false}
+                                                        onChange={(e) => {
+                                                            const searchConfig = {
+                                                                ...formData.config?.search_config,
+                                                                fact_checking: e.target.checked
+                                                            };
+                                                            handleInputChange('config', {
+                                                                ...formData.config,
+                                                                search_config: searchConfig
+                                                            });
+                                                        }}
+                                                        sx={{
+                                                            color: '#AAAAAA',
+                                                            '&.Mui-checked': { color: '#00F3FF' },
+                                                        }}
+                                                    />
+                                                    <Typography variant="body2" sx={{ color: '#FFFFFF' }}>
+                                                        ✅ Enable Fact Checking
+                                                    </Typography>
+                                                </Box>
+                                                
+                                                <FormControl fullWidth margin="normal" size="small">
+                                                    <InputLabel sx={{ color: '#AAAAAA' }}>Result Filtering</InputLabel>
+                                                    <Select
+                                                        value={formData.config?.search_config?.result_filtering || 'basic'}
+                                                        onChange={(e) => {
+                                                            const searchConfig = {
+                                                                ...formData.config?.search_config,
+                                                                result_filtering: e.target.value as 'basic' | 'advanced'
+                                                            };
+                                                            handleInputChange('config', {
+                                                                ...formData.config,
+                                                                search_config: searchConfig
+                                                            });
+                                                        }}
+                                                        sx={{
+                                                            color: '#FFFFFF',
+                                                            '.MuiOutlinedInput-notchedOutline': { borderColor: '#555' },
+                                                            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#00F3FF' },
+                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#00F3FF' },
+                                                            '.MuiSvgIcon-root': { color: '#FFFFFF' },
+                                                        }}
+                                                        MenuProps={{
+                                                            PaperProps: {
+                                                                sx: {
+                                                                    bgcolor: '#333',
+                                                                    color: '#FFFFFF',
+                                                                    '& .MuiMenuItem-root:hover': {
+                                                                        bgcolor: 'rgba(0, 243, 255, 0.08)',
+                                                                    },
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        <MenuItem value="basic">🔍 Basic Filtering</MenuItem>
+                                                        <MenuItem value="advanced">🎯 Advanced Filtering</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </FormGroup>
+                                        </Box>
+                                    )}
                                 </Box>
                             </Box>
                         </Box>

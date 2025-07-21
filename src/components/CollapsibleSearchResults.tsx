@@ -22,13 +22,6 @@ const CollapsibleSearchResults: React.FC<CollapsibleSearchResultsProps> = ({
   onResultClick
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
-  // Debug logging to see what data we're receiving
-  console.log('🔍 CollapsibleSearchResults received:', {
-    resultsCount: results?.length || 0,
-    results: results,
-    isSearching
-  });
 
   // Extract unique domains for the icon display
   const uniqueDomains = React.useMemo(() => {

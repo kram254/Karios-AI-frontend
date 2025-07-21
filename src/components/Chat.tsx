@@ -49,9 +49,7 @@ const Chat: React.FC = () => {
     createNewChat,
     internetSearchEnabled, // Get the internet search status from context
     toggleInternetSearch, // Use the new function that respects persistent internet search state
-    toggleSearchMode, // Keep this for backward compatibility
-    isSearching, // Add isSearching from context
-    accessedWebsites // Add accessedWebsites from context
+    toggleSearchMode // Keep this for backward compatibility
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -698,41 +696,37 @@ const Chat: React.FC = () => {
                           ))}
                         </div>
                       )}
-                      {/* Show collapsible search results after assistant messages when internet search is enabled */}
+                      {/* Show collapsible search results after assistant messages that contain search results */}
                       {msg.role === 'assistant' && 
-                       !msg.content.startsWith('[SEARCH_RESULTS]') && 
-                       (internetSearchEnabled || currentChat?.chat_type === 'internet_search') && (
+                       msg.content.includes('[SEARCH_RESULTS]') && (
                         <div className="mt-2">
-                          {(() => {
-                            // Debug logging to see what data we have
-                            console.log('🔍 Chat.tsx rendering CollapsibleSearchResults with:', {
-                              accessedWebsitesCount: accessedWebsites?.length || 0,
-                              accessedWebsites: accessedWebsites,
-                              internetSearchEnabled,
-                              chatType: currentChat?.chat_type,
-                              isSearching
-                            });
-                            
-                            const mappedResults = accessedWebsites && accessedWebsites.length > 0 ? accessedWebsites.map(site => ({
-                              title: site.title,
-                              url: site.url,
-                              snippet: '', // accessedWebsites doesn't have snippets, but we can show the site
-                              source: new URL(site.url).hostname
-                            })) : [];
-                            
-                            console.log('🔍 Chat.tsx mapped results:', mappedResults);
-                            
-                            return (
-                              <CollapsibleSearchResults 
-                                results={mappedResults}
-                                isSearching={isSearching === true}
-                                onResultClick={(result) => {
-                                  // Open the URL in a new tab when clicked
-                                  window.open(result.url, '_blank', 'noopener,noreferrer');
-                                }}
-                              />
-                            );
-                          })()}
+                          <CollapsibleSearchResults 
+                            results={(() => {
+                              // Extract URLs from the search results message content
+                              const urlRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                              const matches = [];
+                              let match;
+                              while ((match = urlRegex.exec(msg.content)) !== null) {
+                                matches.push({
+                                  title: match[1],
+                                  url: match[2],
+                                  snippet: `Visit ${match[1]}`,
+                                  source: (() => {
+                                    try {
+                                      return new URL(match[2]).hostname;
+                                    } catch {
+                                      return match[2];
+                                    }
+                                  })()
+                                });
+                              }
+                              return matches.slice(0, 7); // Limit to 7 results
+                            })()}
+                            isSearching={false}
+                            onResultClick={(result) => {
+                              window.open(result.url, '_blank', 'noopener,noreferrer');
+                            }}
+                          />
                         </div>
                       )}
                     </>

@@ -418,9 +418,8 @@ const Chat: React.FC = () => {
                       // Log the current state before toggling
                       console.log(`🌐 SEARCH BUTTON CLICKED - Current search mode: ${isSearchMode ? 'ENABLED' : 'DISABLED'}`);
                       
-                      // Toggle search mode using the context function
+                      // Only use toggleSearchMode - it now handles internetSearchEnabled synchronization
                       toggleSearchMode();
-                      toggleInternetSearch(!internetSearchEnabled);
                       console.log('🌐 INTERNET SEARCH READY - Type a search query and press Send to search the web');
                     }}
                     aria-pressed={isSearchMode}
@@ -876,8 +875,8 @@ const Chat: React.FC = () => {
                  className={`search-text-button ${isSearchMode ? 'search-active' : ''}`}
                  onClick={() => {
                    if (currentChat?.chat_type === 'internet_search') return;
+                   // Only use toggleSearchMode - it now handles internetSearchEnabled synchronization
                    toggleSearchMode();
-                   toggleInternetSearch(!internetSearchEnabled);
                  }}
                  disabled={currentChat?.chat_type === 'internet_search'}
                  style={currentChat?.chat_type === 'internet_search' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}

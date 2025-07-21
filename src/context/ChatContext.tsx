@@ -435,8 +435,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Toggle search mode
   const toggleSearchMode = (): void => {
-    setIsSearchMode(!isSearchMode);
-    if (!isSearchMode) {
+    const newSearchMode = !isSearchMode;
+    setIsSearchMode(newSearchMode);
+    
+    // Synchronize internetSearchEnabled with isSearchMode
+    if (newSearchMode) {
+      // When enabling search mode, also enable internet search
+      toggleInternetSearch(true);
+      setSearchResults([]);
+    } else {
+      // When disabling search mode, also disable internet search (if not locked)
+      if (currentChat?.id && !internetEnabledChatIds.has(currentChat.id)) {
+        toggleInternetSearch(false);
+      }
       setSearchResults([]);
     }
   };

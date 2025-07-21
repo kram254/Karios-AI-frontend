@@ -22,6 +22,10 @@ export enum AgentMode {
     VIDEO = 'video'
 }
 
+// Action type constants
+export const SEND_MAIL = 'SEND_MAIL';
+export const SEARCH_INTERNET = 'SEARCH_INTERNET';
+
 export interface ActionType {
     id: string;
     name: string;

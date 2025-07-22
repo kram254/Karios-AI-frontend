@@ -703,22 +703,8 @@ const Chat: React.FC = () => {
                        !msg.content.startsWith('[SEARCH_RESULTS]') && 
                        (internetSearchEnabled || currentChat?.chat_type === 'internet_search') && (
                         <div className="mt-2">
-                          {(() => {
-                            // Debug logging to track accessedWebsites state
-                            console.log('🔍 DEBUG: CollapsibleSearchResults rendering check:', {
-                              messageId: msg.id,
-                              messageContent: msg.content.substring(0, 100) + '...',
-                              internetSearchEnabled,
-                              chatType: currentChat?.chat_type,
-                              accessedWebsitesCount: accessedWebsites?.length || 0,
-                              accessedWebsites: accessedWebsites,
-                              searchResultsCount: searchResults?.length || 0,
-                              searchResults: searchResults,
-                              isSearching
-                            });
-                            
-                            // Use accessedWebsites if available, otherwise fallback to searchResults
-                            const resultsToUse = accessedWebsites && accessedWebsites.length > 0 
+                          <CollapsibleSearchResults 
+                            results={accessedWebsites && accessedWebsites.length > 0 
                               ? accessedWebsites.map(site => ({
                                   title: site.title,
                                   url: site.url,
@@ -744,23 +730,12 @@ const Chat: React.FC = () => {
                                       }
                                     })()
                                   }))
-                                : [];
-                            
-                            console.log('🔍 DEBUG: Final results for CollapsibleSearchResults:', {
-                              resultsCount: resultsToUse.length,
-                              results: resultsToUse
-                            });
-                            
-                            return (
-                              <CollapsibleSearchResults 
-                                results={resultsToUse}
-                                isSearching={isSearching || false}
-                                onResultClick={(result) => {
-                                  window.open(result.url, '_blank', 'noopener,noreferrer');
-                                }}
-                              />
-                            );
-                          })()}
+                                : []}
+                            isSearching={isSearching || false}
+                            onResultClick={(result) => {
+                              window.open(result.url, '_blank', 'noopener,noreferrer');
+                            }}
+                          />
                         </div>
                       )}
                     </>

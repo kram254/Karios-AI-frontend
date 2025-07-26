@@ -80,6 +80,10 @@ interface ChatContextType {
   toggleSearchSidebar: () => void;
   internetSearchEnabled: boolean; // Indicates if internet search is currently active
   toggleInternetSearch: (newState?: boolean) => void; // Function to toggle internet search with persistence
+  avatarState: 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle';
+  setAvatarState: (state: 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle') => void;
+  avatarMessage: string;
+  setAvatarMessage: (message: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -102,6 +106,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
   const [internetSearchEnabled, setInternetSearchEnabled] = useState(false); // Track if internet search is active
   const [internetEnabledChatIds, setInternetEnabledChatIds] = useState<Set<string>>(new Set()); // Track which chats have had internet search enabled
+  const [avatarState, setAvatarState] = useState<'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle'>('idle');
+  const [avatarMessage, setAvatarMessage] = useState<string>('');
 
   useEffect(() => {
     loadChats();
@@ -1149,7 +1155,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isSearchSidebarOpen,
       toggleSearchSidebar,
       internetSearchEnabled, // Add to context so components can access this
-      toggleInternetSearch // Add the new function to toggle internet search
+      toggleInternetSearch, // Add the new function to toggle internet search
+      avatarState,
+      setAvatarState,
+      avatarMessage,
+      setAvatarMessage
     }}>
       {children}
     </ChatContext.Provider>

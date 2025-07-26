@@ -82,6 +82,8 @@ export default function AgentCreationWizard({
     const [languageSelectOpen, setLanguageSelectOpen] = useState(false);
     const [customRole, setCustomRole] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isVerificationLoading, setIsVerificationLoading] = useState(false);
+    const [verificationMessage, setVerificationMessage] = useState<string>('');
 
     // Function to handle opening the modal
     useEffect(() => {
@@ -356,6 +358,50 @@ export default function AgentCreationWizard({
     // Function to check if an action is selected
     const isActionSelected = (actionId: string): boolean => {
         return (formData.actions || []).includes(actionId);
+    };
+
+    const handleSendVerificationCode = async () => {
+        const email = formData.config?.email_config?.email;
+        if (!email) {
+            setVerificationMessage('Please enter an email address first');
+            return;
+        }
+
+        setIsVerificationLoading(true);
+        setVerificationMessage('');
+
+        try {
+            const response = await fetch('/api/email/send-verification', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setVerificationMessage('Verification code sent successfully! Check your email.');
+                setFormData(prev => ({
+                    ...prev,
+                    config: {
+                        ...prev.config,
+                        email_config: {
+                            ...prev.config?.email_config,
+                            verification_code: '',
+                            verification_expires: data.expires_at
+                        }
+                    }
+                }));
+            } else {
+                setVerificationMessage(data.error_message || 'Failed to send verification code');
+            }
+        } catch (error) {
+            setVerificationMessage('Error sending verification code. Please try again.');
+        } finally {
+            setIsVerificationLoading(false);
+        }
     };
 
     // Render using Material-UI Modal
@@ -1467,6 +1513,7 @@ export default function AgentCreationWizard({
                                                         ...formData.config,
                                                         email_config: emailConfig
                                                     });
+                                                    setVerificationMessage('');
                                                 }}
                                                 margin="normal"
                                                 size="small"
@@ -1497,6 +1544,8 @@ export default function AgentCreationWizard({
                                                     <Button
                                                         variant="outlined"
                                                         size="small"
+                                                        onClick={handleSendVerificationCode}
+                                                        disabled={isVerificationLoading || !formData.config?.email_config?.email}
                                                         sx={{
                                                             borderColor: '#00F3FF',
                                                             color: '#00F3FF',
@@ -1504,13 +1553,29 @@ export default function AgentCreationWizard({
                                                                 borderColor: '#00F3FF',
                                                                 bgcolor: 'rgba(0, 243, 255, 0.1)',
                                                             },
+                                                            '&:disabled': {
+                                                                borderColor: '#666',
+                                                                color: '#666',
+                                                            },
                                                         }}
                                                     >
-                                                        Send Verification Code
+                                                        {isVerificationLoading ? 'Sending...' : 'Send Verification Code'}
                                                     </Button>
                                                     <Typography variant="caption" sx={{ color: '#AAAAAA', ml: 2 }}>
                                                         {formData.config?.email_config?.verified ? '✅ Verified' : '⚠️ Not verified'}
                                                     </Typography>
+                                                    {verificationMessage && (
+                                                        <Typography 
+                                                            variant="caption" 
+                                                            sx={{ 
+                                                                color: verificationMessage.includes('successfully') ? '#4CAF50' : '#FF6B6B',
+                                                                display: 'block',
+                                                                mt: 1
+                                                            }}
+                                                        >
+                                                            {verificationMessage}
+                                                        </Typography>
+                                                    )}
                                                 </Box>
                                             )}
                                             

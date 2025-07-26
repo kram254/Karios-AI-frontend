@@ -11,6 +11,7 @@ import { chatService, Attachment } from "../services/api/chat.service";
 import { generateTitleFromMessage } from "../utils/titleGenerator";
 import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
 import CollapsibleSearchResults from "./CollapsibleSearchResults";
+import AnimatedAvatar from "./AnimatedAvatar";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -52,7 +53,11 @@ const Chat: React.FC = () => {
     toggleSearchMode, // Keep this for backward compatibility
     searchResults, // Add searchResults back for debugging
     isSearching, // Add isSearching back for debugging
-    accessedWebsites // Add accessedWebsites back
+    accessedWebsites, // Add accessedWebsites back
+    avatarState,
+    setAvatarState,
+    avatarMessage,
+    setAvatarMessage
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,6 +85,10 @@ const Chat: React.FC = () => {
     setIsProcessing(true);
     console.log('🔄 PROCESSING STARTED');
     
+    // Set avatar to thinking state when processing starts
+    setAvatarState('thinking');
+    setAvatarMessage('Processing your message...');
+    
     // Get message content once for the entire function
     const messageContent = message.trim();
     
@@ -90,6 +99,10 @@ const Chat: React.FC = () => {
     if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
       console.log('🌐 INTERNET SEARCH MODE ACTIVE - Processing search');
       console.log('🌐 [Chat] Disclaimer filtering is ACTIVE - generic AI messages will be filtered out');
+      
+      // Set avatar to searching state for internet search
+      setAvatarState('searching');
+      setAvatarMessage('Searching the web for information...');
       
       try {
         const searchId = `search-${Date.now()}`;
@@ -227,6 +240,9 @@ const Chat: React.FC = () => {
       toast.error("Failed to send message");
     } finally {
       setIsProcessing(false);
+      // Reset avatar to idle state when processing is complete
+      setAvatarState('idle');
+      setAvatarMessage('');
     }
   };
 
@@ -764,6 +780,23 @@ const Chat: React.FC = () => {
               </motion.div>
             ))}
             <div ref={messagesEndRef} />
+            
+            {/* Animated Avatar - Show during processing states */}
+            {(isProcessing || avatarState !== 'idle') && (
+              <div className="flex justify-start mb-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#00F3FF] to-[#0080FF] flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-semibold">AI</span>
+                  </div>
+                  <div className="bg-[#1A1A1A] rounded-lg px-4 py-3 max-w-[80%]">
+                    <AnimatedAvatar 
+                      state={avatarState} 
+                      message={avatarMessage || 'Processing...'} 
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

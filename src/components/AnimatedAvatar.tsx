@@ -64,7 +64,7 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
               transformStyle: 'preserve-3d'
             }}
             animate={{
-              rotateY: [0, 15, -15, 0],
+              rotateY: [0, 8, -8, 0],
               scale: [1, 1.05, 1],
               transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
             }}
@@ -78,54 +78,81 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)',
+                position: 'relative'
               }}
               animate={{
-                scale: [1, 1.2, 1],
-                rotateZ: [0, 5, -5, 0],
+                scale: [1, 1.02, 1],
                 transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
               }}
             >
-              <svg width={baseSize * 0.6} height={baseSize * 0.6} viewBox="0 0 24 24" fill="none">
-                <motion.path
-                  d="M12 2C8.5 2 6 4.5 6 8c0 1.5 0.5 3 1.5 4C6.5 13 6 14.5 6 16c0 3.5 2.5 6 6 6s6-2.5 6-6c0-1.5-0.5-3-1.5-4 1-1 1.5-2.5 1.5-4 0-3.5-2.5-6-6-6z"
-                  fill="white"
-                  opacity="0.9"
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  top: '25%',
+                  left: '30%',
+                  width: '8px',
+                  height: '16px',
+                  background: 'white',
+                  borderRadius: '2px'
+                }}
+                animate={{
+                  scaleY: [1, 0.8, 1],
+                  transition: { duration: 0.8, repeat: Infinity, ease: "easeInOut" }
+                }}
+              />
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  top: '25%',
+                  right: '30%',
+                  width: '8px',
+                  height: '16px',
+                  background: 'white',
+                  borderRadius: '2px'
+                }}
+                animate={{
+                  scaleY: [1, 0.8, 1],
+                  transition: { duration: 0.8, repeat: Infinity, ease: "easeInOut", delay: 0.1 }
+                }}
+              />
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  bottom: '30%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '12px',
+                  height: '6px',
+                  borderRadius: '0 0 12px 12px',
+                  background: 'white',
+                  opacity: 0.8
+                }}
+                animate={{
+                  scaleX: [1, 1.2, 1],
+                  transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                }}
+              />
+              {[0, 1].map((i) => (
+                <motion.div
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    top: '15%',
+                    left: i === 0 ? '25%' : '75%',
+                    width: '4px',
+                    height: '4px',
+                    background: '#fbbf24',
+                    borderRadius: '50%'
+                  }}
+                  animate={{
+                    y: [-2, 2, -2],
+                    opacity: [0.5, 1, 0.5],
+                    transition: { duration: 1, repeat: Infinity, delay: i * 0.3 }
+                  }}
                 />
-                {[0, 1, 2, 3].map((i) => (
-                  <motion.circle
-                    key={i}
-                    cx={8 + (i * 2)}
-                    cy={8 + (i % 2) * 4}
-                    r="1"
-                    fill="#fbbf24"
-                    animate={{
-                      opacity: [0.3, 1, 0.3],
-                      scale: [0.8, 1.2, 0.8],
-                      transition: { duration: 0.8, repeat: Infinity }
-                    }}
-                    transition={{ delay: i * 0.2 }}
-                  />
-                ))}
-              </svg>
+              ))}
             </motion.div>
-            <motion.div
-              style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                width: '8px',
-                height: '8px',
-                background: '#fbbf24',
-                borderRadius: '50%',
-                boxShadow: '0 0 8px #fbbf24'
-              }}
-              animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.7, 1, 0.7]
-              }}
-              transition={{ duration: 1, repeat: Infinity }}
-            />
           </motion.div>
         );
 
@@ -372,9 +399,9 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
               transformStyle: 'preserve-3d'
             }}
             animate={{
-              rotateY: [0, 180, 360],
-              scale: [1, 1.1, 1],
-              transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              rotateY: [0, 12, -12, 0],
+              scale: [1, 1.08, 1],
+              transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" }
             }}
           >
             <motion.div
@@ -386,21 +413,57 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 32px rgba(239, 68, 68, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
+                boxShadow: '0 8px 32px rgba(239, 68, 68, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)',
+                position: 'relative'
               }}
             >
               <motion.div
                 style={{
-                  width: baseSize * 0.4,
-                  height: baseSize * 0.4,
-                  background: 'radial-gradient(circle, #fbbf24 0%, #f59e0b 100%)',
-                  borderRadius: '50%',
-                  boxShadow: '0 0 20px rgba(251, 191, 36, 0.6)'
+                  position: 'absolute',
+                  top: '28%',
+                  left: '28%',
+                  width: '8px',
+                  height: '8px'
                 }}
                 animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [0.7, 1, 0.7],
-                  transition: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                  rotate: [0, 45, 90, 135, 180],
+                  transition: { duration: 0.6, repeat: Infinity, ease: "linear" }
+                }}
+              >
+                <div style={{ width: '100%', height: '2px', background: 'white', position: 'absolute', top: '50%', transform: 'translateY(-50%)' }} />
+                <div style={{ width: '2px', height: '100%', background: 'white', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }} />
+              </motion.div>
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  top: '28%',
+                  right: '28%',
+                  width: '8px',
+                  height: '8px'
+                }}
+                animate={{
+                  rotate: [0, 45, 90, 135, 180],
+                  transition: { duration: 0.6, repeat: Infinity, ease: "linear", delay: 0.2 }
+                }}
+              >
+                <div style={{ width: '100%', height: '2px', background: 'white', position: 'absolute', top: '50%', transform: 'translateY(-50%)' }} />
+                <div style={{ width: '2px', height: '100%', background: 'white', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }} />
+              </motion.div>
+              <motion.div
+                style={{
+                  position: 'absolute',
+                  bottom: '30%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '14px',
+                  height: '8px',
+                  borderRadius: '14px',
+                  background: 'white',
+                  opacity: 0.9
+                }}
+                animate={{
+                  scaleY: [1, 0.4, 1],
+                  transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
                 }}
               />
             </motion.div>
@@ -436,14 +499,56 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
               height: baseSize,
               background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
               borderRadius: '50%',
-              boxShadow: '0 4px 16px rgba(107, 114, 128, 0.3)'
+              boxShadow: '0 4px 16px rgba(107, 114, 128, 0.3)',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
             animate={{
-              scale: [1, 1.05, 1],
-              opacity: [0.7, 1, 0.7]
+              scale: [1, 1.02, 1],
+              opacity: [0.8, 1, 0.8]
             }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+            transition={{ duration: 3, repeat: Infinity }}
+          >
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: '30%',
+                left: '32%',
+                width: '6px',
+                height: '6px',
+                background: 'white',
+                borderRadius: '50%',
+                opacity: 0.6
+              }}
+            />
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: '30%',
+                right: '32%',
+                width: '6px',
+                height: '6px',
+                background: 'white',
+                borderRadius: '50%',
+                opacity: 0.6
+              }}
+            />
+            <motion.div
+              style={{
+                position: 'absolute',
+                bottom: '35%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '10px',
+                height: '4px',
+                borderRadius: '10px',
+                background: 'white',
+                opacity: 0.5
+              }}
+            />
+          </motion.div>
         );
     }
   };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export type AvatarState = 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle';
 
@@ -48,189 +48,401 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
 
   const avatarSize = getAvatarSize();
 
-  const dotVariants = {
-    initial: { y: 0 },
-    animate: {
-      y: [-2, -6, -2],
-      transition: {
-        duration: 0.6,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  };
 
-  const pulseVariants = {
-    initial: { scale: 1, opacity: 0.8 },
-    animate: {
-      scale: [1, 1.1, 1],
-      opacity: [0.8, 1, 0.8],
-      transition: {
-        duration: 1.5,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  };
-
-  const rotateVariants = {
-    initial: { rotate: 0 },
-    animate: {
-      rotate: 360,
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        ease: "linear"
-      }
-    }
-  };
 
   const renderAvatar = () => {
+    const baseSize = avatarSize.width;
+    
     switch (state) {
       case 'thinking':
         return (
-          <div className="flex items-center space-x-1">
+          <motion.div
+            style={{
+              width: baseSize,
+              height: baseSize,
+              position: 'relative',
+              transformStyle: 'preserve-3d'
+            }}
+            animate={{
+              rotateY: [0, 15, -15, 0],
+              scale: [1, 1.05, 1],
+              transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
             <motion.div
               style={{
-                width: avatarSize.width,
-                height: avatarSize.height,
-                backgroundColor: '#3B82F6',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                position: 'relative'
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
               }}
-              variants={pulseVariants}
-              initial="initial"
-              animate="animate"
+              animate={{
+                scale: [1, 1.2, 1],
+                rotateZ: [0, 5, -5, 0],
+                transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+              }}
             >
-              <div className="flex space-x-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
+              <svg width={baseSize * 0.6} height={baseSize * 0.6} viewBox="0 0 24 24" fill="none">
+                <motion.path
+                  d="M12 2C8.5 2 6 4.5 6 8c0 1.5 0.5 3 1.5 4C6.5 13 6 14.5 6 16c0 3.5 2.5 6 6 6s6-2.5 6-6c0-1.5-0.5-3-1.5-4 1-1 1.5-2.5 1.5-4 0-3.5-2.5-6-6-6z"
+                  fill="white"
+                  opacity="0.9"
+                />
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.circle
                     key={i}
-                    style={{
-                      width: 3,
-                      height: 3,
-                      backgroundColor: 'white',
-                      borderRadius: '50%'
+                    cx={8 + (i * 2)}
+                    cy={8 + (i % 2) * 4}
+                    r="1"
+                    fill="#fbbf24"
+                    animate={{
+                      opacity: [0.3, 1, 0.3],
+                      scale: [0.8, 1.2, 0.8],
+                      transition: { duration: 0.8, repeat: Infinity }
                     }}
-                    variants={dotVariants}
-                    initial="initial"
-                    animate="animate"
                     transition={{ delay: i * 0.2 }}
                   />
                 ))}
-              </div>
+              </svg>
             </motion.div>
-          </div>
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                width: '8px',
+                height: '8px',
+                background: '#fbbf24',
+                borderRadius: '50%',
+                boxShadow: '0 0 8px #fbbf24'
+              }}
+              animate={{
+                scale: [1, 1.5, 1],
+                opacity: [0.7, 1, 0.7]
+              }}
+              transition={{ duration: 1, repeat: Infinity }}
+            />
+          </motion.div>
         );
 
       case 'searching':
         return (
-          <div className="flex items-center space-x-1">
+          <motion.div
+            style={{
+              width: baseSize,
+              height: baseSize,
+              position: 'relative',
+              transformStyle: 'preserve-3d'
+            }}
+            animate={{
+              rotateY: [0, 360],
+              scale: [1, 1.1, 1],
+              transition: { duration: 3, repeat: Infinity, ease: "linear" }
+            }}
+          >
             <motion.div
               style={{
-                width: avatarSize.width,
-                height: avatarSize.height,
-                backgroundColor: '#10B981',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
               }}
-              variants={rotateVariants}
-              initial="initial"
-              animate="animate"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-              </svg>
+              <motion.div
+                animate={{
+                  rotate: [0, 360],
+                  scale: [1, 1.3, 1],
+                  transition: { duration: 2, repeat: Infinity, ease: "linear" }
+                }}
+              >
+                <svg width={baseSize * 0.6} height={baseSize * 0.6} viewBox="0 0 24 24" fill="none">
+                  <motion.circle cx="12" cy="12" r="8" stroke="white" strokeWidth="2" fill="none" opacity="0.3" />
+                  <motion.circle cx="12" cy="12" r="5" stroke="white" strokeWidth="1.5" fill="none" opacity="0.5" />
+                  <motion.circle cx="12" cy="12" r="2" fill="white" />
+                  <motion.path
+                    d="M12 4 L12 12 L18 8"
+                    stroke="#fbbf24"
+                    strokeWidth="2"
+                    fill="none"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </motion.div>
             </motion.div>
-          </div>
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: '100%',
+                  height: '100%',
+                  border: '2px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '50%',
+                  transform: 'translate(-50%, -50%)'
+                }}
+                animate={{
+                  scale: [1, 2, 1],
+                  opacity: [0.8, 0, 0.8],
+                  transition: { duration: 1.5, repeat: Infinity }
+                }}
+                transition={{ delay: i * 0.5 }}
+              />
+            ))}
+          </motion.div>
         );
 
       case 'browsing':
         return (
-          <div className="flex items-center space-x-1">
+          <motion.div
+            style={{
+              width: baseSize,
+              height: baseSize,
+              position: 'relative',
+              transformStyle: 'preserve-3d'
+            }}
+            animate={{
+              rotateX: [0, 10, -10, 0],
+              scale: [1, 1.05, 1],
+              transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
             <motion.div
               style={{
-                width: avatarSize.width,
-                height: avatarSize.height,
-                backgroundColor: '#8B5CF6',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 8px 32px rgba(139, 92, 246, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
               }}
-              variants={pulseVariants}
-              initial="initial"
-              animate="animate"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
+              <motion.div
+                style={{
+                  width: baseSize * 0.7,
+                  height: baseSize * 0.4,
+                  background: 'white',
+                  borderRadius: '50%',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                animate={{
+                  scaleX: [1, 0.1, 1],
+                  transition: { duration: 0.3, repeat: Infinity, repeatDelay: 2 }
+                }}
+              >
+                <motion.div
+                  style={{
+                    width: baseSize * 0.3,
+                    height: baseSize * 0.3,
+                    background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)',
+                    borderRadius: '50%',
+                    position: 'relative'
+                  }}
+                  animate={{
+                    x: [-2, 2, -2],
+                    y: [-1, 1, -1],
+                    transition: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '20%',
+                      left: '30%',
+                      width: '30%',
+                      height: '30%',
+                      background: 'white',
+                      borderRadius: '50%',
+                      opacity: 0.8
+                    }}
+                  />
+                </motion.div>
+              </motion.div>
             </motion.div>
-          </div>
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: '10%',
+                right: '15%',
+                width: '6px',
+                height: '6px',
+                background: '#fbbf24',
+                borderRadius: '50%'
+              }}
+              animate={{
+                scale: [0, 1.5, 0],
+                opacity: [0, 1, 0]
+              }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+            />
+          </motion.div>
         );
 
       case 'scraping':
         return (
-          <div className="flex items-center space-x-1">
+          <motion.div
+            style={{
+              width: baseSize,
+              height: baseSize,
+              position: 'relative',
+              transformStyle: 'preserve-3d'
+            }}
+            animate={{
+              rotateZ: [0, 5, -5, 0],
+              scale: [1, 1.08, 1],
+              transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
             <motion.div
               style={{
-                width: avatarSize.width,
-                height: avatarSize.height,
-                backgroundColor: '#F59E0B',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 8px 32px rgba(245, 158, 11, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
               }}
-              variants={rotateVariants}
-              initial="initial"
-              animate="animate"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-              </svg>
+              <motion.div
+                animate={{
+                  rotate: [0, 15, -15, 0],
+                  scale: [1, 1.2, 1],
+                  transition: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                }}
+              >
+                <svg width={baseSize * 0.6} height={baseSize * 0.6} viewBox="0 0 24 24" fill="none">
+                  <motion.path
+                    d="M8 2 L12 6 L16 2 M12 6 L12 14 M8 14 L12 18 L16 14"
+                    stroke="white"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <motion.circle cx="12" cy="10" r="2" fill="white" opacity="0.8" />
+                </svg>
+              </motion.div>
             </motion.div>
-          </div>
+            {[0, 1, 2, 3].map((i) => (
+              <motion.div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: `${20 + i * 15}%`,
+                  left: `${20 + i * 15}%`,
+                  width: '4px',
+                  height: '4px',
+                  background: '#fbbf24',
+                  borderRadius: '50%'
+                }}
+                animate={{
+                  scale: [0, 1.5, 0],
+                  opacity: [0, 1, 0],
+                  rotate: [0, 180],
+                  transition: { duration: 0.6, repeat: Infinity }
+                }}
+                transition={{ delay: i * 0.2 }}
+              />
+            ))}
+          </motion.div>
         );
 
       case 'processing':
         return (
-          <div className="flex items-center space-x-1">
+          <motion.div
+            style={{
+              width: baseSize,
+              height: baseSize,
+              position: 'relative',
+              transformStyle: 'preserve-3d'
+            }}
+            animate={{
+              rotateY: [0, 180, 360],
+              scale: [1, 1.1, 1],
+              transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            }}
+          >
             <motion.div
               style={{
-                width: avatarSize.width,
-                height: avatarSize.height,
-                backgroundColor: '#EF4444',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 8px 32px rgba(239, 68, 68, 0.4), inset 0 2px 8px rgba(255,255,255,0.2)'
               }}
-              variants={pulseVariants}
-              initial="initial"
-              animate="animate"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
+              <motion.div
+                style={{
+                  width: baseSize * 0.4,
+                  height: baseSize * 0.4,
+                  background: 'radial-gradient(circle, #fbbf24 0%, #f59e0b 100%)',
+                  borderRadius: '50%',
+                  boxShadow: '0 0 20px rgba(251, 191, 36, 0.6)'
+                }}
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.7, 1, 0.7],
+                  transition: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                }}
+              />
             </motion.div>
-          </div>
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: `${100 + i * 20}%`,
+                  height: `${100 + i * 20}%`,
+                  border: '2px solid rgba(251, 191, 36, 0.3)',
+                  borderRadius: '50%',
+                  transform: 'translate(-50%, -50%)'
+                }}
+                animate={{
+                  rotate: [0, 360],
+                  scale: [1, 1.2, 1],
+                  transition: { duration: 1.5, repeat: Infinity, ease: "linear" }
+                }}
+                transition={{ delay: i * 0.3 }}
+              />
+            ))}
+          </motion.div>
         );
 
       default:
         return (
-          <div
+          <motion.div
             style={{
-              width: avatarSize.width,
-              height: avatarSize.height,
-              backgroundColor: '#6B7280',
-              borderRadius: '50%'
+              width: baseSize,
+              height: baseSize,
+              background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+              borderRadius: '50%',
+              boxShadow: '0 4px 16px rgba(107, 114, 128, 0.3)'
             }}
+            animate={{
+              scale: [1, 1.05, 1],
+              opacity: [0.7, 1, 0.7]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
           />
         );
     }
@@ -241,18 +453,41 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({
   }
 
   return (
-    <motion.div
-      className="flex items-center space-x-2 px-3 py-2 bg-gray-800 rounded-lg"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.3 }}
-    >
-      {renderAvatar()}
-      <span className="text-sm text-gray-300 font-medium">
-        {getStateMessage(state)}
-      </span>
-    </motion.div>
+    <AnimatePresence>
+      <motion.div
+        className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl border border-gray-700"
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -20, scale: 0.9 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        style={{
+          boxShadow: '0 10px 40px rgba(0,0,0,0.3), 0 0 20px rgba(59, 130, 246, 0.1)'
+        }}
+      >
+        <motion.div
+          initial={{ rotate: -180, scale: 0 }}
+          animate={{ rotate: 0, scale: 1 }}
+          transition={{ duration: 0.6, ease: "backOut" }}
+        >
+          {renderAvatar()}
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+        >
+          <motion.span 
+            className="text-sm font-semibold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
+            animate={{
+              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            {getStateMessage(state)}
+          </motion.span>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

@@ -25,40 +25,20 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     }
   };
 
-  const renderHelmet = () => (
+  const renderEyesContainer = () => (
     <motion.div
-      className="relative w-20 h-20 rounded-full overflow-hidden"
-      style={{
-        background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8fafc 20%, #e2e8f0 60%, #cbd5e1 100%)',
-        boxShadow: 'inset 0 8px 16px rgba(255,255,255,0.8), inset 0 -8px 16px rgba(0,0,0,0.1), 0 12px 24px rgba(0,0,0,0.15)',
-        transformStyle: 'preserve-3d',
-        border: '2px solid rgba(255,255,255,0.3)'
-      }}
+      className="relative flex justify-center"
       animate={{
-        rotateY: state === 'processing' ? [0, 8, -8, 0] : [0, 2, -2, 0],
-        scale: state === 'processing' ? [1, 1.03, 1] : [1, 1.01, 1]
+        rotateY: state === 'processing' ? [0, 10, -10, 0] : [0, 3, -3, 0],
+        scale: state === 'processing' ? [1, 1.05, 1] : [1, 1.02, 1]
       }}
       transition={{
-        duration: state === 'processing' ? 2 : 4,
+        duration: state === 'processing' ? 1.5 : 3,
         repeat: Infinity,
         ease: "easeInOut"
       }}
     >
-      <div
-        className="absolute top-2 left-2 right-2 h-4 rounded-full opacity-40"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.6) 100%)'
-        }}
-      />
-      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 flex space-x-3">
-        {renderEyes()}
-      </div>
-      <div
-        className="absolute bottom-3 left-1/2 transform -translate-x-1/2 w-8 h-1 rounded-full opacity-30"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, #64748b 50%, transparent 100%)'
-        }}
-      />
+      {renderEyes()}
     </motion.div>
   );
 
@@ -66,305 +46,142 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     const pattern = getEyePattern();
     
     if (pattern === '||') {
+      // Thinking eyes - vertical lines
       return (
-        <div className="flex space-x-2">
+        <div className="flex space-x-4">
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #e0f2fe 30%, #0ea5e9 70%, #0284c7 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(14,165,233,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ scale: [1, 1.05, 1], rotateZ: [0, 2, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-5 h-8 bg-white rounded-full relative"
+            animate={{ scaleY: [1, 1.1, 1], rotateX: [0, 5, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #1e40af 0%, #1d4ed8 50%, #1e3a8a 100%)'
-              }}
-              animate={{ scale: [0.8, 1, 0.8], x: [0, 1, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.8)' }}
-              />
-            </motion.div>
+            <motion.div 
+              className="absolute inset-x-0 top-1/2 h-5 w-0.5 bg-white rounded-full transform -translate-y-1/2 left-1/2 -translate-x-1/2"
+              animate={{ scaleY: [0.7, 1, 0.7] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            />
           </motion.div>
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #e0f2fe 30%, #0ea5e9 70%, #0284c7 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(14,165,233,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ scale: [1, 1.05, 1], rotateZ: [0, -2, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.1 }}
+            className="w-5 h-8 bg-white rounded-full relative"
+            animate={{ scaleY: [1, 1.1, 1], rotateX: [0, 5, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #1e40af 0%, #1d4ed8 50%, #1e3a8a 100%)'
-              }}
-              animate={{ scale: [0.8, 1, 0.8], x: [0, -1, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.1 }}
-            >
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.8)' }}
-              />
-            </motion.div>
+            <motion.div 
+              className="absolute inset-x-0 top-1/2 h-5 w-0.5 bg-white rounded-full transform -translate-y-1/2 left-1/2 -translate-x-1/2"
+              animate={{ scaleY: [0.7, 1, 0.7] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }}
+            />
           </motion.div>
         </div>
       );
     }
     
     if (pattern === 'OO') {
+      // Idle eyes - circles
       return (
-        <div className="flex space-x-2">
+        <div className="flex space-x-4">
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #f0fdf4 30%, #22c55e 70%, #16a34a 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(34,197,94,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ scale: [1, 0.95, 1], rotateZ: [0, 1, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #15803d 0%, #166534 50%, #14532d 100%)'
-              }}
-              animate={{ scale: [0.9, 1, 0.9], x: [0, 0.5, 0] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.8)' }}
-              />
-            </motion.div>
-          </motion.div>
+            className="w-5 h-5 bg-white rounded-full"
+            animate={{ scale: [1, 0.9, 1], rotateY: [0, 10, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #f0fdf4 30%, #22c55e 70%, #16a34a 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(34,197,94,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ scale: [1, 0.95, 1], rotateZ: [0, -1, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.1 }}
-          >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #15803d 0%, #166534 50%, #14532d 100%)'
-              }}
-              animate={{ scale: [0.9, 1, 0.9], x: [0, -0.5, 0] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.1 }}
-            >
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.8)' }}
-              />
-            </motion.div>
-          </motion.div>
+            className="w-5 h-5 bg-white rounded-full"
+            animate={{ scale: [1, 0.9, 1], rotateY: [0, -10, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.1 }}
+          />
         </div>
       );
     }
     
     if (pattern === 'XX') {
+      // Processing eyes - X shape
       return (
-        <div className="flex space-x-2">
+        <div className="flex space-x-4">
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fef2f2 30%, #ef4444 70%, #dc2626 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(239,68,68,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ rotate: [0, 180, 360], scale: [1, 1.05, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            className="w-5 h-5 bg-white rounded-full relative"
+            animate={{ rotate: [0, 180, 360], scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)'
-              }}
-              animate={{ scale: [0.8, 1.1, 0.8] }}
-              transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-0.5 bg-white rounded-full transform rotate-45" />
-                <div className="absolute w-3 h-0.5 bg-white rounded-full transform -rotate-45" />
-              </div>
-            </motion.div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4 h-0.5 bg-black rounded-full transform rotate-45" />
+              <div className="absolute w-4 h-0.5 bg-black rounded-full transform -rotate-45" />
+            </div>
           </motion.div>
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fef2f2 30%, #ef4444 70%, #dc2626 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(239,68,68,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ rotate: [0, -180, -360], scale: [1, 1.05, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            className="w-5 h-5 bg-white rounded-full relative"
+            animate={{ rotate: [0, -180, -360], scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)'
-              }}
-              animate={{ scale: [0.8, 1.1, 0.8] }}
-              transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-0.5 bg-white rounded-full transform rotate-45" />
-                <div className="absolute w-3 h-0.5 bg-white rounded-full transform -rotate-45" />
-              </div>
-            </motion.div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4 h-0.5 bg-black rounded-full transform rotate-45" />
+              <div className="absolute w-4 h-0.5 bg-black rounded-full transform -rotate-45" />
+            </div>
           </motion.div>
         </div>
       );
     }
     
     if (pattern === '++') {
+      // Searching eyes - plus shape
       return (
-        <div className="flex space-x-2">
+        <div className="flex space-x-4">
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fefce8 30%, #eab308 70%, #ca8a04 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(234,179,8,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ rotate: [0, 90, 180, 270, 360], scale: [1, 1.05, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-5 h-5 bg-white rounded-full relative"
+            animate={{ scale: [1, 1.2, 1], rotate: [0, 45, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #a16207 0%, #854d0e 50%, #713f12 100%)'
-              }}
-              animate={{ scale: [0.8, 1.1, 0.8] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-0.5 bg-white rounded-full" />
-                <div className="absolute w-0.5 h-3 bg-white rounded-full" />
-              </div>
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.6)' }}
-              />
-            </motion.div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4 h-0.5 bg-black rounded-full" />
+              <div className="absolute w-0.5 h-4 bg-black rounded-full" />
+            </div>
           </motion.div>
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fefce8 30%, #eab308 70%, #ca8a04 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(234,179,8,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ rotate: [0, -90, -180, -270, -360], scale: [1, 1.05, 1] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-5 h-5 bg-white rounded-full relative"
+            animate={{ scale: [1, 1.2, 1], rotate: [0, -45, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #a16207 0%, #854d0e 50%, #713f12 100%)'
-              }}
-              animate={{ scale: [0.8, 1.1, 0.8] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-0.5 bg-white rounded-full" />
-                <div className="absolute w-0.5 h-3 bg-white rounded-full" />
-              </div>
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.6)' }}
-              />
-            </motion.div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-4 h-0.5 bg-black rounded-full" />
+              <div className="absolute w-0.5 h-4 bg-black rounded-full" />
+            </div>
           </motion.div>
         </div>
       );
     }
     
     if (pattern === '**') {
+      // Browsing eyes - star/asterisk shape
       return (
-        <div className="flex space-x-2">
+        <div className="flex space-x-4">
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fffbeb 30%, #f59e0b 70%, #d97706 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(245,158,11,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ scale: [1, 1.1, 1], rotate: [0, 360] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="w-5 h-5 bg-white rounded-full relative"
+            animate={{ scale: [0.9, 1.2, 0.9], rotate: [0, 360, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #92400e 0%, #78350f 50%, #451a03 100%)'
-              }}
-              animate={{ scale: [0.8, 1.2, 0.8] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                {[0, 45, 90, 135].map((rotation, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-2.5 h-0.5 bg-white rounded-full"
-                    style={{ transform: `rotate(${rotation}deg)` }}
-                    animate={{ opacity: [0.6, 1, 0.6] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: i * 0.1 }}
-                  />
-                ))}
-              </div>
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.6)' }}
-              />
-            </motion.div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {[0, 45, 90, 135].map((rotation, i) => (
+                <div
+                  key={i}
+                  className="absolute w-4 h-0.5 bg-black rounded-full"
+                  style={{ transform: `rotate(${rotation}deg)` }}
+                />
+              ))}
+            </div>
           </motion.div>
           <motion.div
-            className="relative w-6 h-6 rounded-full overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fffbeb 30%, #f59e0b 70%, #d97706 100%)',
-              boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -3px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(245,158,11,0.3)',
-              border: '1px solid rgba(255,255,255,0.5)'
-            }}
-            animate={{ scale: [1, 1.1, 1], rotate: [0, -360] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+            className="w-5 h-5 bg-white rounded-full relative"
+            animate={{ scale: [0.9, 1.2, 0.9], rotate: [0, -360, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
           >
-            <motion.div
-              className="absolute w-4 h-4 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                background: 'radial-gradient(circle at 30% 30%, #92400e 0%, #78350f 50%, #451a03 100%)'
-              }}
-              animate={{ scale: [0.8, 1.2, 0.8] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                {[0, 45, 90, 135].map((rotation, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute w-2.5 h-0.5 bg-white rounded-full"
-                    style={{ transform: `rotate(${rotation}deg)` }}
-                    animate={{ opacity: [0.6, 1, 0.6] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: (i * 0.1) + 0.2 }}
-                  />
-                ))}
-              </div>
-              <div
-                className="absolute w-1.5 h-1.5 rounded-full top-1 left-1"
-                style={{ background: 'rgba(255,255,255,0.6)' }}
-              />
-            </motion.div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              {[0, 45, 90, 135].map((rotation, i) => (
+                <div
+                  key={i}
+                  className="absolute w-4 h-0.5 bg-black rounded-full"
+                  style={{ transform: `rotate(${rotation}deg)` }}
+                />
+              ))}
+            </div>
           </motion.div>
         </div>
       );
@@ -446,7 +263,7 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
         }}
       >
         {renderAntlers()}
-        {renderHelmet()}
+        {renderEyesContainer()}
       </motion.div>
       <div className="text-xs text-gray-400 mt-2 text-center max-w-40">
         {message}

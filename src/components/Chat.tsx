@@ -793,7 +793,7 @@ const Chat: React.FC = () => {
                       />
                     </div>
                   </div>
-                  <div className="flex items-center" style={{marginLeft: 18}}>
+                  <div className="flex items-center" style={{marginLeft: 32}}>
                     <div className="bg-[#111111] rounded px-3 py-1 flex items-center" style={{minHeight: '28px'}}>
                       <span className="text-sm text-white font-medium" style={{lineHeight: '1.2'}}>
                         {avatarMessage || 'Processing...'}

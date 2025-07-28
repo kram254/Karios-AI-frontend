@@ -9,27 +9,30 @@ interface AnimatedAvatarProps {
 }
 
 const glyphs: Record<AnimatedAvatarProps['state'], string> = {
-  thinking: '|',
-  searching: '+',
-  browsing: '*',
-  scraping: '+',
-  processing: 'X',
-  idle: 'O',
+  thinking: '||',
+  searching: '++',
+  browsing: '**',
+  scraping: '++',
+  processing: 'XX',
+  idle: 'OO',
 };
 
 const Avatar3D = ({ state }: { state: AnimatedAvatarProps['state'] }) => {
-  const groupRef = useRef<THREE.Group>(null!); const matRef = useRef<THREE.MeshStandardMaterial>(null!);
+  const groupRef = useRef<THREE.Group>(null!);
 
   const eyeTex = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 256;
+    canvas.width = canvas.height = 512;
     const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, 256, 256);
+    ctx.clearRect(0, 0, 512, 512);
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 220px/256px ui-sans-serif, system-ui';
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 8;
+    ctx.font = 'bold 400px/512px ui-sans-serif, system-ui';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(glyphs[state], 128, 128);
+    ctx.fillText(glyphs[state], 256, 256);
+    ctx.strokeText(glyphs[state], 256, 256);
     return new THREE.CanvasTexture(canvas);
   }, [state]);
 
@@ -40,30 +43,26 @@ const Avatar3D = ({ state }: { state: AnimatedAvatarProps['state'] }) => {
       groupRef.current.position.y = Math.sin(t * 1.8) * 0.08;
       groupRef.current.scale.setScalar(1 + Math.sin(t * 2.2) * 0.03);
     }
-    if (matRef.current) {
-      const glow = 0.5 + 0.5 * Math.sin(Date.now() * 0.003);
-      matRef.current.emissive.setScalar(glow * 0.25);
-    }
   });
 
   return (
     <group ref={groupRef}>
       <Sphere args={[1.2, 64, 64]}>
         <meshStandardMaterial
-          ref={matRef}
-          color="#1d6fa5"
-          metalness={0.1}
-          roughness={0.25}
-          emissive="#1d6fa5"
+          color="#2563eb"
+          metalness={0.3}
+          roughness={0.1}
+          emissive="#1e40af"
+          emissiveIntensity={0.1}
         />
       </Sphere>
-      <group position={[0, 0, 0.85]}>
-        <mesh position={[-0.35, 0.1, 0]}>
-          <planeGeometry args={[0.3, 0.3]} />
+      <group position={[0, 0.1, 1.0]}>
+        <mesh position={[-0.4, 0, 0]}>
+          <planeGeometry args={[0.4, 0.4]} />
           <meshBasicMaterial map={eyeTex} transparent />
         </mesh>
-        <mesh position={[0.35, 0.1, 0]}>
-          <planeGeometry args={[0.3, 0.3]} />
+        <mesh position={[0.4, 0, 0]}>
+          <planeGeometry args={[0.4, 0.4]} />
           <meshBasicMaterial map={eyeTex} transparent />
         </mesh>
       </group>

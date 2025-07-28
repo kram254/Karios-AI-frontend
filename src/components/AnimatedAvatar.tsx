@@ -28,35 +28,26 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
     return () => cancelAnimationFrame(animationId);
   }, []);
 
-  // Complex 3D-like movements with higher intensity
-  const floatY = Math.sin(animationOffset * 2.5) * 4;
-  const floatX = Math.cos(animationOffset * 1.8) * 3;
-  const pulseScale = 1 + Math.sin(animationOffset * 4) * 0.08;
+  const pulseScale = 1 + Math.sin(animationOffset * 3) * 0.02;
   
-  // More dramatic face rotation movements
-  const rotateY = Math.sin(animationOffset * 1.2) * 25; // Left-right turn
-  const rotateX = Math.cos(animationOffset * 1.6) * 15; // Up-down tilt
-  const rotateZ = Math.sin(animationOffset * 0.7) * 8;  // Roll movement
+  const rotateY = Math.sin(animationOffset * 0.8) * 3;
+  const rotateX = Math.cos(animationOffset * 0.6) * 2;
+  const rotateZ = Math.sin(animationOffset * 0.4) * 1;
   
-  // Enhanced perspective depth simulation
-  const perspective = 1 + Math.sin(animationOffset * 1.4) * 0.15;
-  
-  // Additional wobble for more liveliness
-  const wobbleX = Math.sin(animationOffset * 3.2) * 1;
-  const wobbleY = Math.cos(animationOffset * 2.8) * 1;
+  const eyePulse = 1 + Math.sin(animationOffset * 4) * 0.1;
+  const eyeMoveX = Math.sin(animationOffset * 1.5) * 2;
+  const eyeMoveY = Math.cos(animationOffset * 1.2) * 1;
 
   return (
     <div 
       className="relative w-16 h-16 flex items-center justify-center"
       style={{ 
         transform: `
-          translateX(${floatX + wobbleX}px) 
-          translateY(${floatY + wobbleY}px) 
-          scale(${pulseScale * perspective})
+          scale(${pulseScale})
           perspective(150px)
         `,
         transformStyle: 'preserve-3d',
-        filter: `drop-shadow(0 ${4 + floatY * 0.3}px ${8 + Math.abs(floatY * 0.5)}px rgba(59, 130, 246, 0.3))`
+        filter: `drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3))`
       }}
     >
       {/* Main sphere with enhanced 3D gradient */}
@@ -73,15 +64,14 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
             )
           `,
           boxShadow: `
-            0 ${6 + floatY * 0.4}px ${20 + Math.abs(floatY * 0.8)}px rgba(59, 130, 246, 0.5),
-            inset 0 ${2 + Math.sin(animationOffset * 2) * 0.5}px ${4 + Math.cos(animationOffset * 1.5) * 1}px rgba(255, 255, 255, 0.4),
+            0 6px 20px rgba(59, 130, 246, 0.5),
+            inset 0 2px 4px rgba(255, 255, 255, 0.4),
             inset 0 -2px 4px rgba(0, 0, 0, 0.1)
           `,
           transform: `
             rotateX(${rotateX}deg) 
             rotateY(${rotateY}deg) 
             rotateZ(${rotateZ}deg)
-            scale(${1 + Math.sin(animationOffset * 3.5) * 0.03})
           `,
           transformStyle: 'preserve-3d',
           border: '1px solid rgba(255, 255, 255, 0.2)'
@@ -92,9 +82,8 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
           className="flex items-center justify-center gap-2"
           style={{
             transform: `
-              translateX(${Math.sin(rotateY * Math.PI / 180) * 3}px)
-              translateY(${Math.sin(rotateX * Math.PI / 180) * 2}px)
-              rotateZ(${rotateZ * 0.3}deg)
+              translateX(${eyeMoveX}px)
+              translateY(${eyeMoveY}px)
             `
           }}
         >
@@ -107,11 +96,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
                 inset 0 0.5px 1px rgba(255, 255, 255, 0.8)
               `,
               transform: `
-                scaleX(${1 - Math.abs(Math.sin(rotateY * Math.PI / 180)) * 0.4})
-                scaleY(${1 - Math.abs(Math.sin(rotateX * Math.PI / 180)) * 0.3})
-                rotateY(${rotateY * 0.5}deg)
-                rotateX(${rotateX * 0.3}deg)
-                scale(${1 + Math.sin(animationOffset * 4.2) * 0.05})
+                scale(${eyePulse})
               `
             }}
           >
@@ -120,10 +105,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
               style={{ 
                 fontSize: '12px',
                 fontFamily: 'ui-monospace, monospace',
-                transform: `
-                  scaleX(${1 + Math.abs(Math.sin(rotateY * Math.PI / 180)) * 0.3})
-                  rotateY(${-rotateY * 0.2}deg)
-                `
+                transform: `scale(1)`
               }}
             >
               {currentEyeState.left}
@@ -139,11 +121,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
                 inset 0 0.5px 1px rgba(255, 255, 255, 0.8)
               `,
               transform: `
-                scaleX(${1 - Math.abs(Math.sin(rotateY * Math.PI / 180)) * 0.4})
-                scaleY(${1 - Math.abs(Math.sin(rotateX * Math.PI / 180)) * 0.3})
-                rotateY(${rotateY * 0.5}deg)
-                rotateX(${rotateX * 0.3}deg)
-                scale(${1 + Math.sin(animationOffset * 4.2 + 0.5) * 0.05})
+                scale(${eyePulse})
               `
             }}
           >
@@ -152,10 +130,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
               style={{ 
                 fontSize: '12px',
                 fontFamily: 'ui-monospace, monospace',
-                transform: `
-                  scaleX(${1 + Math.abs(Math.sin(rotateY * Math.PI / 180)) * 0.3})
-                  rotateY(${-rotateY * 0.2}deg)
-                `
+                transform: `scale(1)`
               }}
             >
               {currentEyeState.right}
@@ -223,14 +198,12 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
           `,
           opacity: 0.6 + Math.sin(animationOffset * 1.8) * 0.2,
           transform: `
-            translateX(${(floatX + wobbleX) * 0.4}px)
-            translateY(${6 - (floatY + wobbleY) * 0.4}px) 
-            scaleX(${1 - (floatY + wobbleY) * 0.03 + Math.abs(rotateY) * 0.015}) 
-            scaleY(${1 - Math.abs(rotateX) * 0.03})
-            skewX(${rotateY * 0.7}deg)
-            rotate(${rotateZ * 0.3}deg)
+            translateY(6px) 
+            scaleX(${1 + Math.abs(rotateY) * 0.01}) 
+            scaleY(${1 - Math.abs(rotateX) * 0.02})
+            skewX(${rotateY * 0.3}deg)
           `,
-          filter: `blur(${1 + Math.abs(floatY) * 0.1}px)`
+          filter: `blur(1px)`
         }}
       />
     </div>

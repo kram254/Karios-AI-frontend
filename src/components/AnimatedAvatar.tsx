@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere } from '@react-three/drei';
 import * as THREE from 'three';
@@ -8,31 +8,27 @@ interface AnimatedAvatarProps {
   message: string;
 }
 
-const glyphs = {
-  thinking: '||',
-  searching: '++',
-  browsing: '**',
-  scraping: '++',
-  processing: 'XX',
-  idle: 'OO',
+// Eye state definitions for five avatar states
+const eyeStates = {
+  thinking: { open: true, leftOffset: 0, rightOffset: 0, scale: 1, blink: false }, // normal open eyes
+  searching: { open: true, leftOffset: -0.04, rightOffset: 0.04, scale: 1.1, blink: false }, // eyes looking to sides
+  browsing: { open: true, leftOffset: 0, rightOffset: 0, scale: 1, blink: true }, // blinking
+  scraping: { open: true, leftOffset: 0, rightOffset: 0, scale: 1, blink: false }, // normal open eyes
+  processing: { open: false, leftOffset: 0, rightOffset: 0, scale: 1, blink: false }, // closed eyes
+  idle: { open: true, leftOffset: 0, rightOffset: 0, scale: 1, blink: false }, // normal open eyes
 };
 
-const Avatar3D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) => {
+interface Avatar3DProps {
+  state: 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle';
+}
+
+const Avatar3D = React.forwardRef<THREE.Group, Avatar3DProps>(({ state }, _ref) => {
   const groupRef = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshStandardMaterial>(null);
 
-  const eyeTex = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 256;
-    const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, 256, 256);
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 220px/256px ui-sans-serif, system-ui';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(glyphs[state], 128, 128);
-    return new THREE.CanvasTexture(canvas);
-  }, [state]);
+  // Animation and state
+  const currentEyeState = eyeStates[state as keyof typeof eyeStates] || eyeStates.idle;
+  const [blink, setBlink] = React.useState(false);
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -41,38 +37,71 @@ const Avatar3D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
       groupRef.current.position.y = Math.sin(t * 1.8) * 0.08;
       groupRef.current.scale.setScalar(1 + Math.sin(t * 2.2) * 0.03);
     }
+    // Blinking logic for 'browsing' state
+    if (currentEyeState.blink) {
+      const blinkNow = Math.sin(t * 3.5) > 0.95;
+      if (blink !== blinkNow) setBlink(blinkNow);
+    } else if (blink) {
+      setBlink(false);
+    }
   });
 
   useFrame(() => {
     if (matRef.current) {
       const glow = 0.5 + 0.5 * Math.sin(Date.now() * 0.003);
-      matRef.current.emissive.setScalar(glow * 0.25);
+      matRef.current.emissive.setScalar(glow * 0.1);
     }
   });
 
+  // Eye rendering helper
+  const renderEye = (side = 'left') => {
+    const x = side === 'left' ? -0.28 + currentEyeState.leftOffset : 0.28 + currentEyeState.rightOffset;
+    const y = 0.22;
+    const scale = currentEyeState.scale;
+    const isOpen = currentEyeState.open && !(blink && currentEyeState.blink) && state !== 'processing';
+    return (
+      <group position={[x, y, 0.7]}>
+        {/* Eye white */}
+        <mesh scale={[0.17 * scale, 0.17 * scale, 0.12]}>
+          <sphereGeometry args={[1, 24, 24]} />
+          <meshStandardMaterial color="#fff" roughness={0.3} metalness={0.05} />
+        </mesh>
+        {/* Pupil */}
+        {isOpen && (
+          <mesh position={[0, 0, 0.09]} scale={[0.33, 0.33, 1]}>
+            <sphereGeometry args={[0.09, 16, 16]} />
+            <meshStandardMaterial color="#222" />
+          </mesh>
+        )}
+        {/* Closed eye (lid) */}
+        {!isOpen && (
+          <mesh position={[0, 0.01, 0.11]}>
+            <planeGeometry args={[0.14, 0.03]} />
+            <meshStandardMaterial color="#bbb" />
+          </mesh>
+        )}
+      </group>
+    );
+  };
+
   return (
     <group ref={groupRef}>
+      {/* Head sphere */}
       <Sphere args={[0.8, 32, 32]}>
         <meshStandardMaterial
           ref={matRef}
-          color="#1d6fa5"
-          metalness={0.1}
-          roughness={0.25}
+          color="#f6f8fa"
+          metalness={0.08}
+          roughness={0.18}
         />
       </Sphere>
-      <group position={[0, 0.3, 0]}>
-        <mesh position={[-0.4, 0, 0]}>
-          <planeGeometry args={[0.2, 0.2]} />
-          <meshBasicMaterial map={eyeTex} transparent />
-        </mesh>
-        <mesh position={[0.4, 0, 0]}>
-          <planeGeometry args={[0.2, 0.2]} />
-          <meshBasicMaterial map={eyeTex} transparent />
-        </mesh>
-      </group>
+      {/* Eyes */}
+      {renderEye('left')}
+      {renderEye('right')}
+
     </group>
   );
-};
+});
 
 const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
   return (

@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useRef, useMemo } from 'react';
+// import { Canvas, useFrame } from '@react-three/fiber';
+// import { Sphere, Box } from '@react-three/drei';
+// import * as THREE from 'three';
 import { motion } from 'framer-motion';
 
 interface AnimatedAvatarProps {
@@ -25,22 +28,7 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     }
   };
 
-  const renderEyesContainer = () => (
-    <motion.div
-      className="relative flex justify-center"
-      animate={{
-        rotateY: state === 'processing' ? [0, 10, -10, 0] : [0, 3, -3, 0],
-        scale: state === 'processing' ? [1, 1.05, 1] : [1, 1.02, 1]
-      }}
-      transition={{
-        duration: state === 'processing' ? 1.5 : 3,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
-    >
-      {renderEyes()}
-    </motion.div>
-  );
+
 
   const renderEyes = () => {
     const pattern = getEyePattern();
@@ -48,12 +36,12 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     if (pattern === '||') {
       // Thinking eyes - vertical lines
       return (
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <motion.div
-            className="w-6 h-8 rounded-full relative overflow-hidden"
+            className="w-4 h-5 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(ellipse at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scaleY: [1, 1.1, 1], rotateX: [0, 5, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
@@ -65,10 +53,10 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
             />
           </motion.div>
           <motion.div
-            className="w-6 h-8 rounded-full relative overflow-hidden"
+            className="w-4 h-5 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(ellipse at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scaleY: [1, 1.1, 1], rotateX: [0, 5, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
@@ -86,21 +74,21 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     if (pattern === 'OO') {
       // Idle eyes - circles
       return (
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <motion.div
-            className="w-6 h-6 rounded-full"
+            className="w-4 h-4 rounded-full"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scale: [1, 0.95, 1], rotateY: [0, 8, 0] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="w-6 h-6 rounded-full"
+            className="w-4 h-4 rounded-full"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scale: [1, 0.95, 1], rotateY: [0, -8, 0] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.1 }}
@@ -112,12 +100,12 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     if (pattern === 'XX') {
       // Processing eyes - X shape
       return (
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <motion.div
-            className="w-6 h-6 rounded-full relative overflow-hidden"
+            className="w-4 h-4 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ rotate: [0, 180, 360], scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
@@ -128,10 +116,10 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
             </div>
           </motion.div>
           <motion.div
-            className="w-6 h-6 rounded-full relative overflow-hidden"
+            className="w-4 h-4 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ rotate: [0, -180, -360], scale: [1, 1.1, 1] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
@@ -148,12 +136,12 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     if (pattern === '++') {
       // Searching eyes - plus shape
       return (
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <motion.div
-            className="w-6 h-6 rounded-full relative overflow-hidden"
+            className="w-4 h-4 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scale: [1, 1.15, 1], rotate: [0, 45, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
@@ -164,10 +152,10 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
             </div>
           </motion.div>
           <motion.div
-            className="w-6 h-6 rounded-full relative overflow-hidden"
+            className="w-4 h-4 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scale: [1, 1.15, 1], rotate: [0, -45, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
@@ -184,12 +172,12 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     if (pattern === '**') {
       // Browsing eyes - star/asterisk shape
       return (
-        <div className="flex space-x-3">
+        <div className="flex space-x-2">
           <motion.div
-            className="w-6 h-6 rounded-full relative overflow-hidden"
+            className="w-4 h-4 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scale: [0.95, 1.2, 0.95], rotate: [0, 360, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -205,10 +193,10 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
             </div>
           </motion.div>
           <motion.div
-            className="w-6 h-6 rounded-full relative overflow-hidden"
+            className="w-4 h-4 rounded-full relative overflow-hidden"
             style={{
-              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f8f9fa 40%, #e9ecef 100%)',
-              boxShadow: 'inset -2px -2px 4px rgba(255,255,255,0.8), inset 2px 2px 6px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)'
+              background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(248,249,250,0.9) 40%, rgba(233,236,239,0.85) 100%)',
+              boxShadow: 'inset -1px -1px 3px rgba(255,255,255,0.9), inset 1px 1px 3px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1), 0 0 8px rgba(255,255,255,0.3)'
             }}
             animate={{ scale: [0.95, 1.2, 0.95], rotate: [0, -360, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
@@ -230,91 +218,19 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
     return null;
   };
 
-  const renderAntlers = () => (
-    <div className="flex justify-center space-x-8 mb-1">
-      <motion.div
-        className="relative"
-        animate={{
-          rotateZ: state === 'thinking' ? [0, 12, -12, 0] : [0, 5, -5, 0]
-        }}
-        transition={{
-          duration: state === 'idle' ? 4 : 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      >
-        <div
-          className="w-1.5 h-8 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #8b4513 0%, #654321 50%, #4a2c17 100%)',
-            boxShadow: 'inset -1px -1px 2px rgba(255,255,255,0.3), inset 1px 1px 3px rgba(0,0,0,0.4), 0 3px 8px rgba(139,69,19,0.4)'
-          }}
-        />
-        <div
-          className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #a0522d 0%, #8b4513 100%)',
-            boxShadow: 'inset -1px -1px 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.3)'
-          }}
-        />
-        <div
-          className="absolute top-2 -right-0.5 w-1.5 h-1.5 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #a0522d 0%, #8b4513 100%)',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
-          }}
-        />
-      </motion.div>
-      <motion.div
-        className="relative"
-        animate={{
-          rotateZ: state === 'thinking' ? [0, -12, 12, 0] : [0, -5, 5, 0]
-        }}
-        transition={{
-          duration: state === 'idle' ? 4 : 2,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: 0.1
-        }}
-      >
-        <div
-          className="w-1.5 h-8 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #8b4513 0%, #654321 50%, #4a2c17 100%)',
-            boxShadow: 'inset -1px -1px 2px rgba(255,255,255,0.3), inset 1px 1px 3px rgba(0,0,0,0.4), 0 3px 8px rgba(139,69,19,0.4)'
-          }}
-        />
-        <div
-          className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #a0522d 0%, #8b4513 100%)',
-            boxShadow: 'inset -1px -1px 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.3)'
-          }}
-        />
-        <div
-          className="absolute top-2 -left-0.5 w-1.5 h-1.5 rounded-full"
-          style={{
-            background: 'linear-gradient(145deg, #a0522d 0%, #8b4513 100%)',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
-          }}
-        />
-      </motion.div>
-    </div>
-  );
+
 
   return (
     <div className="flex flex-col items-center">
       <motion.div
-        className="relative w-24 h-24 rounded-full flex flex-col items-center justify-center"
+        className="relative w-12 h-12 rounded-full flex items-center justify-center"
         style={{
-          background: 'radial-gradient(circle at 30% 30%, #4ec5f1, #1d6fa5)',
-          boxShadow: 'inset -5px -5px 10px rgba(255,255,255,0.15), inset 5px 5px 15px rgba(0,0,0,0.2), 0 5px 15px rgba(0,0,0,0.3)',
-          border: '2px solid #1b4e6b'
+          background: 'rgba(55, 65, 81, 0.9)',
+          border: '2px solid rgba(75, 85, 99, 0.8)'
         }}
         animate={{
           scale: state === 'processing' ? [1, 1.05, 1] : [1, 1.02, 1],
-          y: state === 'idle' ? [0, -1, 0] : [0, -2, 0],
-          rotateY: state === 'processing' ? [0, 5, -5, 0] : [0, 2, -2, 0]
+          y: state === 'idle' ? [0, -1, 0] : [0, -2, 0]
         }}
         transition={{
           duration: state === 'processing' ? 1.5 : 3,
@@ -322,31 +238,9 @@ const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
           ease: "easeInOut"
         }}
       >
-        {/* Helmet highlight */}
-        <div
-          className="absolute top-2 left-2 right-2 h-3 rounded-t-full opacity-30"
-          style={{
-            background: 'linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.4) 100%)'
-          }}
-        />
-        
-        {/* Antlers positioned above helmet */}
-        <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-          {renderAntlers()}
-        </div>
-        
-        {/* Eyes positioned in center of helmet */}
         <div className="relative z-10">
-          {renderEyesContainer()}
+          {renderEyes()}
         </div>
-        
-        {/* Bottom helmet detail */}
-        <div
-          className="absolute bottom-1 left-3 right-3 h-1 rounded-full opacity-20"
-          style={{
-            background: 'linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%)'
-          }}
-        />
       </motion.div>
       <div className="text-xs text-gray-400 mt-3 text-center max-w-40">
         {message}

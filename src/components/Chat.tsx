@@ -87,7 +87,7 @@ const Chat: React.FC = () => {
     
     // Set avatar to thinking state when processing starts
     setAvatarState('thinking');
-    setAvatarMessage('Processing your message...');
+    setAvatarMessage('Thinking...');
     
     // Get message content once for the entire function
     const messageContent = message.trim();
@@ -102,7 +102,7 @@ const Chat: React.FC = () => {
       
       // Set avatar to searching state for internet search
       setAvatarState('searching');
-      setAvatarMessage('Searching the web for information...');
+      setAvatarMessage('Browsing...');
       
       try {
         const searchId = `search-${Date.now()}`;

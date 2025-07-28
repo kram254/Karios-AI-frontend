@@ -784,16 +784,18 @@ const Chat: React.FC = () => {
             {/* Animated Avatar - Show during processing states */}
             {(isProcessing || avatarState !== 'idle') && (
               <div className="flex justify-start mb-4">
-                <div className="bg-[#111111] rounded flex items-center pl-3 pr-4 py-1">
-                  <div className="w-3.5 h-3.5">
+                <div className="flex items-end" style={{paddingLeft: 20}}>
+                  <div className="w-3.5 h-3.5 flex items-end">
                     <AnimatedAvatar 
                       state={avatarState} 
                       message="" 
                     />
                   </div>
-                  <div className="ml-3">
-                    <div className="text-sm text-white font-medium">
-                      {avatarMessage || 'Processing...'}
+                  <div className="flex items-end" style={{marginLeft: 12, height: '100%'}}>
+                    <div className="bg-[#111111] rounded px-3 py-1 flex items-center" style={{minHeight: '28px'}}>
+                      <span className="text-sm text-white font-medium" style={{lineHeight: '1.2'}}>
+                        {avatarMessage || 'Processing...'}
+                      </span>
                     </div>
                   </div>
                 </div>

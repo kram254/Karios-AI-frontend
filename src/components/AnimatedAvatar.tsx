@@ -9,16 +9,16 @@ interface AnimatedAvatarProps {
 }
 
 const glyphs: Record<AnimatedAvatarProps['state'], string> = {
-  thinking: '||',
-  searching: '++',
-  browsing: '**',
-  scraping: '++',
-  processing: 'XX',
-  idle: 'OO',
+  thinking: '|',
+  searching: '+',
+  browsing: '*',
+  scraping: '+',
+  processing: 'X',
+  idle: 'O',
 };
 
 const Avatar3D = ({ state }: { state: AnimatedAvatarProps['state'] }) => {
-  const groupRef = useRef<THREE.Group>(null!);
+  const groupRef = useRef<THREE.Group>(null!); const matRef = useRef<THREE.MeshStandardMaterial>(null!);
 
   const eyeTex = useMemo(() => {
     const canvas = document.createElement('canvas');
@@ -40,15 +40,21 @@ const Avatar3D = ({ state }: { state: AnimatedAvatarProps['state'] }) => {
       groupRef.current.position.y = Math.sin(t * 1.8) * 0.08;
       groupRef.current.scale.setScalar(1 + Math.sin(t * 2.2) * 0.03);
     }
+    if (matRef.current) {
+      const glow = 0.5 + 0.5 * Math.sin(Date.now() * 0.003);
+      matRef.current.emissive.setScalar(glow * 0.25);
+    }
   });
 
   return (
     <group ref={groupRef}>
       <Sphere args={[1.2, 64, 64]}>
         <meshStandardMaterial
+          ref={matRef}
           color="#1d6fa5"
           metalness={0.1}
           roughness={0.25}
+          emissive="#1d6fa5"
         />
       </Sphere>
       <group position={[0, 0, 0.85]}>

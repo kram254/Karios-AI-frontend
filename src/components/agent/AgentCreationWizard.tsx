@@ -386,6 +386,10 @@ export default function AgentCreationWizard({
                 setFormData(prev => ({
                     ...prev,
                     config: {
+                        language: 'en',
+                        mode: AgentMode.TEXT,
+                        response_style: 0.5,
+                        response_length: 100,
                         ...prev.config,
                         email_config: {
                             ...prev.config?.email_config,

@@ -89,6 +89,8 @@
 .message-container {
   display: flex;
   margin-bottom: 1rem;
+  margin-left: 7%;
+  margin-right: 7%;
 }
 
 .message-container.user {
@@ -181,7 +183,7 @@
 }
 
 .message-content.assistant {
-  background-color: #2A2A2A;
+  background-color: transparent;
   color: #fff;
   border-top-left-radius: 0;
 }

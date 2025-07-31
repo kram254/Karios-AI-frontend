@@ -100,16 +100,41 @@
 }
 
 .message-content {
-  max-width: 80%;
   padding: 1rem;
   border-radius: 0.5rem;
   position: relative;
 }
 
 .message-content.user {
-  background-color: #00b4d8;
-  color: #000;
+  background-color: #2A2A2A;
+  color: #fff;
+  border: 2px solid #00F3FF;
   border-top-right-radius: 0;
+  max-width: 65%;
+  min-width: fit-content;
+  width: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.message-content.user::-webkit-scrollbar {
+  width: 6px;
+}
+
+.message-content.user::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.message-content.user::-webkit-scrollbar-thumb {
+  background: #00F3FF;
+  border-radius: 3px;
+}
+
+.message-content.user::-webkit-scrollbar-thumb:hover {
+  background: #00b4d8;
 }
 
 .message-content.assistant {

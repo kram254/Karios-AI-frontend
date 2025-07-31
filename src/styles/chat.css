@@ -110,8 +110,8 @@
   color: #fff;
   border: 2px solid #666666;
   border-top-right-radius: 0;
-  max-width: 65%;
-  min-width: fit-content;
+  max-width: 60%;
+  min-width: 100px;
   width: auto;
   max-height: 400px;
   overflow-y: auto;
@@ -121,6 +121,12 @@
   font-family: inherit;
   text-align: left;
   display: block;
+  overflow-wrap: break-word;
+  hyphens: none;
+  text-justify: none;
+  column-count: unset;
+  column-width: unset;
+  columns: unset;
 }
 
 .message-content.user::-webkit-scrollbar {

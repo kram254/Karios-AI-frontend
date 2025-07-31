@@ -124,9 +124,19 @@
   overflow-wrap: break-word;
   hyphens: none;
   text-justify: none;
-  column-count: unset;
-  column-width: unset;
-  columns: unset;
+  column-count: 1 !important;
+  column-width: auto !important;
+  columns: auto !important;
+  column-fill: auto !important;
+  column-gap: normal !important;
+  column-rule: none !important;
+  column-span: none !important;
+  break-inside: auto !important;
+  break-before: auto !important;
+  break-after: auto !important;
+  page-break-inside: auto !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
 }
 
 .message-content.user::-webkit-scrollbar {
@@ -145,6 +155,29 @@
 
 .message-content.user::-webkit-scrollbar-thumb:hover {
   background: #888888;
+}
+
+.message-content.user *,
+.message-content.user *::before,
+.message-content.user *::after {
+  column-count: 1 !important;
+  column-width: auto !important;
+  columns: auto !important;
+  column-fill: auto !important;
+  column-gap: normal !important;
+  column-rule: none !important;
+  column-span: none !important;
+  break-inside: auto !important;
+  break-before: auto !important;
+  break-after: auto !important;
+  page-break-inside: auto !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  display: inline !important;
+  float: none !important;
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
 }
 
 .message-content.assistant {

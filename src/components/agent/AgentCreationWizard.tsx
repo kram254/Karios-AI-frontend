@@ -391,6 +391,7 @@ export default function AgentCreationWizard({
                         response_style: 0.5,
                         response_length: 100,
                         ...prev.config,
+
                         email_config: {
                             ...prev.config?.email_config,
                             verification_code: '',
@@ -398,8 +399,11 @@ export default function AgentCreationWizard({
                         }
                     }
                 }));
+
             } else {
+
                 setVerificationMessage(data.error_message || 'Failed to send verification code');
+
             }
         } catch (error) {
             setVerificationMessage('Error sending verification code. Please try again.');

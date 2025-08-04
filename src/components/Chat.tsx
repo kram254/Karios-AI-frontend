@@ -12,6 +12,7 @@ import { generateTitleFromMessage } from "../utils/titleGenerator";
 import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
 import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
+import WebAutomationIntegration from "./WebAutomationIntegration";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -49,7 +50,6 @@ const Chat: React.FC = () => {
     setCurrentChat, 
     createNewChat,
     internetSearchEnabled, // Get the internet search status from context
-    toggleInternetSearch, // Use the new function that respects persistent internet search state
     toggleSearchMode, // Keep this for backward compatibility
     searchResults, // Add searchResults back for debugging
     isSearching, // Add isSearching back for debugging
@@ -899,6 +899,24 @@ const Chat: React.FC = () => {
                  Search
                </button>
              </SearchLockTooltip>
+             
+             <WebAutomationIntegration
+               onAutomationResult={(result) => {
+                 console.log('Web automation result:', result);
+                 // Add automation result as a system message to the chat
+                 if (result.type === 'session_started') {
+                   addMessage({
+                     content: `🤖 Web automation session started: ${result.sessionId}`,
+                     role: 'system'
+                   });
+                 } else if (result.type === 'action_executed') {
+                   addMessage({
+                     content: `🔧 Web automation action: ${result.action.type} executed`,
+                     role: 'system'
+                   });
+                 }
+               }}
+             />
            </div>
         </form>
         

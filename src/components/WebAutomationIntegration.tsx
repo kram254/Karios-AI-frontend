@@ -135,7 +135,8 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           minWidth: 'auto',
           px: 1,
           color: isAutomationActive ? '#4caf50' : 'inherit',
-          borderColor: isAutomationActive ? '#4caf50' : 'inherit'
+          borderColor: isAutomationActive ? '#4caf50' : 'inherit',
+          borderRadius: '10px',
         }}
       >
         Web Automation

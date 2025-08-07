@@ -36,13 +36,31 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     try {
       const sessionId = `session_${Date.now()}`;
       
+      const chatResponse = await fetch('/api/chat/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Web Automation Agent',
+          chat_type: 'sales_agent',
+          agent_id: 1
+        })
+      });
+      
+      if (!chatResponse.ok) {
+        throw new Error('Failed to create Web Automation Agent chat');
+      }
+      
+      const chatResult = await chatResponse.json();
+      const chatId = chatResult.id;
+      
       const response = await fetch('/api/web-automation/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
           url: url || 'https://example.com',
-          visible: true
+          visible: true,
+          chatId
         })
       });
 
@@ -56,7 +74,8 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           onAutomationResult({
             type: 'session_started',
             sessionId,
-            status: 'running'
+            status: 'running',
+            chatId
           });
         }
       }

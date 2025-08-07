@@ -63,7 +63,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   }, []);
 
   const initializeWebSocket = () => {
-    const ws = new WebSocket(`ws://localhost:8000/ws/automation/${session.sessionId}`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.host;
+    const ws = new WebSocket(`${wsProtocol}//${wsHost}/api/web-automation/ws/automation/${session.sessionId}`);
     
     ws.onopen = () => {
       console.log('WebSocket connected for automation session');

@@ -104,7 +104,10 @@ const Chat: React.FC = () => {
         setAvatarState('searching');
         setAvatarMessage('Automating...');
         if (!automationSessionId) throw new Error('No automation session');
-        await fetch('/api/web-automation/execute-workflow', {
+        const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
+        const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
+        console.log('Dispatching workflow to', wfUrl);
+        await fetch(wfUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

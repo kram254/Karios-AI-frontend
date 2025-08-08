@@ -12,6 +12,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   onAutomationResult,
   isVisible = false
 }) => {
+  const BACKEND_URL: string = (import.meta as any).env.VITE_BACKEND_URL;
   const [isOpen, setIsOpen] = useState(isVisible);
   const [isAutomationActive, setIsAutomationActive] = useState(false);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       const sessionId = `session_${Date.now()}`;
       
       console.log('Creating chat for Web Automation Agent');
-      const chatResponse = await fetch('/api/chat/chats', {
+      const chatResponse = await fetch(`${BACKEND_URL}/api/chat/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -53,7 +54,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       const chatId = chatResult.id;
       
       console.log('Starting backend automation session', { sessionId, url: url || 'https://example.com', visible: false, chatId });
-      const response = await fetch('/api/web-automation/start', {
+      const startUrl = `${BACKEND_URL}/api/web-automation/start`;
+      console.log('WebAutomation start URL', startUrl);
+      const response = await fetch(startUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,6 +67,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         })
       });
 
+      const status = response.status;
+      const text = await response.text().catch(() => '');
+      console.log('WebAutomation start response', { status, body: text });
       if (response.ok) {
         setCurrentSession(sessionId);
         setIsAutomationActive(true);
@@ -96,12 +102,17 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
     try {
       console.log('Stopping WebAutomation session', { sessionId: currentSession });
-      const response = await fetch('/api/web-automation/stop', {
+      const stopUrl = `${BACKEND_URL}/api/web-automation/stop`;
+      console.log('WebAutomation stop URL', stopUrl);
+      const response = await fetch(stopUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: currentSession })
       });
 
+      const status = response.status;
+      const text = await response.text().catch(() => '');
+      console.log('WebAutomation stop response', { status, body: text });
       if (response.ok) {
         setIsAutomationActive(false);
         setCurrentSession(null);

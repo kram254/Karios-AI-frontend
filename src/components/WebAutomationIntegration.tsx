@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Dialog, DialogTitle, DialogContent, IconButton, Chip, Typography } from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, IconButton, Chip, Typography, FormControlLabel, Switch } from '@mui/material';
 import { Web, Close, PlayArrow, Stop } from '@mui/icons-material';
 import WebAutomationBrowser from './WebAutomationBrowser';
 
@@ -17,10 +17,17 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [isAutomationActive, setIsAutomationActive] = useState(false);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [automationStatus, setAutomationStatus] = useState<'idle' | 'running' | 'paused' | 'error'>('idle');
+  const [visibleMode, setVisibleMode] = useState(false);
 
   useEffect(() => {
     setIsOpen(isVisible);
   }, [isVisible]);
+
+  useEffect(() => {
+    const onShow = () => setIsOpen(true);
+    window.addEventListener('automation:show', onShow as any);
+    return () => window.removeEventListener('automation:show', onShow as any);
+  }, []);
 
   const handleCloseAutomation = () => {
     setIsOpen(false);
@@ -63,7 +70,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         body: JSON.stringify({
           sessionId,
           url: url || 'https://example.com',
-          visible: false,
+          visible: visibleMode,
           chatId
         })
       });
@@ -75,7 +82,6 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         setCurrentSession(sessionId);
         setIsAutomationActive(true);
         setAutomationStatus('running');
-        setIsOpen(true);
         console.log('WebAutomation session started', { sessionId });
         
         if (onAutomationResult) {
@@ -88,13 +94,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         }
       } else {
         console.log('WebAutomation start response not ok');
-        setIsAutomationActive(false);
-        setAutomationStatus('idle');
+        setAutomationStatus('error');
       }
     } catch (error) {
       console.error('Failed to start automation:', error);
-      setIsAutomationActive(false);
-      setAutomationStatus('idle');
+      setAutomationStatus('error');
     }
   };
 
@@ -262,6 +266,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControlLabel
+              control={<Switch size="small" checked={visibleMode} onChange={(e) => setVisibleMode(e.target.checked)} />}
+              label={visibleMode ? 'Headed' : 'Headless'}
+              sx={{ mr: 1, color: 'rgba(255,255,255,0.8)', '& .MuiFormControlLabel-label': { fontSize: 12 } }}
+            />
             {!isAutomationActive ? (
               <Button
                 startIcon={<PlayArrow />}

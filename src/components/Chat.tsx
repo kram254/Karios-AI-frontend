@@ -101,8 +101,9 @@ const Chat: React.FC = () => {
     if (automationActive) {
       console.log('Submitting message to web automation workflow', { automationActive, automationSessionId, task: messageContent });
       try {
-        setAvatarState('searching');
-        setAvatarMessage('Automating...');
+        setAvatarState('browsing');
+        setAvatarMessage('Web automation enabled');
+        try { window.dispatchEvent(new Event('automation:show')); } catch {}
         if (!automationSessionId) throw new Error('No automation session');
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;

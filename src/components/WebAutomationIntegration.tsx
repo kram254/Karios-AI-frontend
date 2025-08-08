@@ -149,23 +149,28 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         startIcon={<Web />}
         onClick={() => {
           if (!isAutomationActive) {
+            setIsAutomationActive(true);
+            setAutomationStatus('running');
             startAutomation();
           } else {
             setIsOpen(!isOpen);
           }
         }}
         variant={isAutomationActive ? 'contained' : 'outlined'}
+        color={isAutomationActive ? 'info' : 'inherit'}
         size="small"
         sx={{
           minWidth: 'auto',
           px: 1.5,
           textTransform: 'none',
-          borderRadius: '24px',
-          bgcolor: isAutomationActive ? '#00838f' : 'transparent',
-          color: isAutomationActive ? '#ffffff' : 'inherit',
-          borderColor: isAutomationActive ? '#00838f' : 'inherit',
+          borderRadius: '28px',
+          backgroundColor: isAutomationActive ? '#00838f !important' : 'transparent',
+          color: isAutomationActive ? '#ffffff !important' : 'inherit',
+          borderColor: isAutomationActive ? '#00838f !important' : 'inherit',
+          borderWidth: 1,
+          borderStyle: 'solid',
           '&:hover': {
-            bgcolor: isAutomationActive ? '#006974' : 'rgba(255,255,255,0.08)'
+            backgroundColor: isAutomationActive ? '#006974 !important' : 'rgba(255,255,255,0.08)'
           }
         }}
       >

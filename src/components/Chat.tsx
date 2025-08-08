@@ -64,6 +64,8 @@ const Chat: React.FC = () => {
   const [uploadedImages, setUploadedImages] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [automationActive, setAutomationActive] = useState(false);
+  const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,8 +97,29 @@ const Chat: React.FC = () => {
     // Clear the input field immediately for better UX
     setMessage("");
     
-    // Handle search mode differently
-    if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
+    // Handle search or automation modes differently
+    if (automationActive) {
+      try {
+        setAvatarState('searching');
+        setAvatarMessage('Automating...');
+        if (!automationSessionId) throw new Error('No automation session');
+        await fetch('/api/web-automation/execute-workflow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: automationSessionId,
+            workflow_steps: [],
+            task_description: messageContent
+          })
+        });
+        setIsProcessing(false);
+        return;
+      } catch (automationErr) {
+        console.error('Automation dispatch failed:', automationErr);
+        setIsProcessing(false);
+        return;
+      }
+    } else if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
       console.log('🌐 INTERNET SEARCH MODE ACTIVE - Processing search');
       console.log('🌐 [Chat] Disclaimer filtering is ACTIVE - generic AI messages will be filtered out');
       
@@ -899,24 +922,28 @@ const Chat: React.FC = () => {
                  Search
                </button>
              </SearchLockTooltip>
-             
-             <WebAutomationIntegration
-               onAutomationResult={(result) => {
-                 console.log('Web automation result:', result);
-                 // Add automation result as a system message to the chat
-                 if (result.type === 'session_started') {
-                   addMessage({
-                     content: `🤖 Web automation session started: ${result.sessionId}`,
-                     role: 'system'
-                   });
-                 } else if (result.type === 'action_executed') {
-                   addMessage({
-                     content: `🔧 Web automation action: ${result.action.type} executed`,
-                     role: 'system'
-                   });
-                 }
-               }}
-             />
+                          <WebAutomationIntegration
+                onAutomationResult={(result) => {
+                  console.log('Web automation result:', result);
+                  // Add automation result as a system message to the chat
+                  if (result.type === 'session_started') {
+                    setAutomationActive(true);
+                    setAutomationSessionId(result.sessionId);
+                    addMessage({
+                      content: `🤖 Web automation session started: ${result.sessionId}`,
+                      role: 'system'
+                    });
+                  } else if (result.type === 'action_executed') {
+                    addMessage({
+                      content: `🔧 Web automation action: ${result.action.type} executed`,
+                      role: 'system'
+                    });
+                  } else if (result.type === 'session_stopped') {
+                    setAutomationActive(false);
+                    setAutomationSessionId(null);
+                  }
+                }}
+              />
            </div>
         </form>
         

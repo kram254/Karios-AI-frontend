@@ -21,10 +21,6 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     setIsOpen(isVisible);
   }, [isVisible]);
 
-  const handleOpenAutomation = () => {
-    setIsOpen(true);
-  };
-
   const handleCloseAutomation = () => {
     setIsOpen(false);
     if (isAutomationActive && currentSession) {
@@ -65,10 +61,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       });
 
       if (response.ok) {
-        const result = await response.json();
         setCurrentSession(sessionId);
         setIsAutomationActive(true);
         setAutomationStatus('running');
+        setIsOpen(true);
         
         if (onAutomationResult) {
           onAutomationResult({
@@ -163,27 +159,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         variant={'outlined'}
         color={'inherit'}
         size="small"
+        className={`search-text-button ${isAutomationActive ? 'search-active' : ''}`}
         sx={{
           minWidth: 'auto',
           px: 1.5,
           textTransform: 'none',
-          borderRadius: '20px',
-          backgroundColor: isAutomationActive ? 'rgba(0, 180, 216, 0.2)' : 'transparent',
-          color: isAutomationActive ? '#00b4d8' : '#ffffff',
-          borderColor: isAutomationActive ? '#00b4d8' : '#444',
-          borderWidth: 1,
-          borderStyle: 'solid',
-          boxShadow: isAutomationActive ? '0 0 8px rgba(255, 255, 255, 0.2)' : 'none',
-          '&:hover': {
-            backgroundColor: isAutomationActive ? 'rgba(0, 180, 216, 0.2)' : 'rgba(255,255,255,0.1)',
-            borderColor: isAutomationActive ? '#00b4d8' : '#888',
-            transform: 'scale(1.05)',
-            boxShadow: '0 0 8px rgba(255, 255, 255, 0.2)'
-          },
-          '&:focus-visible': {
-            outline: 'none',
-            boxShadow: '0 0 8px rgba(255,255,255,0.2)'
-          }
+          borderRadius: '20px'
         }}
       >
         Web Automation

@@ -154,14 +154,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setIsOpen(!isOpen);
           }
         }}
-        variant="outlined"
+        variant={isAutomationActive ? 'contained' : 'outlined'}
         size="small"
         sx={{
           minWidth: 'auto',
-          px: 1,
-          color: isAutomationActive ? '#4caf50' : 'inherit',
-          borderColor: isAutomationActive ? '#4caf50' : 'inherit',
-          borderRadius: '10px',
+          px: 1.5,
+          textTransform: 'none',
+          borderRadius: '24px',
+          bgcolor: isAutomationActive ? '#00838f' : 'transparent',
+          color: isAutomationActive ? '#ffffff' : 'inherit',
+          borderColor: isAutomationActive ? '#00838f' : 'inherit',
+          '&:hover': {
+            bgcolor: isAutomationActive ? '#006974' : 'rgba(255,255,255,0.08)'
+          }
         }}
       >
         Web Automation

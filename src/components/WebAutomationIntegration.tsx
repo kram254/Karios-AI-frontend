@@ -41,7 +41,8 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         body: JSON.stringify({
           title: 'Web Automation Agent',
           chat_type: 'sales_agent',
-          agent_id: 1
+          agent_id: '1',
+          language: 'en'
         })
       });
       

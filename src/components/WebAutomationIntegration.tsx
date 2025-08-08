@@ -207,24 +207,41 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         maxWidth={false}
         sx={{
           '& .MuiDialog-paper': {
-            width: '420px',
-            height: '360px',
+            width: '880px',
+            height: '560px',
             maxWidth: 'none',
-            m: 1
+            m: 2,
+            borderRadius: '16px',
+            boxShadow: '0px 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset',
+            bgcolor: '#0f1115',
+            border: '1px solid rgba(255,255,255,0.08)'
           }
         }}
       >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          bgcolor: '#1a1a1a',
+          bgcolor: '#0f1115',
           color: 'white',
-          py: 1
+          py: 1.5,
+          px: 2,
+          borderBottom: '1px solid rgba(255,255,255,0.08)'
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Web />
-            <Typography variant="h6">Web Automation Agent</Typography>
+            <Box sx={{
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '10px',
+              bgcolor: 'rgba(59,130,246,0.15)',
+              color: '#60a5fa'
+            }}>
+              <Web fontSize="small" />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Web Automation Agent</Typography>
             
             {currentSession && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -232,12 +249,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                   label={`Session: ${currentSession.slice(-8)}`}
                   size="small"
                   variant="outlined"
-                  sx={{ color: 'white', borderColor: 'white' }}
+                  sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.24)', borderRadius: '8px' }}
                 />
                 <Chip
                   label={automationStatus.toUpperCase()}
                   size="small"
                   color={getStatusColor()}
+                  sx={{ borderRadius: '8px' }}
                 />
               </Box>
             )}
@@ -251,6 +269,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 variant="contained"
                 color="success"
                 size="small"
+                sx={{ borderRadius: '10px', boxShadow: '0 6px 14px rgba(16,185,129,0.25)' }}
               >
                 Start Session
               </Button>
@@ -261,23 +280,32 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 variant="contained"
                 color="error"
                 size="small"
+                sx={{ borderRadius: '10px', boxShadow: '0 6px 14px rgba(239,68,68,0.25)' }}
               >
                 Stop Session
               </Button>
             )}
             
-            <IconButton onClick={handleCloseAutomation} sx={{ color: 'white' }}>
+            <IconButton onClick={handleCloseAutomation} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '10px', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}>
               <Close />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 0, bgcolor: '#1a1a1a' }}>
+        <DialogContent sx={{ p: 2, bgcolor: '#0b0f14' }}>
+          <Box sx={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)'
+          }}>
           <WebAutomationBrowser
             onActionExecute={handleActionExecute}
             onSessionUpdate={handleSessionUpdate}
             initialUrl="https://example.com"
           />
+          </Box>
         </DialogContent>
       </Dialog>
     </>

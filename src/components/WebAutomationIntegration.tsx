@@ -78,10 +78,14 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             chatId
           });
         }
+      } else {
+        setIsAutomationActive(false);
+        setAutomationStatus('idle');
       }
     } catch (error) {
       console.error('Failed to start automation:', error);
-      setAutomationStatus('error');
+      setIsAutomationActive(false);
+      setAutomationStatus('idle');
     }
   };
 
@@ -156,21 +160,29 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setIsOpen(!isOpen);
           }
         }}
-        variant={isAutomationActive ? 'contained' : 'outlined'}
-        color={isAutomationActive ? 'info' : 'inherit'}
+        variant={'outlined'}
+        color={'inherit'}
         size="small"
         sx={{
           minWidth: 'auto',
           px: 1.5,
           textTransform: 'none',
-          borderRadius: '28px',
-          backgroundColor: isAutomationActive ? '#00838f !important' : 'transparent',
-          color: isAutomationActive ? '#ffffff !important' : 'inherit',
-          borderColor: isAutomationActive ? '#00838f !important' : 'inherit',
+          borderRadius: '20px',
+          backgroundColor: isAutomationActive ? 'rgba(0, 180, 216, 0.2)' : 'transparent',
+          color: isAutomationActive ? '#00b4d8' : '#ffffff',
+          borderColor: isAutomationActive ? '#00b4d8' : '#444',
           borderWidth: 1,
           borderStyle: 'solid',
+          boxShadow: isAutomationActive ? '0 0 8px rgba(255, 255, 255, 0.2)' : 'none',
           '&:hover': {
-            backgroundColor: isAutomationActive ? '#006974 !important' : 'rgba(255,255,255,0.08)'
+            backgroundColor: isAutomationActive ? 'rgba(0, 180, 216, 0.2)' : 'rgba(255,255,255,0.1)',
+            borderColor: isAutomationActive ? '#00b4d8' : '#888',
+            transform: 'scale(1.05)',
+            boxShadow: '0 0 8px rgba(255, 255, 255, 0.2)'
+          },
+          '&:focus-visible': {
+            outline: 'none',
+            boxShadow: '0 0 8px rgba(255,255,255,0.2)'
           }
         }}
       >

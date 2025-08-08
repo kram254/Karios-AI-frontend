@@ -60,6 +60,20 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         wsRef.current.close();
       }
     };
+
+  useEffect(() => {
+    if (!currentScreenshot || !screenshotCanvasRef.current) return;
+    const canvas = screenshotCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = `data:image/png;base64,${currentScreenshot}`;
+  }, [currentScreenshot]);
   }, []);
 
   const initializeWebSocket = () => {
@@ -89,6 +103,20 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         setCurrentScreenshot(data.screenshot);
         break;
       case 'action_started':
+        setSession(prev => {
+          const exists = prev.actions.some(a => a.id === data.actionId);
+          if (exists) return prev;
+          const newAction: WebAutomationAction = {
+            id: data.actionId,
+            type: data.actionType || 'action',
+            target: undefined,
+            value: undefined,
+            coordinates: Array.isArray(data.coordinates) ? [data.coordinates[0], data.coordinates[1]] : undefined,
+            status: 'executing',
+            timestamp: new Date().toISOString()
+          };
+          return { ...prev, actions: [...prev.actions, newAction] };
+        });
         updateActionStatus(data.actionId, 'executing');
         if (data.coordinates) {
           setActionOverlay({
@@ -99,10 +127,36 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         }
         break;
       case 'action_completed':
+        setSession(prev => {
+          const exists = prev.actions.some(a => a.id === data.actionId);
+          if (!exists) {
+            const newAction: WebAutomationAction = {
+              id: data.actionId,
+              type: data.actionType || 'action',
+              status: 'completed',
+              timestamp: new Date().toISOString()
+            } as WebAutomationAction;
+            return { ...prev, actions: [...prev.actions, newAction] };
+          }
+          return prev;
+        });
         updateActionStatus(data.actionId, 'completed');
         setActionOverlay(null);
         break;
       case 'action_failed':
+        setSession(prev => {
+          const exists = prev.actions.some(a => a.id === data.actionId);
+          if (!exists) {
+            const newAction: WebAutomationAction = {
+              id: data.actionId,
+              type: data.actionType || 'action',
+              status: 'failed',
+              timestamp: new Date().toISOString()
+            } as WebAutomationAction;
+            return { ...prev, actions: [...prev.actions, newAction] };
+          }
+          return prev;
+        });
         updateActionStatus(data.actionId, 'failed');
         setActionOverlay(null);
         break;

@@ -43,7 +43,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   });
   
   const [currentUrl, setCurrentUrl] = useState(initialUrl);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [executionProgress, setExecutionProgress] = useState(0);
   const [currentScreenshot, setCurrentScreenshot] = useState<string>('');
@@ -300,7 +300,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   }, [currentScreenshot]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: '#1a1a1a' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#1a1a1a' }}>
       <Paper sx={{ p: 2, mb: 1, bgcolor: '#2a2a2a', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <TextField
@@ -421,7 +421,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           </Box>
         </Paper>
 
-        <Paper sx={{ width: 300, p: 1, bgcolor: '#2a2a2a', overflow: 'hidden' }}>
+        <Paper sx={{ width: 200, p: 1, bgcolor: '#2a2a2a', overflow: 'hidden' }}>
           <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
             Actions Queue ({session.actions.length})
           </Typography>

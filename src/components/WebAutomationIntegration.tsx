@@ -59,7 +59,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         body: JSON.stringify({
           sessionId,
           url: url || 'https://example.com',
-          visible: true,
+          visible: false,
           chatId
         })
       });
@@ -147,7 +147,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     <>
       <Button
         startIcon={<Web />}
-        onClick={handleOpenAutomation}
+        onClick={() => {
+          if (!isAutomationActive) {
+            startAutomation();
+          } else {
+            setIsOpen(!isOpen);
+          }
+        }}
         variant="outlined"
         size="small"
         sx={{
@@ -173,11 +179,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         open={isOpen}
         onClose={handleCloseAutomation}
         maxWidth={false}
-        fullWidth
         sx={{
           '& .MuiDialog-paper': {
-            width: '95vw',
-            height: '90vh',
+            width: '420px',
+            height: '360px',
             maxWidth: 'none',
             m: 1
           }

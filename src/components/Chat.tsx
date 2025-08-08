@@ -99,6 +99,7 @@ const Chat: React.FC = () => {
     
     // Handle search or automation modes differently
     if (automationActive) {
+      console.log('Submitting message to web automation workflow', { automationActive, automationSessionId, task: messageContent });
       try {
         setAvatarState('searching');
         setAvatarMessage('Automating...');
@@ -112,6 +113,7 @@ const Chat: React.FC = () => {
             task_description: messageContent
           })
         });
+        console.log('Automation workflow request sent');
         setIsProcessing(false);
         return;
       } catch (automationErr) {
@@ -929,6 +931,7 @@ const Chat: React.FC = () => {
                   if (result.type === 'session_started') {
                     setAutomationActive(true);
                     setAutomationSessionId(result.sessionId);
+                    console.log('Automation session started (Chat)', { sessionId: result.sessionId });
                     addMessage({
                       content: `🤖 Web automation session started: ${result.sessionId}`,
                       role: 'system'
@@ -941,6 +944,7 @@ const Chat: React.FC = () => {
                   } else if (result.type === 'session_stopped') {
                     setAutomationActive(false);
                     setAutomationSessionId(null);
+                    console.log('Automation session stopped (Chat)');
                   }
                 }}
               />

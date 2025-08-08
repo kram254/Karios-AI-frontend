@@ -30,8 +30,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
   const startAutomation = async (url?: string) => {
     try {
+      console.log('WebAutomation start requested');
       const sessionId = `session_${Date.now()}`;
       
+      console.log('Creating chat for Web Automation Agent');
       const chatResponse = await fetch('/api/chat/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,12 +45,14 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       });
       
       if (!chatResponse.ok) {
+        console.log('Failed to create chat for Web Automation Agent');
         throw new Error('Failed to create Web Automation Agent chat');
       }
       
       const chatResult = await chatResponse.json();
       const chatId = chatResult.id;
       
+      console.log('Starting backend automation session', { sessionId, url: url || 'https://example.com', visible: false, chatId });
       const response = await fetch('/api/web-automation/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -65,6 +69,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         setIsAutomationActive(true);
         setAutomationStatus('running');
         setIsOpen(true);
+        console.log('WebAutomation session started', { sessionId });
         
         if (onAutomationResult) {
           onAutomationResult({
@@ -75,6 +80,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           });
         }
       } else {
+        console.log('WebAutomation start response not ok');
         setIsAutomationActive(false);
         setAutomationStatus('idle');
       }
@@ -89,6 +95,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     if (!currentSession) return;
 
     try {
+      console.log('Stopping WebAutomation session', { sessionId: currentSession });
       const response = await fetch('/api/web-automation/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,6 +106,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         setIsAutomationActive(false);
         setCurrentSession(null);
         setAutomationStatus('idle');
+        console.log('WebAutomation session stopped');
         
         if (onAutomationResult) {
           onAutomationResult({
@@ -148,18 +156,21 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       <Button
         startIcon={<Web />}
         onClick={() => {
+          console.log('WebAutomation button clicked', { isAutomationActive, isOpen, currentSession });
           if (!isAutomationActive) {
             setIsAutomationActive(true);
             setAutomationStatus('running');
             startAutomation();
           } else {
-            setIsOpen(!isOpen);
+            const next = !isOpen;
+            console.log('Toggling WebAutomation panel', { open: next });
+            setIsOpen(next);
           }
         }}
         variant={'outlined'}
         color={'inherit'}
         size="small"
-        className={`search-text-button ${isAutomationActive ? 'search-active' : ''}`}
+        className={(() => { const c = `search-text-button ${isAutomationActive ? 'search-active' : ''}`; console.log('WebAutomation button class', { className: c }); return c; })()}
         sx={{
           minWidth: 'auto',
           px: 1.5,
@@ -167,7 +178,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           borderRadius: '20px'
         }}
       >
-        Web Automation
+        {(() => { console.log('WebAutomation button render', { active: isAutomationActive }); return 'Web Automation'; })()}
         {isAutomationActive && (
           <Chip
             label={automationStatus.toUpperCase()}

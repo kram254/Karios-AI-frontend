@@ -115,10 +115,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       } else {
         console.log('WebAutomation start response not ok');
         setAutomationStatus('error');
+        setIsAutomationActive(false);
       }
     } catch (error) {
       console.error('Failed to start automation:', error);
       setAutomationStatus('error');
+      setIsAutomationActive(false);
     }
   };
 
@@ -190,6 +192,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   return (
     <>
       <Button
+        type="button"
         startIcon={<Web />}
         onClick={async () => {
           console.log('WebAutomation button clicked', { isAutomationActive, isOpen, currentSession });
@@ -299,6 +302,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             />
             {!isAutomationActive ? (
               <Button
+                type="button"
                 startIcon={<PlayArrow />}
                 onClick={() => startAutomation()}
                 variant="contained"
@@ -310,6 +314,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               </Button>
             ) : (
               <Button
+                type="button"
                 startIcon={<Stop />}
                 onClick={stopAutomation}
                 variant="contained"
@@ -321,7 +326,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               </Button>
             )}
             
-            <IconButton onClick={handleCloseAutomation} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '10px', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}>
+            <IconButton type="button" onClick={handleCloseAutomation} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '10px', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}>
               <Close />
             </IconButton>
           </Box>

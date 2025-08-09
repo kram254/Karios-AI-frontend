@@ -171,8 +171,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     <>
       <Button
         startIcon={<Web />}
-        onClick={() => {
+        onClick={async () => {
           console.log('WebAutomation button clicked', { isAutomationActive, isOpen, currentSession });
+          try { await fetch(`${BACKEND_URL}/api/web-automation/enable`, { method: 'POST' }); } catch {}
           if (!isAutomationActive) {
             setIsAutomationActive(true);
             setAutomationStatus('running');

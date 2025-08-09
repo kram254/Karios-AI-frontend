@@ -184,14 +184,20 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setIsOpen(next);
           }
         }}
-        variant={'text'}
+        variant={'outlined'}
+        color={'inherit'}
         size="small"
         className={(() => { const c = `search-text-button ${isAutomationActive ? 'search-active' : ''}`; console.log('WebAutomation button class', { className: c }); return c; })()}
         sx={{
           minWidth: 'auto',
           px: 1.5,
           textTransform: 'none',
-          borderRadius: '20px'
+          borderRadius: '20px',
+          ...(isAutomationActive && {
+            backgroundColor: 'rgba(0, 180, 216, 0.2)',
+            borderColor: '#00b4d8',
+            color: '#00b4d8'
+          })
         }}
       >
         {(() => { console.log('WebAutomation button render', { active: isAutomationActive }); return 'Web Automation'; })()}

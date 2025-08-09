@@ -416,9 +416,9 @@
 
 /* Search active state */
 .search-active {
-  background-color: rgba(0, 180, 216, 0.2);
-  border-color: #00b4d8;
-  color: #00b4d8;
+  background-color: rgba(0, 180, 216, 0.2) !important;
+  border-color: #00b4d8 !important;
+  color: #00b4d8 !important;
 }
 
 /* Search button styles preserved */

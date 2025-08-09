@@ -184,8 +184,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setIsOpen(next);
           }
         }}
-        variant={'outlined'}
-        color={'inherit'}
+        variant={'text'}
         size="small"
         className={(() => { const c = `search-text-button ${isAutomationActive ? 'search-active' : ''}`; console.log('WebAutomation button class', { className: c }); return c; })()}
         sx={{

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Button, Dialog, DialogTitle, DialogContent, IconButton, Chip, Typography, FormControlLabel, Switch } from '@mui/material';
 import { Web, Close, PlayArrow, Stop } from '@mui/icons-material';
 import WebAutomationBrowser from './WebAutomationBrowser';
+import PlanContainer from './PlanContainer';
 
 interface WebAutomationIntegrationProps {
   onAutomationResult?: (result: any) => void;
@@ -18,6 +19,8 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [automationStatus, setAutomationStatus] = useState<'idle' | 'running' | 'paused' | 'error'>('idle');
   const [visibleMode, setVisibleMode] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<any>(null);
+  const [showPlan, setShowPlan] = useState(false);
 
   useEffect(() => {
     setIsOpen(isVisible);
@@ -28,6 +31,23 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     window.addEventListener('automation:show', onShow as any);
     return () => window.removeEventListener('automation:show', onShow as any);
   }, []);
+
+  useEffect(() => {
+    if (!currentSession) return;
+    
+    const wsUrl = `${BACKEND_URL.replace('http', 'ws')}/api/web-automation/ws/automation/${currentSession}`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'plan_created') {
+        setCurrentPlan(data.plan);
+        setShowPlan(true);
+      }
+    };
+    
+    return () => ws.close();
+  }, [currentSession, BACKEND_URL]);
 
   const handleCloseAutomation = () => {
     setIsOpen(false);
@@ -307,13 +327,15 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 2, bgcolor: '#0b0f14' }}>
+        <DialogContent sx={{ p: 0, bgcolor: '#0b0f14' }}>
+          <PlanContainer plan={currentPlan} isVisible={showPlan} />
           <Box sx={{
             width: '100%',
-            height: '100%',
+            height: showPlan ? 'calc(100% - 200px)' : '100%',
             borderRadius: '12px',
             overflow: 'hidden',
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)'
+            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+            margin: '0 16px 16px 16px'
           }}>
           <WebAutomationBrowser
             onActionExecute={handleActionExecute}

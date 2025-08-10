@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Dialog, DialogTitle, DialogContent, IconButton, Chip, Typography, FormControlLabel, Switch } from '@mui/material';
-import { Web, Close, PlayArrow, Stop } from '@mui/icons-material';
+import { Web, Close, PlayArrow, Stop, Minimize } from '@mui/icons-material';
 import WebAutomationBrowser from './WebAutomationBrowser';
 import PlanContainer from './PlanContainer';
 
@@ -21,6 +21,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [visibleMode, setVisibleMode] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [showPlan, setShowPlan] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [dialogPos, setDialogPos] = useState<{ x: number; y: number }>({ x: 120, y: 120 });
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     setIsOpen(isVisible);
@@ -43,8 +46,14 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       if (data.type === 'plan_created') {
         setCurrentPlan(data.plan);
         setShowPlan(true);
+        if (onAutomationResult) {
+          onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
+        }
       } else if (data.type === 'execution_started') {
         setIsOpen(true);
+        if (onAutomationResult) {
+          onAutomationResult({ type: 'execution_started', sessionId: currentSession });
+        }
       }
     };
     
@@ -205,11 +214,6 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
   return (
     <>
-      {showPlan && (
-        <Box sx={{ my: 1.5 }}>
-          <PlanContainer plan={currentPlan} isVisible={showPlan} />
-        </Box>
-      )}
       <Button
         type="button"
         startIcon={<Web />}
@@ -258,11 +262,18 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         onClose={handleCloseAutomation}
         maxWidth={false}
         sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start'
+          },
           '& .MuiDialog-paper': {
+            position: 'absolute',
+            left: `${dialogPos.x}px`,
+            top: `${dialogPos.y}px`,
             width: '880px',
-            height: '560px',
+            height: isMinimized ? 'auto' : '560px',
             maxWidth: 'none',
-            m: 2,
+            m: 0,
             borderRadius: '16px',
             boxShadow: '0px 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset',
             bgcolor: '#0f1115',
@@ -279,7 +290,20 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           py: 1.5,
           px: 2,
           borderBottom: '1px solid rgba(255,255,255,0.08)'
-        }}>
+        }}
+        onMouseDown={(e) => {
+          const sx = e.clientX - dialogPos.x;
+          const sy = e.clientY - dialogPos.y;
+          setDragStart({ x: sx, y: sy });
+        }}
+        onMouseMove={(e) => {
+          if (!dragStart) return;
+          const nx = e.clientX - dragStart.x;
+          const ny = e.clientY - dragStart.y;
+          setDialogPos({ x: Math.max(8, nx), y: Math.max(8, ny) });
+        }}
+        onMouseUp={() => setDragStart(null)}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{
               width: 32,
@@ -345,14 +369,17 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               </Button>
             )}
             
+            <IconButton type="button" onClick={() => setIsMinimized((v) => !v)} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '10px', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}>
+              <Minimize />
+            </IconButton>
             <IconButton type="button" onClick={handleCloseAutomation} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.06)', borderRadius: '10px', '&:hover': { bgcolor: 'rgba(255,255,255,0.12)' } }}>
               <Close />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 0, bgcolor: '#0b0f14' }}>
-          <PlanContainer plan={currentPlan} isVisible={showPlan} />
+        <DialogContent sx={{ p: 0, bgcolor: '#0b0f14', display: isMinimized ? 'none' : 'block' }}>
+          <PlanContainer plan={currentPlan} isVisible={false} />
           <Box sx={{
             width: '100%',
             height: showPlan ? 'calc(100% - 200px)' : '100%',

@@ -13,6 +13,7 @@ import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
 import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
+import PlanContainer from "./PlanContainer";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -66,6 +67,7 @@ const Chat: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [automationActive, setAutomationActive] = useState(false);
   const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
+  const [automationPlans, setAutomationPlans] = useState<Record<string, any>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -695,9 +697,32 @@ const Chat: React.FC = () => {
                   <div className="message-text">
                     <>
                        {/* Enhanced rendering for search result messages */}
-                       {msg.role === 'assistant' && (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.match(/https?:\/\//)) ? (
-                         <div className="search-result-message">
-                           <span className="search-result-badge">🌐 Search Result</span>
+                        {msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]') ? (
+                          <div className="automation-plan-message">
+                            {(() => { let plan = automationPlans[msg.id]; try { const i = msg.content.indexOf('\n'); if (i >= 0) { const j = msg.content.slice(i + 1); if (j) plan = JSON.parse(j); } } catch {} return <PlanContainer plan={plan} isVisible={true} />; })()}
+                            <div style={{ marginTop: 12 }}>
+                              <button
+                                type="button"
+                                className="search-text-button"
+                                onClick={() => { try { window.dispatchEvent(new Event('automation:show')); } catch {} }}
+                              >
+                                Open Web Automation Window
+                              </button>
+                            </div>
+                          </div>
+                        ) : msg.role === 'system' && msg.content.startsWith('[AUTOMATION_CONTROL]') ? (
+                          <div className="automation-control-message">
+                            <button
+                              type="button"
+                              className="search-text-button"
+                              onClick={() => { try { window.dispatchEvent(new Event('automation:show')); } catch {} }}
+                            >
+                              Open Web Automation Window
+                            </button>
+                          </div>
+                        ) : msg.role === 'assistant' && (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.match(/https?:\/\//)) ? (
+                          <div className="search-result-message">
+                            <span className="search-result-badge">🌐 Search Result</span>
                            {/* Attempt to parse [SEARCH_RESULTS] format: [SEARCH_RESULTS]\nTitle: ...\nURL: ...\nSnippet: ... */}
                            {(() => {
                              const lines = msg.content.split('\n');
@@ -934,6 +959,18 @@ const Chat: React.FC = () => {
                     console.log('Automation session started (Chat)', { sessionId: result.sessionId });
                     addMessage({
                       content: `🤖 Web automation session started: ${result.sessionId}`,
+                      role: 'system'
+                    });
+                  } else if (result.type === 'plan_created') {
+                    const id = `plan-${Date.now()}`;
+                    setAutomationPlans((prev) => ({ ...prev, [id]: result.plan }));
+                    addMessage({
+                      content: `[AUTOMATION_PLAN]\n${JSON.stringify(result.plan)}`,
+                      role: 'assistant'
+                    });
+                  } else if (result.type === 'execution_started') {
+                    addMessage({
+                      content: `[AUTOMATION_CONTROL]`,
                       role: 'system'
                     });
                   } else if (result.type === 'action_executed') {

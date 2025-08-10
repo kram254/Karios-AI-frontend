@@ -43,6 +43,8 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       if (data.type === 'plan_created') {
         setCurrentPlan(data.plan);
         setShowPlan(true);
+      } else if (data.type === 'execution_started') {
+        setIsOpen(true);
       }
     };
     
@@ -189,8 +191,25 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     }
   };
 
+  const initialUrl = React.useMemo(() => {
+    try {
+      const steps = (currentPlan && (currentPlan.steps || currentPlan.plan?.steps)) || [];
+      if (Array.isArray(steps)) {
+        const nav = steps.find((s: any) => (s.action_type || s.type) === 'navigate');
+        const u = (nav && (nav.target || nav.value)) || '';
+        if (typeof u === 'string' && /^https?:\/\//i.test(u)) return u;
+      }
+    } catch {}
+    return 'https://example.com';
+  }, [currentPlan]);
+
   return (
     <>
+      {showPlan && (
+        <Box sx={{ my: 1.5 }}>
+          <PlanContainer plan={currentPlan} isVisible={showPlan} />
+        </Box>
+      )}
       <Button
         type="button"
         startIcon={<Web />}
@@ -345,7 +364,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           <WebAutomationBrowser
             onActionExecute={handleActionExecute}
             onSessionUpdate={handleSessionUpdate}
-            initialUrl="https://example.com"
+            initialUrl={initialUrl}
           />
           </Box>
         </DialogContent>

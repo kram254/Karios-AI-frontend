@@ -103,7 +103,6 @@ const Chat: React.FC = () => {
       try {
         setAvatarState('browsing');
         setAvatarMessage('Web automation enabled');
-        try { window.dispatchEvent(new Event('automation:show')); } catch {}
         if (!automationSessionId) throw new Error('No automation session');
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
@@ -118,12 +117,9 @@ const Chat: React.FC = () => {
           })
         });
         console.log('Automation workflow request sent');
-        setIsProcessing(false);
-        return;
       } catch (automationErr) {
         console.error('Automation dispatch failed:', automationErr);
-        setIsProcessing(false);
-        return;
+        
       }
     } else if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
       console.log('🌐 INTERNET SEARCH MODE ACTIVE - Processing search');

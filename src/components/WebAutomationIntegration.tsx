@@ -95,12 +95,21 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   useEffect(() => {
     if (!dragStart) return;
     draggingRef.current = true;
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = e instanceof TouchEvent ? (e.touches[0]?.clientX || 0) : (e as MouseEvent).clientX;
+      const clientY = e instanceof TouchEvent ? (e.touches[0]?.clientY || 0) : (e as MouseEvent).clientY;
       if (!draggingRef.current) return;
-      const nx = e.clientX - dragStart.x;
-      const ny = e.clientY - dragStart.y;
-      const cx = Math.max(8, nx);
-      const cy = Math.max(8, ny);
+      if (e instanceof TouchEvent) {
+        try { (e as any).preventDefault(); } catch {}
+      }
+      const nx = clientX - dragStart.x;
+      const ny = clientY - dragStart.y;
+      const w = (paperRef.current && (paperRef.current as HTMLElement).offsetWidth) || 880;
+      const h = (paperRef.current && (paperRef.current as HTMLElement).offsetHeight) || 560;
+      const maxX = Math.max(8, (window.innerWidth || 0) - w - 8);
+      const maxY = Math.max(8, (window.innerHeight || 0) - h - 8);
+      const cx = Math.min(Math.max(8, nx), maxX);
+      const cy = Math.min(Math.max(8, ny), maxY);
       if (frameRef.current == null) {
         frameRef.current = requestAnimationFrame(() => {
           frameRef.current = null;
@@ -114,10 +123,14 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp, { once: true });
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp as any, { once: true });
     return () => {
       draggingRef.current = false;
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp as any);
+      window.removeEventListener('touchmove', onMove as any);
+      window.removeEventListener('touchend', onUp as any);
     };
   }, [dragStart]);
 
@@ -336,10 +349,22 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         disableScrollLock
         keepMounted
         sx={{
+          '&.MuiModal-root': {
+            position: 'static',
+            inset: 'auto',
+            overflow: 'visible',
+            width: 0,
+            height: 0
+          },
           '& .MuiDialog-container': {
             alignItems: 'flex-start',
             justifyContent: 'flex-start',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            position: 'static',
+            inset: 'auto',
+            overflow: 'visible',
+            width: 0,
+            height: 0
           },
           '& .MuiDialog-paper': {
             position: 'fixed',
@@ -365,11 +390,20 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           color: 'white',
           py: 1.5,
           px: 2,
-          borderBottom: '1px solid rgba(255,255,255,0.08)'
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          userSelect: 'none',
+          cursor: dragStart ? 'grabbing' : 'grab'
         }}
         onMouseDown={(e) => {
           const sx = e.clientX - dialogPos.x;
           const sy = e.clientY - dialogPos.y;
+          setDragStart({ x: sx, y: sy });
+        }}
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          if (!t) return;
+          const sx = t.clientX - dialogPos.x;
+          const sy = t.clientY - dialogPos.y;
           setDragStart({ x: sx, y: sy });
         }}
         >

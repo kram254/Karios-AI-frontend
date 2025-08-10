@@ -25,6 +25,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number }>({ x: 120, y: 120 });
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const paperRef = useRef<HTMLDivElement | null>(null);
+  const draggingRef = useRef(false);
+  const frameRef = useRef<number | null>(null);
+  const posRef = useRef<{ x: number; y: number }>({ x: 120, y: 120 });
 
   useEffect(() => {
     setIsOpen(isVisible);
@@ -72,6 +75,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   }, [currentSession, BACKEND_URL]);
 
   useEffect(() => {
+    posRef.current = dialogPos;
+  }, [dialogPos]);
+
+  useEffect(() => {
     if (!isOpen || isMinimized) return;
     const handler = (e: MouseEvent) => {
       const node = paperRef.current;
@@ -84,6 +91,35 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isOpen, isMinimized]);
+
+  useEffect(() => {
+    if (!dragStart) return;
+    draggingRef.current = true;
+    const onMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const nx = e.clientX - dragStart.x;
+      const ny = e.clientY - dragStart.y;
+      const cx = Math.max(8, nx);
+      const cy = Math.max(8, ny);
+      if (frameRef.current == null) {
+        frameRef.current = requestAnimationFrame(() => {
+          frameRef.current = null;
+          setDialogPos({ x: cx, y: cy });
+        });
+      }
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      setDragStart(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp, { once: true });
+    return () => {
+      draggingRef.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp as any);
+    };
+  }, [dragStart]);
 
   const handleCloseAutomation = () => {
     setIsOpen(false);
@@ -302,12 +338,14 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         sx={{
           '& .MuiDialog-container': {
             alignItems: 'flex-start',
-            justifyContent: 'flex-start'
+            justifyContent: 'flex-start',
+            pointerEvents: 'none'
           },
           '& .MuiDialog-paper': {
-            position: 'absolute',
-            left: `${dialogPos.x}px`,
-            top: `${dialogPos.y}px`,
+            position: 'fixed',
+            transform: `translate3d(${dialogPos.x}px, ${dialogPos.y}px, 0)`,
+            willChange: 'transform',
+            pointerEvents: 'auto',
             width: '880px',
             height: isMinimized ? 'auto' : '560px',
             maxWidth: 'none',
@@ -334,13 +372,6 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           const sy = e.clientY - dialogPos.y;
           setDragStart({ x: sx, y: sy });
         }}
-        onMouseMove={(e) => {
-          if (!dragStart) return;
-          const nx = e.clientX - dragStart.x;
-          const ny = e.clientY - dragStart.y;
-          setDialogPos({ x: Math.max(8, nx), y: Math.max(8, ny) });
-        }}
-        onMouseUp={() => setDragStart(null)}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{

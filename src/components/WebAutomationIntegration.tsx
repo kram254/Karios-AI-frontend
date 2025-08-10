@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Button, Dialog, DialogTitle, DialogContent, IconButton, Chip, Typography, FormControlLabel, Switch } from '@mui/material';
 import { Web, Close, PlayArrow, Stop, Minimize } from '@mui/icons-material';
 import WebAutomationBrowser from './WebAutomationBrowser';
@@ -24,6 +24,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [isMinimized, setIsMinimized] = useState(false);
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number }>({ x: 120, y: 120 });
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const paperRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIsOpen(isVisible);
@@ -54,11 +55,35 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         if (onAutomationResult) {
           onAutomationResult({ type: 'execution_started', sessionId: currentSession });
         }
+      } else if (data.type === 'workflow_completed') {
+        if (onAutomationResult) {
+          onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, result: data.result, score: data.score });
+        }
+        try {
+          const score = typeof data.score === 'number' ? data.score : (typeof data.result?.score === 'number' ? data.result.score : undefined);
+          if (typeof score === 'number' && score >= 92) {
+            setIsOpen(false);
+          }
+        } catch {}
       }
     };
     
     return () => ws.close();
   }, [currentSession, BACKEND_URL]);
+
+  useEffect(() => {
+    if (!isOpen || isMinimized) return;
+    const handler = (e: MouseEvent) => {
+      const node = paperRef.current;
+      if (!node) return;
+      const target = e.target as Node | null;
+      if (target && !node.contains(target)) {
+        setIsMinimized(true);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isOpen, isMinimized]);
 
   const handleCloseAutomation = () => {
     setIsOpen(false);
@@ -259,8 +284,21 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
       <Dialog
         open={isOpen}
-        onClose={handleCloseAutomation}
+        PaperProps={{ ref: paperRef }}
+        onClose={(_event, reason) => {
+          if (reason === 'backdropClick' || reason === 'escapeKeyDown') {
+            setIsMinimized(true);
+            return;
+          }
+          handleCloseAutomation();
+        }}
         maxWidth={false}
+        hideBackdrop
+        disableEscapeKeyDown
+        disableEnforceFocus
+        disableAutoFocus
+        disableScrollLock
+        keepMounted
         sx={{
           '& .MuiDialog-container': {
             alignItems: 'flex-start',

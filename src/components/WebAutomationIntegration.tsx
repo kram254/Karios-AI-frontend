@@ -24,6 +24,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [isMinimized, setIsMinimized] = useState(false);
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number }>({ x: 120, y: 120 });
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [workflowDispatched, setWorkflowDispatched] = useState(false);
   const paperRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
   const frameRef = useRef<number | null>(null);
@@ -50,6 +51,17 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       if (data.type === 'plan_created') {
         setCurrentPlan(data.plan);
         setShowPlan(true);
+        if (!workflowDispatched && currentSession) {
+          try {
+            const steps = (data.plan && (data.plan.steps || data.plan.plan?.steps)) || [];
+            const task = (data.plan && (data.plan.task || data.plan.goal || data.plan.title)) || '';
+            fetch(`${BACKEND_URL}/api/web-automation/execute-workflow`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: currentSession, workflow_steps: Array.isArray(steps) ? steps : [], task_description: typeof task === 'string' ? task : '' })
+            }).then(() => setWorkflowDispatched(true)).catch(() => {});
+          } catch {}
+        }
         if (onAutomationResult) {
           onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
         }
@@ -72,7 +84,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     };
     
     return () => ws.close();
-  }, [currentSession, BACKEND_URL]);
+  }, [currentSession, BACKEND_URL, workflowDispatched, onAutomationResult]);
+
+  useEffect(() => {
+    setWorkflowDispatched(false);
+  }, [currentSession]);
 
   useEffect(() => {
     posRef.current = dialogPos;

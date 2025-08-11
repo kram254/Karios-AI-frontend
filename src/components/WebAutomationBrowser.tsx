@@ -62,20 +62,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         wsRef.current.close();
       }
     };
-
-  useEffect(() => {
-    if (!currentScreenshot || !screenshotCanvasRef.current) return;
-    const canvas = screenshotCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-    };
-    img.src = `data:image/png;base64,${currentScreenshot}`;
-  }, [currentScreenshot]);
   }, []);
 
   const initializeWebSocket = () => {

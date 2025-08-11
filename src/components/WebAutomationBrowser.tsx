@@ -76,6 +76,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     
     ws.onopen = () => {
       console.log('WebSocket connected for automation session');
+      try {
+        ws.send(JSON.stringify({ type: 'get_status' }));
+      } catch {}
     };
     
     ws.onmessage = (event) => {
@@ -100,6 +103,13 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const handleWebSocketMessage = (data: any) => {
     switch (data.type) {
+      case 'status_update':
+        setSession(prev => ({
+          ...prev,
+          status: data.status || prev.status,
+          url: typeof data.url === 'string' ? data.url : prev.url
+        }));
+        break;
       case 'screenshot_update':
         setCurrentScreenshot(data.screenshot);
         break;

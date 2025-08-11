@@ -68,6 +68,7 @@ const Chat: React.FC = () => {
   const [automationActive, setAutomationActive] = useState(false);
   const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
   const [automationPlans, setAutomationPlans] = useState<Record<string, any>>({});
+  const [pendingAutomationTask, setPendingAutomationTask] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,7 +106,13 @@ const Chat: React.FC = () => {
       try {
         setAvatarState('browsing');
         setAvatarMessage('Web automation enabled');
-        if (!automationSessionId) throw new Error('No automation session');
+        try { window.dispatchEvent(new Event('automation:show')); } catch {}
+        if (!automationSessionId) {
+          try { window.dispatchEvent(new Event('automation:start')); } catch {}
+          setPendingAutomationTask(messageContent);
+          setIsProcessing(false);
+          return;
+        }
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
         console.log('Dispatching workflow to', wfUrl);
@@ -950,7 +957,7 @@ const Chat: React.FC = () => {
                </button>
              </SearchLockTooltip>
                           <WebAutomationIntegration
-                onAutomationResult={(result) => {
+                onAutomationResult={async (result) => {
                   console.log('Web automation result:', result);
                   // Add automation result as a system message to the chat
                   if (result.type === 'session_started') {
@@ -961,6 +968,22 @@ const Chat: React.FC = () => {
                       content: `Web automation session started: ${result.sessionId}`,
                       role: 'system'
                     });
+                    if (pendingAutomationTask) {
+                      try {
+                        const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
+                        const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
+                        await fetch(wfUrl, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            sessionId: result.sessionId,
+                            workflow_steps: [],
+                            task_description: pendingAutomationTask
+                          })
+                        });
+                      } catch {}
+                      setPendingAutomationTask(null);
+                    }
                   } else if (result.type === 'plan_created') {
                     const id = `plan-${Date.now()}`;
                     setAutomationPlans((prev) => ({ ...prev, [id]: result.plan }));

@@ -36,8 +36,20 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
   useEffect(() => {
     const onShow = () => setIsOpen(true);
+    const onStart = () => {
+      setIsOpen(true);
+      if (!isAutomationActive) {
+        setIsAutomationActive(true);
+        setAutomationStatus('running');
+        startAutomation();
+      }
+    };
     window.addEventListener('automation:show', onShow as any);
-    return () => window.removeEventListener('automation:show', onShow as any);
+    window.addEventListener('automation:start', onStart as any);
+    return () => {
+      window.removeEventListener('automation:show', onShow as any);
+      window.removeEventListener('automation:start', onStart as any);
+    };
   }, []);
 
   useEffect(() => {
@@ -51,17 +63,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       if (data.type === 'plan_created') {
         setCurrentPlan(data.plan);
         setShowPlan(true);
-        if (!workflowDispatched && currentSession) {
-          try {
-            const steps = (data.plan && (data.plan.steps || data.plan.plan?.steps)) || [];
-            const task = (data.plan && (data.plan.task || data.plan.goal || data.plan.title)) || '';
-            fetch(`${BACKEND_URL}/api/web-automation/execute-workflow`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sessionId: currentSession, workflow_steps: Array.isArray(steps) ? steps : [], task_description: typeof task === 'string' ? task : '' })
-            }).then(() => setWorkflowDispatched(true)).catch(() => {});
-          } catch {}
-        }
+        setIsOpen(true);
         if (onAutomationResult) {
           onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
         }

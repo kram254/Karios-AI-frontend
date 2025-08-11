@@ -958,7 +958,7 @@ const Chat: React.FC = () => {
                     setAutomationSessionId(result.sessionId);
                     console.log('Automation session started (Chat)', { sessionId: result.sessionId });
                     addMessage({
-                      content: `🤖 Web automation session started: ${result.sessionId}`,
+                      content: `Web automation session started: ${result.sessionId}`,
                       role: 'system'
                     });
                   } else if (result.type === 'plan_created') {
@@ -975,7 +975,7 @@ const Chat: React.FC = () => {
                     });
                   } else if (result.type === 'action_executed') {
                     addMessage({
-                      content: `🔧 Web automation action: ${result.action.type} executed`,
+                      content: `Web automation action: ${result.action.type} executed`,
                       role: 'system'
                     });
                   } else if (result.type === 'session_stopped') {

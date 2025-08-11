@@ -174,7 +174,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          url: url || 'https://example.com',
+          url: url || 'about:blank',
           visible: visibleMode,
           chatId
         })
@@ -283,7 +283,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         if (typeof u === 'string' && /^https?:\/\//i.test(u)) return u;
       }
     } catch {}
-    return 'https://example.com';
+    return 'about:blank';
   }, [currentPlan]);
 
   return (
@@ -494,6 +494,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           <WebAutomationBrowser
             onActionExecute={handleActionExecute}
             onSessionUpdate={handleSessionUpdate}
+            sessionId={currentSession || undefined}
             initialUrl={initialUrl}
           />
           </Box>

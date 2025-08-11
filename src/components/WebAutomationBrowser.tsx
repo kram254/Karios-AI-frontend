@@ -26,15 +26,17 @@ interface WebAutomationBrowserProps {
   onActionExecute?: (action: WebAutomationAction) => void;
   onSessionUpdate?: (session: WebAutomationSession) => void;
   initialUrl?: string;
+  sessionId?: string;
 }
 
 export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   onActionExecute,
   onSessionUpdate,
-  initialUrl = 'about:blank'
+  initialUrl = 'about:blank',
+  sessionId
 }) => {
   const [session, setSession] = useState<WebAutomationSession>({
-    sessionId: `session_${Date.now()}`,
+    sessionId: sessionId || `session_${Date.now()}`,
     url: initialUrl,
     status: 'idle',
     actions: [],
@@ -77,9 +79,14 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   }, []);
 
   const initializeWebSocket = () => {
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
+    }
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
-    const ws = new WebSocket(`${wsProtocol}//${wsHost}/api/web-automation/ws/automation/${session.sessionId}`);
+    const sid = sessionId || session.sessionId;
+    const ws = new WebSocket(`${wsProtocol}//${wsHost}/api/web-automation/ws/automation/${sid}`);
     
     ws.onopen = () => {
       console.log('WebSocket connected for automation session');
@@ -96,6 +103,14 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     
     wsRef.current = ws;
   };
+
+  useEffect(() => {
+    if (!sessionId) return;
+    if (session.sessionId !== sessionId) {
+      setSession(prev => ({ ...prev, sessionId }));
+      initializeWebSocket();
+    }
+  }, [sessionId]);
 
   const handleWebSocketMessage = (data: any) => {
     switch (data.type) {

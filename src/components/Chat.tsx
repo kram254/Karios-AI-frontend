@@ -397,7 +397,7 @@ const Chat: React.FC = () => {
           
           {/* Welcome Message with enhanced typography */}
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-[#00F3FF] to-[#00D4E0] bg-clip-text text-transparent neon-text">
-            Hi, I'm Agentando AI.
+            Hi, I'm Karios AI.
           </h1>
           <p className="text-gray-400 text-center text-sm sm:text-base mb-8 sm:mb-10 max-w-md">How can I help you today?</p>
           
@@ -429,7 +429,7 @@ const Chat: React.FC = () => {
                         textAreaRef.style.height = `${newHeight}px`;
                       }
                     }}
-                    placeholder="Ask Agentando AI"
+                    placeholder="Ask Karios AI"
                     value={message}
                     onChange={(e) => {
                       setMessage(e.target.value);
@@ -480,7 +480,7 @@ const Chat: React.FC = () => {
                 </div>
                 
                 {/* AI reference notice on the right side */}
-                <div className="text-xs text-gray-500">Agentando AI | Verify important Info.</div>
+                <div className="text-xs text-gray-500">Karios AI | Verify important Info.</div>
               </div>
             </form>
           </div>
@@ -915,7 +915,7 @@ const Chat: React.FC = () => {
                     handleKeyDown(e);
                   }
                 }}
-                placeholder={isSearchMode ? "Ask Agentando AI..." : "Ask Agentando AI"}
+                placeholder={isSearchMode ? "Ask Karios AI..." : "Ask Karios AI"}
                 className="chat-textarea"
                 rows={1}
                 disabled={isProcessing}
@@ -1042,7 +1042,7 @@ const Chat: React.FC = () => {
             ))}
           </div>
         )}
-        <div className="chat-ai-notice">Agentando AI | Verify important Info.</div>
+        <div className="chat-ai-notice">Karios AI | Verify important Info.</div>
         
         {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater

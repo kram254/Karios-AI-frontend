@@ -76,7 +76,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role, children
                     >
                         <Menu size={20} />
                     </button>
-                    <h1 className="nav-title">Agentando AI</h1>
+                    <h1 className="nav-title">Karios AI</h1>
                 </div>
                 <div className="nav-right">
                     <button 

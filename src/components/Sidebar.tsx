@@ -100,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Header */}
       <div className="p-4 border-b border-[#2A2A2A] flex items-center justify-between">
-        {!isCollapsed && <h1 className="text-xl font-bold">Agentando AI</h1>}
+        {!isCollapsed && <h1 className="text-xl font-bold">Karios AI</h1>}
         <button
           onClick={onCollapse}
           className="p-2 hover:bg-[#2A2A2A] rounded-lg transition-colors"

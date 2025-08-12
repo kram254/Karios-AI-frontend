@@ -350,10 +350,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log(`[ChatContext][addMessage] Detailed chat info: ID=${chatToUse.id}, Title=${chatToUse.title}, MessageCount=${chatToUse.messages?.length || 0}`);
 
       const messageData = { content, role };
-      const addedMessageResponse = await chatService.addMessage(activeChatId, messageData);
-      const newlyAddedMessage: Message = addedMessageResponse.data;
-
-      console.log(`[ChatContext][addMessage] Message successfully added via API for chat ${activeChatId}. New message ID: ${newlyAddedMessage.id}.`);
+      await chatService.addMessage(activeChatId, messageData);
+      console.log(`[ChatContext][addMessage] Message successfully added via API for chat ${activeChatId}.`);
 
       // Crucial Step: Refetch the entire chat to get the most up-to-date state from the server
       console.log(`[ChatContext][addMessage] Refetching chat ${activeChatId} to ensure UI consistency.`);

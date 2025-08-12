@@ -31,6 +31,8 @@ export interface Chat {
   created_at: string;
   updated_at: string;
   agent_id?: string;
+  chat_type?: string;
+  language?: string;
 }
 
 export interface ChatCreate {
@@ -119,7 +121,7 @@ export const chatService = {
       attachments: []
     };
     console.log('Message payload:', payload);
-    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
+    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
   updateMessage: (chatId: string, messageId: string, data: Partial<ChatMessage>) => {
@@ -170,7 +172,7 @@ export const chatService = {
     }
     
     console.log(`Message payload with role=${payload.role}, suppress_ai_response=${payload.suppress_ai_response}, search_mode=${searchModeActive}`);
-    return api.post<ChatMessage>(`/api/chat/chats/${chatId}/messages`, payload);
+    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload);
   },
   
   addMessageWithAttachments: async (
@@ -195,7 +197,7 @@ export const chatService = {
     };
     
     console.log(`🔄 [chat.service] Adding message with attachments, searchModeActive=${searchModeActive}, suppressAiResponse=${suppressAiResponse}`);
-    return api.post(`/api/chat/chats/${chatId}/messages`, payload);
+    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload);
   },
 
   // Agent and Knowledge Integration

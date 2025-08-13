@@ -727,7 +727,15 @@ const Chat: React.FC = () => {
                               <button
                                 type="button"
                                 className="search-text-button"
-                                onClick={() => { try { window.dispatchEvent(new Event('automation:show')); } catch {} }}
+                                onClick={() => { 
+                                  try { 
+                                    console.log('Automation window button clicked - dispatching events');
+                                    window.dispatchEvent(new Event('automation:show')); 
+                                    window.dispatchEvent(new Event('automation:start')); 
+                                  } catch (e) { 
+                                    console.error('Failed to dispatch automation events:', e); 
+                                  } 
+                                }}
                               >
                                 Open Web Automation Window
                               </button>
@@ -738,7 +746,15 @@ const Chat: React.FC = () => {
                             <button
                               type="button"
                               className="search-text-button"
-                              onClick={() => { try { window.dispatchEvent(new Event('automation:show')); } catch {} }}
+                              onClick={() => { 
+                                try { 
+                                  console.log('Automation control button clicked - dispatching events');
+                                  window.dispatchEvent(new Event('automation:show')); 
+                                  window.dispatchEvent(new Event('automation:start')); 
+                                } catch (e) { 
+                                  console.error('Failed to dispatch automation events:', e); 
+                                } 
+                              }}
                             >
                               Open Web Automation Window
                             </button>

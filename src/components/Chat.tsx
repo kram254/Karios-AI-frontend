@@ -116,12 +116,28 @@ const Chat: React.FC = () => {
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
         console.log('Dispatching workflow to', wfUrl);
+        
+        let workflowSteps = [];
+        const latestMessages = currentChat?.messages?.slice(-5) || [];
+        for (const msg of latestMessages) {
+          if (msg.content.startsWith('[AUTOMATION_PLAN]')) {
+            try {
+              const planJson = msg.content.substring(msg.content.indexOf('\n') + 1);
+              const plan = JSON.parse(planJson);
+              if (plan.steps && Array.isArray(plan.steps)) {
+                workflowSteps = plan.steps;
+                break;
+              }
+            } catch {}
+          }
+        }
+        
         await fetch(wfUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId: automationSessionId,
-            workflow_steps: [],
+            workflow_steps: workflowSteps,
             task_description: messageContent
           })
         });
@@ -972,12 +988,28 @@ const Chat: React.FC = () => {
                       try {
                         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
                         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
+                        
+                        let workflowSteps = [];
+                        const latestMessages = currentChat?.messages?.slice(-5) || [];
+                        for (const msg of latestMessages) {
+                          if (msg.content.startsWith('[AUTOMATION_PLAN]')) {
+                            try {
+                              const planJson = msg.content.substring(msg.content.indexOf('\n') + 1);
+                              const plan = JSON.parse(planJson);
+                              if (plan.steps && Array.isArray(plan.steps)) {
+                                workflowSteps = plan.steps;
+                                break;
+                              }
+                            } catch {}
+                          }
+                        }
+                        
                         await fetch(wfUrl, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             sessionId: result.sessionId,
-                            workflow_steps: [],
+                            workflow_steps: workflowSteps,
                             task_description: pendingAutomationTask
                           })
                         });

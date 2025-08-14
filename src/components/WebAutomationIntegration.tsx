@@ -41,7 +41,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       if (!isAutomationActive) {
         setIsAutomationActive(true);
         setAutomationStatus('running');
-        startAutomation(initialUrl);
+        startAutomation();
       }
     };
     window.addEventListener('automation:show', onShow as any);
@@ -184,7 +184,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       const chatResult = await chatResponse.json();
       const chatId = chatResult.id;
       
-      console.log('Starting backend automation session', { sessionId, url: url || 'https://example.com', visible: false, chatId });
+      console.log('Starting backend automation session', { sessionId, url: url || undefined, visible: false, chatId });
       const startUrl = `${BACKEND_URL}/api/web-automation/start`;
       console.log('WebAutomation start URL', startUrl);
       const response = await fetch(startUrl, {
@@ -192,7 +192,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          url: url || initialUrl || 'https://example.com',
+          url: url || undefined,
           visible: visibleMode,
           chatId
         })

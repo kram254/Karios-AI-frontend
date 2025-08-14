@@ -67,6 +67,7 @@ const Chat: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [automationActive, setAutomationActive] = useState(false);
   const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
+  const [automationChatId, setAutomationChatId] = useState<string | null>(null);
   const [automationPlans, setAutomationPlans] = useState<Record<string, any>>({});
   const [pendingAutomationTask, setPendingAutomationTask] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -116,11 +117,30 @@ const Chat: React.FC = () => {
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
         console.log('Dispatching workflow to', wfUrl);
+        // Log the user's task to the automation chat session
+        try {
+          if (automationChatId) {
+            await addMessage({ role: 'user', content: messageContent, chatId: automationChatId });
+          }
+        } catch (e) {
+          console.warn('Failed to log task message to automation chat', e);
+        }
         
         let workflowSteps = [];
-        const latestMessages = currentChat?.messages?.slice(-5) || [];
+        let latestMessages: any[] = [];
+        try {
+          const targetChatId = automationChatId;
+          if (targetChatId) {
+            const autoChat = await chatService.getChat(targetChatId);
+            latestMessages = (autoChat.data?.messages || []).slice(-10);
+          } else {
+            latestMessages = currentChat?.messages?.slice(-10) || [];
+          }
+        } catch {
+          latestMessages = currentChat?.messages?.slice(-10) || [];
+        }
         for (const msg of latestMessages) {
-          if (msg.content.startsWith('[AUTOMATION_PLAN]')) {
+          if (typeof msg.content === 'string' && msg.content.startsWith('[AUTOMATION_PLAN]')) {
             try {
               const planJson = msg.content.substring(msg.content.indexOf('\n') + 1);
               const plan = JSON.parse(planJson);
@@ -130,6 +150,17 @@ const Chat: React.FC = () => {
               }
             } catch {}
           }
+        }
+        if (workflowSteps.length === 0) {
+          const latestAutomationMessages = latestMessages.filter((m: any) => typeof m.content === 'string' && m.content.startsWith('[AUTOMATION_STEP]')) || [];
+          workflowSteps = latestAutomationMessages.map((msg: any) => {
+            try {
+              const stepJson = msg.content.substring(msg.content.indexOf('\n') + 1);
+              return JSON.parse(stepJson);
+            } catch {
+              return null;
+            }
+          }).filter(Boolean);
         }
         
         await fetch(wfUrl, {
@@ -142,9 +173,12 @@ const Chat: React.FC = () => {
           })
         });
         console.log('Automation workflow request sent');
+        setIsProcessing(false);
+        return; // prevent fallthrough to regular chat handling
       } catch (automationErr) {
         console.error('Automation dispatch failed:', automationErr);
-        
+        setIsProcessing(false);
+        return;
       }
     } else if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
       console.log('🌐 INTERNET SEARCH MODE ACTIVE - Processing search');
@@ -995,18 +1029,39 @@ const Chat: React.FC = () => {
                   if (result.type === 'session_started') {
                     setAutomationActive(true);
                     setAutomationSessionId(result.sessionId);
+                    if (result.chatId) setAutomationChatId(result.chatId);
                     console.log('Automation session started (Chat)', { sessionId: result.sessionId });
                     addMessage({
                       content: `Web automation session started: ${result.sessionId}`,
-                      role: 'system'
+                      role: 'system',
+                      chatId: result.chatId || automationChatId || undefined
                     });
                     if (pendingAutomationTask) {
                       try {
                         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
                         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
-                        
+
+                        // Log the pending user task into the automation chat
+                        try {
+                          const targetChatId = result.chatId || automationChatId;
+                          if (targetChatId) {
+                            await addMessage({ role: 'user', content: pendingAutomationTask, chatId: targetChatId });
+                          }
+                        } catch {}
+
                         let workflowSteps = [];
-                        const latestMessages = currentChat?.messages?.slice(-5) || [];
+                        let latestMessages: any[] = [];
+                        try {
+                          const targetChatId = result.chatId || automationChatId;
+                          if (targetChatId) {
+                            const autoChat = await chatService.getChat(targetChatId);
+                            latestMessages = (autoChat.data?.messages || []).slice(-10);
+                          } else {
+                            latestMessages = currentChat?.messages?.slice(-10) || [];
+                          }
+                        } catch {
+                          latestMessages = currentChat?.messages?.slice(-10) || [];
+                        }
                         for (const msg of latestMessages) {
                           if (msg.content.startsWith('[AUTOMATION_PLAN]')) {
                             try {
@@ -1019,7 +1074,17 @@ const Chat: React.FC = () => {
                             } catch {}
                           }
                         }
-                        
+                        if (workflowSteps.length === 0) {
+                          const latestAutomationMessages = currentChat?.messages?.filter(msg => msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_STEP]')) || [];
+                          workflowSteps = latestAutomationMessages.map(msg => {
+                            try {
+                              const stepJson = msg.content.substring(msg.content.indexOf('\n') + 1);
+                              return JSON.parse(stepJson);
+                            } catch {
+                              return null;
+                            }
+                          }).filter(Boolean);
+                        }
                         await fetch(wfUrl, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -1037,17 +1102,20 @@ const Chat: React.FC = () => {
                     setAutomationPlans((prev) => ({ ...prev, [id]: result.plan }));
                     addMessage({
                       content: `[AUTOMATION_PLAN]\n${JSON.stringify(result.plan)}`,
-                      role: 'assistant'
+                      role: 'assistant',
+                      chatId: automationChatId || undefined
                     });
                   } else if (result.type === 'execution_started') {
                     addMessage({
                       content: `[AUTOMATION_CONTROL]`,
-                      role: 'system'
+                      role: 'system',
+                      chatId: automationChatId || undefined
                     });
                   } else if (result.type === 'action_executed') {
                     addMessage({
                       content: `Web automation action: ${result.action.type} executed`,
-                      role: 'system'
+                      role: 'system',
+                      chatId: automationChatId || undefined
                     });
                   } else if (result.type === 'session_stopped') {
                     setAutomationActive(false);

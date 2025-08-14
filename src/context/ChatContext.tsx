@@ -63,7 +63,7 @@ interface ChatContextType {
   createNewChat: (customTitle?: string) => Promise<Chat | null>;
   createAgentChat: (agent?: Agent) => Promise<Chat | null>; // Update createAgentChat method
   setCurrentChat: (chat: Chat) => void;
-  addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string }) => Promise<void>;
+  addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string; chatId?: string }) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
   selectedAgent: Agent | null; // Add selectedAgent state
@@ -296,8 +296,33 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return language.code;
   };
 
-  const addMessage = async ({ role, content }: { role: 'user' | 'assistant' | 'system'; content: string }) => {
+  const addMessage = async ({ role, content, chatId }: { role: 'user' | 'assistant' | 'system'; content: string; chatId?: string }) => {
     let chatToUse = currentChat;
+
+    // If a specific chatId is provided, route the message there
+    if (chatId) {
+      if (!chatToUse || chatToUse.id !== chatId) {
+        // Try to find in existing chats
+        const targetFromState = chats.find(c => c.id === chatId);
+        if (targetFromState) {
+          chatToUse = targetFromState;
+        } else {
+          try {
+            const fetched = await chatService.getChat(chatId);
+            chatToUse = fetched.data as Chat;
+            // Merge into chats list
+            setChats(prev => {
+              const exists = prev.some(c => c.id === chatId);
+              return exists ? prev.map(c => (c.id === chatId ? (chatToUse as Chat) : c)) : [chatToUse as Chat, ...prev];
+            });
+          } catch (e) {
+            console.error('[ChatContext][addMessage] Failed to fetch target chat by ID:', chatId, e);
+            toast.error('Cannot send message: target chat not found');
+            return;
+          }
+        }
+      }
+    }
     
     // If we don't have a current chat, create one and ensure it's set in state
     if (!chatToUse) {
@@ -335,13 +360,17 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Optimistically add the message to the UI
-    setCurrentChat(prev => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        messages: [...prev.messages, tempMessage]
-      };
-    });
+    if (chatToUse?.id === currentChat?.id) {
+      setCurrentChat(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, tempMessage]
+        };
+      });
+    } else if (chatToUse) {
+      setChats(prev => prev.map(c => c.id === chatToUse!.id ? { ...c, messages: [...(c.messages || []), tempMessage] } : c));
+    }
 
     try {
       // At this point chatToUse should always be defined
@@ -361,8 +390,10 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
       console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
 
-      // Update the currentChat state with the fully loaded chat object
-      setCurrentChat(fullyUpdatedChat);
+      // Update the currentChat state only if we're updating the currently open chat
+      if (currentChat?.id === activeChatId) {
+        setCurrentChat(fullyUpdatedChat);
+      }
 
       // Update the chats array in the state
       setChats(prevChats =>

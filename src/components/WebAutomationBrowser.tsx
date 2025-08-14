@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Paper, IconButton, TextField, Button, Typography, Chip, LinearProgress } from '@mui/material';
 import { PlayArrow, Pause, Stop, Refresh, Screenshot, Visibility, VisibilityOff } from '@mui/icons-material';
 
+const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
+
 interface WebAutomationAction {
   id: string;
   type: string;
@@ -69,10 +71,17 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       try { wsRef.current.close(); } catch {}
       wsRef.current = null;
     }
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.host;
     const sid = sessionId || session.sessionId;
-    const ws = new WebSocket(`${wsProtocol}//${wsHost}/api/web-automation/ws/automation/${sid}`);
+    let wsUrl: string;
+    try {
+      const base = new URL(BACKEND_URL);
+      const wsProto = base.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${wsProto}//${base.host}/api/web-automation/ws/automation/${sid}`;
+    } catch {
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${wsProto}//${window.location.host}/api/web-automation/ws/automation/${sid}`;
+    }
+    const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
       console.log('WebSocket connected for automation session');
@@ -104,11 +113,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const handleWebSocketMessage = (data: any) => {
     switch (data.type) {
       case 'status_update':
-        setSession(prev => ({
-          ...prev,
-          status: data.status || prev.status,
-          url: typeof data.url === 'string' ? data.url : prev.url
-        }));
+        setSession(prev => {
+          const next = {
+            ...prev,
+            status: data.status || prev.status,
+            url: typeof data.url === 'string' ? data.url : prev.url
+          };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
         break;
       case 'screenshot_update':
         setCurrentScreenshot(data.screenshot);
@@ -172,7 +185,11 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         setActionOverlay(null);
         break;
       case 'session_update':
-        setSession(prev => ({ ...prev, ...data.session }));
+        setSession(prev => {
+          const next = { ...prev, ...data.session };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
         break;
     }
   };
@@ -190,7 +207,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     try {
       setSession(prev => ({ ...prev, status: 'running' }));
       
-      const response = await fetch('/api/web-automation/start', {
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -212,7 +229,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const pauseAutomation = async () => {
     try {
-      const response = await fetch('/api/web-automation/pause', {
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/pause`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.sessionId })
@@ -228,7 +245,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const stopAutomation = async () => {
     try {
-      const response = await fetch('/api/web-automation/stop', {
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/stop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.sessionId })
@@ -249,7 +266,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const takeScreenshot = async () => {
     try {
-      const response = await fetch('/api/web-automation/screenshot', {
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/screenshot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.sessionId })
@@ -270,7 +287,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const navigateToUrl = async () => {
     try {
-      const response = await fetch('/api/web-automation/navigate', {
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/navigate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

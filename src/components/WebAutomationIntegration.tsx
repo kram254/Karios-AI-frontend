@@ -41,7 +41,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       if (!isAutomationActive) {
         setIsAutomationActive(true);
         setAutomationStatus('running');
-        startAutomation();
+        startAutomation(initialUrl);
       }
     };
     window.addEventListener('automation:show', onShow as any);
@@ -192,7 +192,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          url: url || 'about:blank',
+          url: url || initialUrl || 'https://example.com',
           visible: visibleMode,
           chatId
         })
@@ -468,7 +468,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               <Button
                 type="button"
                 startIcon={<PlayArrow />}
-                onClick={() => startAutomation()}
+                onClick={() => startAutomation(initialUrl)}
                 variant="contained"
                 color="success"
                 size="small"

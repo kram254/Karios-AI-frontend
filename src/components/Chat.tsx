@@ -83,30 +83,62 @@ const Chat: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() && uploadedImages.length === 0) return;
+    console.log('🚀 HANDLESUBMIT STARTED - message:', message.trim());
+    console.log('🚀 HANDLESUBMIT - automationActive:', automationActive);
+    console.log('🚀 HANDLESUBMIT - automationSessionId:', automationSessionId);
+    console.log('🚀 HANDLESUBMIT - automationChatId:', automationChatId);
+    console.log('🚀 HANDLESUBMIT - isProcessing:', isProcessing);
+    
+    if (!message.trim() && uploadedImages.length === 0) {
+      console.log('🚀 HANDLESUBMIT - EARLY RETURN: empty message and no images');
+      return;
+    }
 
     // Don't allow sending messages while processing
-    if (isProcessing) return;
+    if (isProcessing) {
+      console.log('🚀 HANDLESUBMIT - EARLY RETURN: already processing');
+      return;
+    }
     
     setIsProcessing(true);
-    console.log('🔄 PROCESSING STARTED');
+    console.log('🔄 PROCESSING STARTED - setIsProcessing(true)');
     
     // Set avatar to thinking state when processing starts
     setAvatarState('thinking');
     setAvatarMessage('Thinking...');
+    console.log('🔄 AVATAR STATE SET TO THINKING');
     
     // Get message content once for the entire function
     const messageContent = message.trim();
+    console.log('🔄 MESSAGE CONTENT:', messageContent);
     
     // Clear the input field immediately for better UX
     setMessage("");
+    console.log('🔄 INPUT FIELD CLEARED');
     
     const automationKeywords = /(browse|visit|navigate to|go to|open website|web automation|click on|fill form|search on|scrape|extract from|http:\/\/|https:\/\/|\.com|\.org|\.net|\.co\.)/i;
-    if (!automationActive && automationKeywords.test(messageContent)) {
-      try { window.dispatchEvent(new Event('automation:show')); } catch {}
-      try { window.dispatchEvent(new Event('automation:start')); } catch {}
+    const keywordMatch = automationKeywords.test(messageContent);
+    console.log('🔄 AUTOMATION KEYWORD TEST:', keywordMatch);
+    console.log('🔄 AUTOMATION ACTIVE:', automationActive);
+    
+    if (!automationActive && keywordMatch) {
+      console.log('🎯 AUTOMATION TRIGGER DETECTED - dispatching events');
+      try { 
+        window.dispatchEvent(new Event('automation:show')); 
+        console.log('🎯 DISPATCHED automation:show');
+      } catch (e) {
+        console.error('🎯 ERROR dispatching automation:show:', e);
+      }
+      try { 
+        window.dispatchEvent(new Event('automation:start')); 
+        console.log('🎯 DISPATCHED automation:start');
+      } catch (e) {
+        console.error('🎯 ERROR dispatching automation:start:', e);
+      }
       setPendingAutomationTask(messageContent);
+      console.log('🎯 SET PENDING AUTOMATION TASK:', messageContent);
       setIsProcessing(false);
+      console.log('🎯 PROCESSING STOPPED - automation trigger path');
       return;
     }
     
@@ -114,15 +146,40 @@ const Chat: React.FC = () => {
     
     // Handle search or automation modes differently
     if (automationActive) {
-      console.log('Submitting message to web automation workflow', { automationActive, automationSessionId, task: messageContent });
+      console.log('🤖 AUTOMATION ACTIVE PATH - Submitting message to web automation workflow');
+      console.log('🤖 AUTOMATION STATE:', { automationActive, automationSessionId, automationChatId, task: messageContent });
+      
+      // Add the user message to the chat UI immediately
+      try {
+        console.log('🤖 ADDING USER MESSAGE TO CHAT UI');
+        await addMessage({ role: 'user', content: messageContent });
+        console.log('🤖 USER MESSAGE ADDED TO CHAT UI SUCCESSFULLY');
+      } catch (e) {
+        console.error('🤖 ERROR ADDING USER MESSAGE TO CHAT UI:', e);
+      }
+      
       try {
         setAvatarState('browsing');
         setAvatarMessage('Web automation enabled');
-        try { window.dispatchEvent(new Event('automation:show')); } catch {}
+        console.log('🤖 AVATAR STATE SET TO BROWSING');
+        try { 
+          window.dispatchEvent(new Event('automation:show')); 
+          console.log('🤖 DISPATCHED automation:show');
+        } catch (e) {
+          console.error('🤖 ERROR dispatching automation:show:', e);
+        }
         if (!automationSessionId) {
-          try { window.dispatchEvent(new Event('automation:start')); } catch {}
+          console.log('🤖 NO AUTOMATION SESSION - starting new session');
+          try { 
+            window.dispatchEvent(new Event('automation:start')); 
+            console.log('🤖 DISPATCHED automation:start');
+          } catch (e) {
+            console.error('🤖 ERROR dispatching automation:start:', e);
+          }
           setPendingAutomationTask(messageContent);
+          console.log('🤖 SET PENDING AUTOMATION TASK:', messageContent);
           setIsProcessing(false);
+          console.log('🤖 PROCESSING STOPPED - no session path');
           return;
         }
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
@@ -1035,30 +1092,49 @@ const Chat: React.FC = () => {
              </SearchLockTooltip>
                           <WebAutomationIntegration
                 onAutomationResult={async (result) => {
-                  console.log('Web automation result:', result);
-                  // Add automation result as a system message to the chat
+                  console.log('🎯 Chat.tsx - Web automation result received:', result);
+                  console.log('🎯 Current automation state:', { automationActive, automationSessionId, automationChatId });
+                  
                   if (result.type === 'session_started') {
+                    console.log('🎯 Processing session_started result');
                     setAutomationActive(true);
                     setAutomationSessionId(result.sessionId);
-                    if (result.chatId) setAutomationChatId(result.chatId);
-                    console.log('Automation session started (Chat)', { sessionId: result.sessionId });
-                    addMessage({
-                      content: `Web automation session started: ${result.sessionId}`,
-                      role: 'system',
-                      chatId: result.chatId || automationChatId || undefined
-                    });
+                    if (result.chatId) {
+                      setAutomationChatId(result.chatId);
+                      console.log('🎯 Set automationChatId to:', result.chatId);
+                    }
+                    console.log('🎯 Automation session started (Chat)', { sessionId: result.sessionId, chatId: result.chatId });
+                    
+                    try {
+                      await addMessage({
+                        content: `Web automation session started: ${result.sessionId}`,
+                        role: 'system',
+                        chatId: result.chatId || automationChatId || undefined
+                      });
+                      console.log('🎯 Session started message added to chat');
+                    } catch (e) {
+                      console.error('🎯 Error adding session started message:', e);
+                    }
                     if (pendingAutomationTask) {
+                      console.log('🎯 Processing pending automation task:', pendingAutomationTask);
                       try {
                         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
                         const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
+                        console.log('🎯 Will execute workflow at:', wfUrl);
 
                         // Log the pending user task into the automation chat
                         try {
                           const targetChatId = result.chatId || automationChatId;
+                          console.log('🎯 Adding pending task to chat with ID:', targetChatId);
                           if (targetChatId) {
                             await addMessage({ role: 'user', content: pendingAutomationTask, chatId: targetChatId });
+                            console.log('🎯 Pending task added to automation chat');
+                          } else {
+                            console.log('🎯 No target chat ID available for pending task');
                           }
-                        } catch {}
+                        } catch (e) {
+                          console.error('🎯 Error adding pending task to chat:', e);
+                        }
 
                         let workflowSteps = [];
                         let latestMessages: any[] = [];
@@ -1096,42 +1172,94 @@ const Chat: React.FC = () => {
                             }
                           }).filter(Boolean);
                         }
-                        await fetch(wfUrl, {
+                        console.log('🎯 Executing workflow with steps:', workflowSteps.length, 'steps');
+                        const workflowPayload = {
+                          sessionId: result.sessionId,
+                          workflow_steps: workflowSteps,
+                          task_description: pendingAutomationTask
+                        };
+                        console.log('🎯 Workflow payload:', workflowPayload);
+                        
+                        const workflowResponse = await fetch(wfUrl, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            sessionId: result.sessionId,
-                            workflow_steps: workflowSteps,
-                            task_description: pendingAutomationTask
-                          })
+                          body: JSON.stringify(workflowPayload)
                         });
-                      } catch {}
+                        
+                        console.log('🎯 Workflow execution response status:', workflowResponse.status);
+                        if (!workflowResponse.ok) {
+                          const errorText = await workflowResponse.text().catch(() => 'Unknown error');
+                          console.error('🎯 Workflow execution failed:', errorText);
+                        } else {
+                          console.log('🎯 Workflow execution started successfully');
+                        }
+                      } catch (e) {
+                        console.error('🎯 Error executing workflow:', e);
+                      }
                       setPendingAutomationTask(null);
+                      console.log('🎯 Cleared pending automation task');
+                    } else {
+                      console.log('🎯 No pending automation task to process');
                     }
                   } else if (result.type === 'plan_created') {
+                    console.log('🎯 Processing plan_created result:', result.plan);
                     const id = `plan-${Date.now()}`;
                     setAutomationPlans((prev) => ({ ...prev, [id]: result.plan }));
-                    addMessage({
-                      content: `[AUTOMATION_PLAN]\n${JSON.stringify(result.plan)}`,
-                      role: 'assistant',
-                      chatId: automationChatId || undefined
-                    });
+                    console.log('🎯 Added plan to automationPlans with ID:', id);
+                    
+                    try {
+                      await addMessage({
+                        content: `[AUTOMATION_PLAN]\n${JSON.stringify(result.plan)}`,
+                        role: 'assistant',
+                        chatId: automationChatId || undefined
+                      });
+                      console.log('🎯 Plan message added to chat UI');
+                    } catch (e) {
+                      console.error('🎯 Error adding plan message to chat:', e);
+                    }
                   } else if (result.type === 'execution_started') {
-                    addMessage({
-                      content: `[AUTOMATION_CONTROL]`,
-                      role: 'system',
-                      chatId: automationChatId || undefined
-                    });
+                    console.log('🎯 Processing execution_started result');
+                    try {
+                      await addMessage({
+                        content: `[AUTOMATION_CONTROL]`,
+                        role: 'system',
+                        chatId: automationChatId || undefined
+                      });
+                      console.log('🎯 Execution started message added to chat');
+                    } catch (e) {
+                      console.error('🎯 Error adding execution started message:', e);
+                    }
                   } else if (result.type === 'action_executed') {
-                    addMessage({
-                      content: `Web automation action: ${result.action.type} executed`,
-                      role: 'system',
-                      chatId: automationChatId || undefined
-                    });
+                    console.log('🎯 Processing action_executed result:', result.action);
+                    try {
+                      await addMessage({
+                        content: `Web automation action: ${result.action.type} executed`,
+                        role: 'system',
+                        chatId: automationChatId || undefined
+                      });
+                      console.log('🎯 Action executed message added to chat');
+                    } catch (e) {
+                      console.error('🎯 Error adding action executed message:', e);
+                    }
+                  } else if (result.type === 'workflow_completed') {
+                    console.log('🎯 Processing workflow_completed result:', { result: result.result, score: result.score });
+                    try {
+                      await addMessage({
+                        content: `Web automation completed with score: ${result.score}%`,
+                        role: 'system',
+                        chatId: automationChatId || undefined
+                      });
+                      console.log('🎯 Workflow completed message added to chat');
+                    } catch (e) {
+                      console.error('🎯 Error adding workflow completed message:', e);
+                    }
                   } else if (result.type === 'session_stopped') {
+                    console.log('🎯 Processing session_stopped result');
                     setAutomationActive(false);
                     setAutomationSessionId(null);
-                    console.log('Automation session stopped (Chat)');
+                    console.log('🎯 Automation session stopped (Chat)');
+                  } else {
+                    console.log('🎯 Unknown automation result type:', result.type);
                   }
                 }}
               />

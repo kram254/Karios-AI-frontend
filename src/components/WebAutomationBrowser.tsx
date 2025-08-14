@@ -22,11 +22,14 @@ interface WebAutomationSession {
   actions: WebAutomationAction[];
   currentActionIndex: number;
   screenshots: string[];
+  results?: any;
+  score?: number;
 }
 
 interface WebAutomationBrowserProps {
   onActionExecute?: (action: WebAutomationAction) => void;
   onSessionUpdate?: (session: WebAutomationSession) => void;
+  onClose?: () => void;
   initialUrl?: string;
   sessionId?: string;
 }
@@ -34,6 +37,7 @@ interface WebAutomationBrowserProps {
 export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   onActionExecute,
   onSessionUpdate,
+  onClose,
   initialUrl = 'about:blank',
   sessionId
 }) => {
@@ -190,6 +194,31 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           if (onSessionUpdate) onSessionUpdate(next);
           return next;
         });
+        break;
+      case 'workflow_completed':
+        console.log('🎯 WORKFLOW_COMPLETED - Received workflow completion event:', data);
+        setSession(prev => {
+          const next = {
+            ...prev,
+            status: 'completed' as const,
+            results: data.results || prev.results,
+            score: data.score || prev.score
+          };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        
+        const score = data.score || data.result?.score || 0;
+        console.log('🎯 WORKFLOW_COMPLETED - Score received:', score);
+        
+        if (score >= 92) {
+          console.log('🎯 WORKFLOW_COMPLETED - High score detected, auto-minimizing window');
+          if (onClose) {
+            setTimeout(() => {
+              onClose();
+            }, 2000);
+          }
+        }
         break;
     }
   };

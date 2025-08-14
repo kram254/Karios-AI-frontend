@@ -35,53 +35,101 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   }, [isVisible]);
 
   useEffect(() => {
-    const onShow = () => setIsOpen(true);
+    const onShow = () => {
+      console.log('🎬 WebAutomationIntegration - automation:show event received');
+      setIsOpen(true);
+    };
     const onStart = () => {
+      console.log('🎬 WebAutomationIntegration - automation:start event received');
+      console.log('🎬 Current state:', { isAutomationActive, automationStatus, currentSession });
       setIsOpen(true);
       if (!isAutomationActive) {
+        console.log('🎬 Starting automation - not currently active');
         setIsAutomationActive(true);
         setAutomationStatus('running');
         startAutomation();
+      } else {
+        console.log('🎬 Automation already active, skipping start');
       }
     };
+    console.log('🎬 WebAutomationIntegration - registering event listeners');
     window.addEventListener('automation:show', onShow as any);
     window.addEventListener('automation:start', onStart as any);
     return () => {
+      console.log('🎬 WebAutomationIntegration - removing event listeners');
       window.removeEventListener('automation:show', onShow as any);
       window.removeEventListener('automation:start', onStart as any);
     };
   }, []);
 
   useEffect(() => {
-    if (!currentSession) return;
+    if (!currentSession) {
+      console.log('📡 No current session, skipping WebSocket connection');
+      return;
+    }
     
     const wsUrl = `${BACKEND_URL.replace('http', 'ws')}/api/web-automation/ws/automation/${currentSession}`;
+    console.log('📡 Connecting to WebSocket:', wsUrl);
     const ws = new WebSocket(wsUrl);
     
+    ws.onopen = () => {
+      console.log('📡 WebSocket connection opened for session:', currentSession);
+    };
+    
+    ws.onerror = (error) => {
+      console.error('📡 WebSocket error:', error);
+    };
+    
+    ws.onclose = (event) => {
+      console.log('📡 WebSocket connection closed:', event.code, event.reason);
+    };
+    
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'plan_created') {
-        setCurrentPlan(data.plan);
-        setShowPlan(true);
-        setIsOpen(true);
-        if (onAutomationResult) {
-          onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
-        }
-      } else if (data.type === 'execution_started') {
-        setIsOpen(true);
-        if (onAutomationResult) {
-          onAutomationResult({ type: 'execution_started', sessionId: currentSession });
-        }
-      } else if (data.type === 'workflow_completed') {
-        if (onAutomationResult) {
-          onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, result: data.result, score: data.score });
-        }
-        try {
-          const score = typeof data.score === 'number' ? data.score : (typeof data.result?.score === 'number' ? data.result.score : undefined);
-          if (typeof score === 'number' && score >= 92) {
-            setIsOpen(false);
+      console.log('📡 WebSocket message received:', event.data);
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📡 Parsed WebSocket data:', data);
+        
+        if (data.type === 'plan_created') {
+          console.log('📡 PLAN_CREATED event received:', data.plan);
+          setCurrentPlan(data.plan);
+          setShowPlan(true);
+          setIsOpen(true);
+          console.log('📡 Plan state updated, calling onAutomationResult');
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
+            console.log('📡 onAutomationResult called for plan_created');
           }
-        } catch {}
+        } else if (data.type === 'execution_started') {
+          console.log('📡 EXECUTION_STARTED event received');
+          setIsOpen(true);
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'execution_started', sessionId: currentSession });
+            console.log('📡 onAutomationResult called for execution_started');
+          }
+        } else if (data.type === 'workflow_completed') {
+          console.log('📡 WORKFLOW_COMPLETED event received:', { result: data.result, score: data.score });
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, result: data.result, score: data.score });
+            console.log('📡 onAutomationResult called for workflow_completed');
+          }
+          try {
+            const score = typeof data.score === 'number' ? data.score : (typeof data.result?.score === 'number' ? data.result.score : undefined);
+            console.log('📡 Extracted score for auto-close check:', score);
+            if (typeof score === 'number' && score >= 92) {
+              console.log('📡 Score >= 92, auto-closing window');
+              setIsOpen(false);
+            } else {
+              console.log('📡 Score < 92 or invalid, keeping window open');
+            }
+          } catch (e) {
+            console.error('📡 Error processing workflow_completed score:', e);
+          }
+        } else {
+          console.log('📡 Unknown WebSocket message type:', data.type);
+        }
+      } catch (e) {
+        console.error('📡 Error parsing WebSocket message:', e, 'Raw data:', event.data);
       }
     };
     
@@ -161,67 +209,84 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
   const startAutomation = async (url?: string) => {
     try {
-      console.log('WebAutomation start requested');
+      console.log('🚀 WebAutomation start requested with URL:', url);
+      console.log('🚀 BACKEND_URL:', BACKEND_URL);
+      console.log('🚀 visibleMode:', visibleMode);
       const sessionId = `session_${Date.now()}`;
+      console.log('🚀 Generated sessionId:', sessionId);
       
-      console.log('Creating chat for Web Automation Agent');
+      console.log('🚀 Creating chat for Web Automation Agent...');
+      const chatPayload = {
+        title: 'Web Automation Agent',
+        chat_type: 'sales_agent',
+        agent_id: '1',
+        language: 'en'
+      };
+      console.log('🚀 Chat creation payload:', chatPayload);
+      
       const chatResponse = await fetch(`${BACKEND_URL}/api/chat/chats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Web Automation Agent',
-          chat_type: 'sales_agent',
-          agent_id: '1',
-          language: 'en'
-        })
+        body: JSON.stringify(chatPayload)
       });
       
+      console.log('🚀 Chat creation response status:', chatResponse.status);
       if (!chatResponse.ok) {
-        console.log('Failed to create chat for Web Automation Agent');
-        throw new Error('Failed to create Web Automation Agent chat');
+        const errorText = await chatResponse.text().catch(() => 'Unknown error');
+        console.error('🚀 Failed to create chat for Web Automation Agent:', errorText);
+        throw new Error(`Failed to create Web Automation Agent chat: ${chatResponse.status} ${errorText}`);
       }
       
       const chatResult = await chatResponse.json();
       const chatId = chatResult.id;
+      console.log('🚀 Chat created successfully with ID:', chatId);
       
-      console.log('Starting backend automation session', { sessionId, url: url || undefined, visible: false, chatId });
+      const automationPayload = {
+        sessionId,
+        url: url || undefined,
+        visible: visibleMode,
+        chatId
+      };
+      console.log('🚀 Starting backend automation session with payload:', automationPayload);
       const startUrl = `${BACKEND_URL}/api/web-automation/start`;
-      console.log('WebAutomation start URL', startUrl);
+      console.log('🚀 WebAutomation start URL:', startUrl);
+      
       const response = await fetch(startUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          url: url || undefined,
-          visible: visibleMode,
-          chatId
-        })
+        body: JSON.stringify(automationPayload)
       });
 
       const status = response.status;
       const text = await response.text().catch(() => '');
-      console.log('WebAutomation start response', { status, body: text });
+      console.log('🚀 WebAutomation start response:', { status, body: text });
+      
       if (response.ok) {
+        console.log('🚀 Backend automation session started successfully');
         setCurrentSession(sessionId);
         setIsAutomationActive(true);
         setAutomationStatus('running');
-        console.log('WebAutomation session started', { sessionId });
+        console.log('🚀 Local state updated:', { sessionId, isAutomationActive: true, status: 'running' });
         
         if (onAutomationResult) {
-          onAutomationResult({
+          const resultPayload = {
             type: 'session_started',
             sessionId,
             status: 'running',
             chatId
-          });
+          };
+          console.log('🚀 Calling onAutomationResult with:', resultPayload);
+          onAutomationResult(resultPayload);
+        } else {
+          console.log('🚀 No onAutomationResult callback provided');
         }
       } else {
-        console.log('WebAutomation start response not ok');
+        console.error('🚀 WebAutomation start response not ok:', status, text);
         setAutomationStatus('error');
         setIsAutomationActive(false);
       }
     } catch (error) {
-      console.error('Failed to start automation:', error);
+      console.error('🚀 Failed to start automation:', error);
       setAutomationStatus('error');
       setIsAutomationActive(false);
     }
@@ -512,6 +577,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           <WebAutomationBrowser
             onActionExecute={handleActionExecute}
             onSessionUpdate={handleSessionUpdate}
+            onClose={handleCloseAutomation}
             sessionId={currentSession || undefined}
             initialUrl={initialUrl}
           />

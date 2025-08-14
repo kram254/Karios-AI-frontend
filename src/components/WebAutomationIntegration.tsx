@@ -301,7 +301,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         if (typeof u === 'string' && /^https?:\/\//i.test(u)) return u;
       }
     } catch {}
-    return 'about:blank';
+    return 'https://example.com';
   }, [currentPlan]);
 
   return (

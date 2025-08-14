@@ -372,59 +372,52 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setChats(prev => prev.map(c => c.id === chatToUse!.id ? { ...c, messages: [...(c.messages || []), tempMessage] } : c));
     }
 
-    try {
-      // At this point chatToUse should always be defined
+    {
       const activeChatId = chatToUse.id;
       console.log(`[ChatContext][addMessage] Sending message to chat ${activeChatId}:`, { content, role });
       console.log(`[ChatContext][addMessage] Detailed chat info: ID=${chatToUse.id}, Title=${chatToUse.title}, MessageCount=${chatToUse.messages?.length || 0}`);
 
       const messageData = { content, role };
-      await chatService.addMessage(activeChatId, messageData);
-      console.log(`[ChatContext][addMessage] Message successfully added via API for chat ${activeChatId}.`);
-
-      // Crucial Step: Refetch the entire chat to get the most up-to-date state from the server
-      console.log(`[ChatContext][addMessage] Refetching chat ${activeChatId} to ensure UI consistency.`);
-      const updatedChatResponse = await chatService.getChat(activeChatId);
-      const fullyUpdatedChat: Chat = updatedChatResponse.data;
-
-      console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
-      console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
-
-      // Update the currentChat state only if we're updating the currently open chat
-      if (currentChat?.id === activeChatId) {
-        setCurrentChat(fullyUpdatedChat);
-      }
-
-      // Update the chats array in the state
-      setChats(prevChats =>
-        prevChats.map(chat =>
-          chat.id === activeChatId ? fullyUpdatedChat : chat
-        )
-      );
-
-      // Generate title for the chat if this is the first user message and title is still default
-      if (role === 'user' && 
-          fullyUpdatedChat.title === 'New Chat' && 
-          fullyUpdatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
-        console.log(`[ChatContext][addMessage] First user message in 'New Chat'. Generating title for chat ${activeChatId}.`);
-        const generatedTitle = generateTitleFromMessage(content);
-        await updateChatTitle(activeChatId, generatedTitle); // This might trigger another fetch if updateChatTitle modifies and refetches.
+      try {
+        await chatService.addMessage(activeChatId, messageData);
+        console.log(`[ChatContext][addMessage] Message successfully added via API for chat ${activeChatId}.`);
+      } catch (err: unknown) {
+        console.error(`[ChatContext][addMessage] Error during addMessage for chat ${chatToUse?.id || 'UNKNOWN_CHAT_ID'}:`, err);
+        toast.error('Failed to send message. Please try again.');
+        setCurrentChat(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            messages: prev.messages.filter(msg => msg.id !== tempId)
+          };
+        });
+        setError('Failed to send message');
+        return;
       }
 
       setError(null);
-    } catch (err: unknown) {
-      console.error(`[ChatContext][addMessage] Error during addMessage for chat ${chatToUse?.id || 'UNKNOWN_CHAT_ID'}:`, err);
-      toast.error('Failed to send message. Please try again.');
 
-      // Revert optimistic message on error
-      setCurrentChat(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          messages: prev.messages.filter(msg => msg.id !== tempId)
-        };
-      });
-      setError('Failed to send message');
+      try {
+        const updatedChatResponse = await chatService.getChat(activeChatId);
+        const fullyUpdatedChat: Chat = updatedChatResponse.data;
+        console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
+        console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
+        if (currentChat?.id === activeChatId) {
+          setCurrentChat(fullyUpdatedChat);
+        }
+        setChats(prevChats =>
+          prevChats.map(chat =>
+            chat.id === activeChatId ? fullyUpdatedChat : chat
+          )
+        );
+        if (role === 'user' && 
+            fullyUpdatedChat.title === 'New Chat' && 
+            fullyUpdatedChat.messages.filter(msg => msg.role === 'user').length === 1) {
+          const generatedTitle = generateTitleFromMessage(content);
+          await updateChatTitle(activeChatId, generatedTitle);
+        }
+      } catch (e) {
+      }
     }
   };
 

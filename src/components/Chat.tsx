@@ -101,6 +101,17 @@ const Chat: React.FC = () => {
     // Clear the input field immediately for better UX
     setMessage("");
     
+    const automationKeywords = /(browse|visit|navigate to|go to|open website|web automation|click on|fill form|search on|scrape|extract from|http:\/\/|https:\/\/|\.com|\.org|\.net|\.co\.)/i;
+    if (!automationActive && automationKeywords.test(messageContent)) {
+      try { window.dispatchEvent(new Event('automation:show')); } catch {}
+      try { window.dispatchEvent(new Event('automation:start')); } catch {}
+      setPendingAutomationTask(messageContent);
+      setIsProcessing(false);
+      return;
+    }
+    
+    
+    
     // Handle search or automation modes differently
     if (automationActive) {
       console.log('Submitting message to web automation workflow', { automationActive, automationSessionId, task: messageContent });
@@ -174,7 +185,7 @@ const Chat: React.FC = () => {
         });
         console.log('Automation workflow request sent');
         setIsProcessing(false);
-        return; // prevent fallthrough to regular chat handling
+        return;
       } catch (automationErr) {
         console.error('Automation dispatch failed:', automationErr);
         setIsProcessing(false);

@@ -268,6 +268,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         setAutomationStatus('running');
         console.log('🚀 Local state updated:', { sessionId, isAutomationActive: true, status: 'running' });
         
+        window.dispatchEvent(new CustomEvent('automation:session_start', {
+          detail: { sessionId, chatId }
+        }));
+        
         if (onAutomationResult) {
           const resultPayload = {
             type: 'session_started',
@@ -380,6 +384,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           if (!isAutomationActive) {
             setIsAutomationActive(true);
             setAutomationStatus('running');
+            window.dispatchEvent(new Event('automation:enable'));
             startAutomation();
           } else {
             const next = !isOpen;

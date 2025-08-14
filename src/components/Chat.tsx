@@ -81,6 +81,44 @@ const Chat: React.FC = () => {
     scrollToBottom();
   }, [currentChat?.messages]);
 
+  useEffect(() => {
+    const handleAutomationEnable = () => {
+      console.log('🎯 AUTOMATION_ENABLE event received');
+      setAutomationActive(true);
+      setAvatarState('browsing');
+      setAvatarMessage('Web automation enabled');
+    };
+
+    const handleAutomationDisable = () => {
+      console.log('🎯 AUTOMATION_DISABLE event received');
+      setAutomationActive(false);
+      setAutomationSessionId(null);
+      setAutomationChatId(null);
+      setAvatarState('idle');
+      setAvatarMessage('');
+    };
+
+    const handleAutomationSessionStart = (event: any) => {
+      console.log('🎯 AUTOMATION_SESSION_START event received:', event.detail);
+      if (event.detail?.sessionId) {
+        setAutomationSessionId(event.detail.sessionId);
+      }
+      if (event.detail?.chatId) {
+        setAutomationChatId(event.detail.chatId);
+      }
+    };
+
+    window.addEventListener('automation:enable', handleAutomationEnable);
+    window.addEventListener('automation:disable', handleAutomationDisable);
+    window.addEventListener('automation:session_start', handleAutomationSessionStart);
+
+    return () => {
+      window.removeEventListener('automation:enable', handleAutomationEnable);
+      window.removeEventListener('automation:disable', handleAutomationDisable);
+      window.removeEventListener('automation:session_start', handleAutomationSessionStart);
+    };
+  }, [setAvatarState, setAvatarMessage]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🚀 HANDLESUBMIT STARTED - message:', message.trim());
@@ -149,50 +187,86 @@ const Chat: React.FC = () => {
       console.log('🤖 AUTOMATION ACTIVE PATH - Submitting message to web automation workflow');
       console.log('🤖 AUTOMATION STATE:', { automationActive, automationSessionId, automationChatId, task: messageContent });
       
-      // Add the user message to the chat UI immediately
       try {
         console.log('🤖 ADDING USER MESSAGE TO CHAT UI');
         await addMessage({ role: 'user', content: messageContent });
         console.log('🤖 USER MESSAGE ADDED TO CHAT UI SUCCESSFULLY');
-      } catch (e) {
-        console.error('🤖 ERROR ADDING USER MESSAGE TO CHAT UI:', e);
-      }
-      
-      try {
-        setAvatarState('browsing');
-        setAvatarMessage('Web automation enabled');
-        console.log('🤖 AVATAR STATE SET TO BROWSING');
-        try { 
-          window.dispatchEvent(new Event('automation:show')); 
-          console.log('🤖 DISPATCHED automation:show');
-        } catch (e) {
-          console.error('🤖 ERROR dispatching automation:show:', e);
-        }
-        if (!automationSessionId) {
-          console.log('🤖 NO AUTOMATION SESSION - starting new session');
-          try { 
-            window.dispatchEvent(new Event('automation:start')); 
-            console.log('🤖 DISPATCHED automation:start');
-          } catch (e) {
-            console.error('🤖 ERROR dispatching automation:start:', e);
-          }
-          setPendingAutomationTask(messageContent);
-          console.log('🤖 SET PENDING AUTOMATION TASK:', messageContent);
-          setIsProcessing(false);
-          console.log('🤖 PROCESSING STOPPED - no session path');
+        
+        console.log('🤖 STARTING PLAN GENERATION');
+        setAvatarState('thinking');
+        setAvatarMessage('Generating automation plan...');
+        
+        const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
+        const chatId = currentChat?.id;
+        if (!chatId) {
+          console.error('🤖 ERROR: No current chat ID available');
           return;
         }
-        const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
-        const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
-        console.log('Dispatching workflow to', wfUrl);
-        // Log the user's task to the automation chat session
+        
+        const planResponse = await fetch(`${BACKEND_URL}/api/chat/chats/${chatId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: messageContent, message: messageContent })
+        });
+        
+        if (planResponse.ok) {
+          const planResult = await planResponse.json();
+          console.log('🤖 PLAN GENERATION RESPONSE:', planResult);
+          
+          if (planResult.response && planResult.response.includes('[AUTOMATION_PLAN]')) {
+            console.log('🤖 PLAN GENERATED SUCCESSFULLY');
+            setAvatarState('browsing');
+            setAvatarMessage('Plan ready - starting automation...');
+            
+            try {
+              const planContent = planResult.response.split('[AUTOMATION_PLAN]')[1];
+              const planData = JSON.parse(planContent.trim());
+              setAutomationPlans(prev => ({ ...prev, [planResult.id]: planData }));
+              console.log('🤖 PLAN STORED:', planData);
+              
+              console.log('🤖 PLAN READY - TRIGGERING AUTOMATION WINDOW');
+              setAvatarState('browsing');
+              setAvatarMessage('Starting automation execution...');
+              
+              setTimeout(() => {
+                try { 
+                  window.dispatchEvent(new Event('automation:show')); 
+                  console.log('🤖 DISPATCHED automation:show');
+                } catch (e) {
+                  console.error('🤖 ERROR dispatching automation:show:', e);
+                }
+                
+                if (!automationSessionId) {
+                  console.log('🤖 NO AUTOMATION SESSION - starting new session');
+                  try { 
+                    window.dispatchEvent(new Event('automation:start')); 
+                    console.log('🤖 DISPATCHED automation:start');
+                  } catch (e) {
+                    console.error('🤖 ERROR dispatching automation:start:', e);
+                  }
+                  setPendingAutomationTask(messageContent);
+                  console.log('🤖 SET PENDING AUTOMATION TASK:', messageContent);
+                }
+              }, 1000);
+              
+            } catch (e) {
+              console.error('🤖 ERROR PARSING PLAN:', e);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('🤖 ERROR IN AUTOMATION WORKFLOW:', e);
+      }
+      
+      if (automationSessionId) {
         try {
+          const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
+          const wfUrl = `${BACKEND_URL}/api/web-automation/execute-workflow`;
+          console.log('Dispatching workflow to', wfUrl);
+          
           if (automationChatId) {
             await addMessage({ role: 'user', content: messageContent, chatId: automationChatId });
           }
-        } catch (e) {
-          console.warn('Failed to log task message to automation chat', e);
-        }
         
         let workflowSteps = [];
         let latestMessages: any[] = [];
@@ -240,14 +314,18 @@ const Chat: React.FC = () => {
             task_description: messageContent
           })
         });
-        console.log('Automation workflow request sent');
-        setIsProcessing(false);
-        return;
-      } catch (automationErr) {
-        console.error('Automation dispatch failed:', automationErr);
-        setIsProcessing(false);
-        return;
+          console.log('Automation workflow request sent');
+          setIsProcessing(false);
+          return;
+        } catch (automationErr) {
+          console.error('Automation dispatch failed:', automationErr);
+          setIsProcessing(false);
+          return;
+        }
       }
+      
+      setIsProcessing(false);
+      return;
     } else if (isSearchMode || internetSearchEnabled) { // Check both isSearchMode and internetSearchEnabled
       console.log('🌐 INTERNET SEARCH MODE ACTIVE - Processing search');
       console.log('🌐 [Chat] Disclaimer filtering is ACTIVE - generic AI messages will be filtered out');
@@ -1054,7 +1132,15 @@ const Chat: React.FC = () => {
                 rows={1}
                 disabled={isProcessing}
               />
-              {isProcessing && (
+              {automationActive && (
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-teal-500">Web Automation Active</span>
+                  </div>
+                </div>
+              )}
+              {isProcessing && !automationActive && (
                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                   <span className="text-sm font-medium text-cyan-500">Thinking...</span>
                 </div>

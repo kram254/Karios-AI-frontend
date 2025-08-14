@@ -89,18 +89,37 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     
     ws.onopen = () => {
       console.log('WebSocket connected for automation session');
-      try {
-        ws.send(JSON.stringify({ type: 'get_status' }));
-      } catch {}
+      setTimeout(() => {
+        try {
+          ws.send(JSON.stringify({ type: 'get_status' }));
+        } catch {}
+      }, 100);
     };
     
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      handleWebSocketMessage(data);
+      try {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+      } catch (e) {
+        console.error('WebSocket message parse error:', e);
+      }
     };
     
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
+    ws.onclose = (event) => {
+      console.log('WebSocket disconnected:', event.code, event.reason);
+      if (event.code !== 1000) {
+        console.log('WebSocket closed unexpectedly, attempting reconnection in 2 seconds...');
+        setTimeout(() => {
+          if (sessionId) {
+            console.log('Attempting WebSocket reconnection...');
+            initializeWebSocket();
+          }
+        }, 2000);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
     };
     
     wsRef.current = ws;

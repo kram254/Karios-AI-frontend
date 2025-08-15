@@ -149,6 +149,27 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       case 'screenshot_update':
         setCurrentScreenshot(data.screenshot);
         break;
+      case 'connection_established':
+        // Sync sessionId from server and notify parent
+        setSession(prev => {
+          const next = { ...prev, sessionId: data.sessionId || prev.sessionId };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        break;
+      case 'plan_created':
+        // Plan received; keep status managed by Integration, just reflect minimal progress
+        setExecutionProgress(p => (p < 5 ? 5 : p));
+        break;
+      case 'execution_started':
+        // Execution phase begins
+        setSession(prev => {
+          const next = { ...prev, status: 'running' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        setExecutionProgress(0);
+        break;
       case 'action_started':
         setSession(prev => {
           const exists = prev.actions.some(a => a.id === data.actionId);
@@ -214,6 +235,56 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           return next;
         });
         break;
+      case 'workflow_step_completed':
+        console.log('🔁 WORKFLOW_STEP_COMPLETED:', data);
+        setExecutionProgress(typeof data.progress === 'number' ? data.progress : 0);
+        setSession(prev => {
+          const next = {
+            ...prev,
+            currentActionIndex: typeof data.step_index === 'number' ? data.step_index : prev.currentActionIndex,
+            status: 'running' as const
+          };
+          if (onSessionUpdate) onSessionUpdate(next);
+          setActionOverlay(null);
+          return next;
+        });
+        break;
+      case 'workflow_error':
+        console.warn('⚠️ WORKFLOW_ERROR:', data);
+        setSession(prev => {
+          const next = { ...prev, status: 'error' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        setActionOverlay(null);
+        break;
+      case 'error':
+        // Generic error from server
+        console.error('🛑 ERROR event:', data?.message || data);
+        setSession(prev => {
+          const next = { ...prev, status: 'error' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        setActionOverlay(null);
+        break;
+      case 'pong':
+        // Heartbeat acknowledgement
+        // No state change needed; keep for diagnostics
+        console.log('📶 PONG received');
+        break;
+      case 'quality_improvement_started':
+        console.log('✨ QUALITY_IMPROVEMENT_STARTED:', data);
+        setSession(prev => {
+          const next = { ...prev, status: 'running' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        break;
+      case 'quality_improvement_completed':
+        console.log('✅ QUALITY_IMPROVEMENT_COMPLETED:', data);
+        // keep running state; finalization handled by workflow_completed
+        break;
       case 'workflow_completed':
         console.log('🎯 WORKFLOW_COMPLETED - Received workflow completion event:', data);
         setSession(prev => {
@@ -226,6 +297,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           if (onSessionUpdate) onSessionUpdate(next);
           return next;
         });
+        setExecutionProgress(100);
         
         const score = data.score || data.result?.score || 0;
         console.log('🎯 WORKFLOW_COMPLETED - Score received:', score);
@@ -238,6 +310,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             }, 2000);
           }
         }
+        break;
+      default:
+        console.log('ℹ️ Unrecognized WebSocket message type in Browser:', data?.type, data);
         break;
     }
   };
@@ -254,6 +329,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const startAutomation = async () => {
     try {
       setSession(prev => ({ ...prev, status: 'running' }));
+      setExecutionProgress(0);
       
       const response = await fetch(`${BACKEND_URL}/api/web-automation/start`, {
         method: 'POST',
@@ -306,6 +382,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           currentActionIndex: -1
         }));
         setActionOverlay(null);
+        setExecutionProgress(0);
       }
     } catch (error) {
       console.error('Failed to stop automation:', error);

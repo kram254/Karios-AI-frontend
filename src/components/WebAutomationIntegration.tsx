@@ -107,6 +107,104 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             onAutomationResult({ type: 'execution_started', sessionId: currentSession });
             console.log('📡 onAutomationResult called for execution_started');
           }
+        } else if (data.type === 'workflow_step_completed') {
+          console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
+          setAutomationStatus('running');
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'workflow_step_completed',
+              sessionId: currentSession,
+              step_index: data.step_index,
+              progress: data.progress,
+              result: data.result
+            });
+          }
+        } else if (data.type === 'workflow_error') {
+          console.warn('📡 WORKFLOW_ERROR event received:', { step_index: data.step_index, error: data.error });
+          setAutomationStatus('error');
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'workflow_error',
+              sessionId: currentSession,
+              step_index: data.step_index,
+              error: data.error,
+              corrections: data.corrections
+            });
+          }
+        } else if (data.type === 'quality_improvement_started') {
+          console.log('📡 QUALITY_IMPROVEMENT_STARTED event received:', { attempt: data.attempt });
+          setAutomationStatus('running');
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'quality_improvement_started',
+              sessionId: currentSession,
+              attempt: data.attempt,
+              steps: data.steps
+            });
+          }
+        } else if (data.type === 'quality_improvement_completed') {
+          console.log('📡 QUALITY_IMPROVEMENT_COMPLETED event received:', { attempt: data.attempt });
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'quality_improvement_completed',
+              sessionId: currentSession,
+              attempt: data.attempt
+            });
+          }
+        } else if (data.type === 'status_update') {
+          console.log('📡 STATUS_UPDATE event received:', { status: data.status, url: data.url });
+          const raw = data.status === 'inactive' ? 'idle' : data.status;
+          const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
+          if (statusUnion) setAutomationStatus(statusUnion);
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
+          }
+        } else if (data.type === 'session_update') {
+          console.log('📡 SESSION_UPDATE event received:', data.session);
+          if (data.session && typeof data.session.status === 'string') {
+            const sraw = data.session.status === 'inactive' ? 'idle' : data.session.status;
+            const sUnion = (sraw === 'idle' || sraw === 'running' || sraw === 'paused' || sraw === 'error') ? sraw : undefined;
+            if (sUnion) setAutomationStatus(sUnion);
+          }
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'session_update', session: data.session, sessionId: currentSession });
+          }
+        } else if (data.type === 'action_started') {
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'action_started',
+              sessionId: currentSession,
+              actionId: data.actionId,
+              actionType: data.actionType,
+              coordinates: data.coordinates
+            });
+          }
+        } else if (data.type === 'action_completed') {
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'action_completed',
+              sessionId: currentSession,
+              actionId: data.actionId,
+              result: data.result
+            });
+          }
+        } else if (data.type === 'action_failed') {
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'action_failed',
+              sessionId: currentSession,
+              actionId: data.actionId,
+              error: data.error || data.result?.message
+            });
+          }
+        } else if (data.type === 'screenshot_update') {
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'screenshot_update',
+              sessionId: currentSession,
+              screenshot: data.screenshot
+            });
+          }
         } else if (data.type === 'workflow_completed') {
           console.log('📡 WORKFLOW_COMPLETED event received:', { result: data.result, score: data.score });
           if (onAutomationResult) {

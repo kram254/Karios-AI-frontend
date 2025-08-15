@@ -197,12 +197,14 @@ const Chat: React.FC = () => {
         setAvatarMessage('Generating automation plan...');
         
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
-        const chatId = currentChat?.id;
+        const chatId = automationChatId || currentChat?.id;
         if (!chatId) {
-          console.error('🤖 ERROR: No current chat ID available');
+          console.error('🤖 ERROR: No chat ID available (automation or current)');
+          console.error('🤖 DEBUG:', { automationChatId, currentChatId: currentChat?.id, automationActive });
           return;
         }
         
+        console.log('🤖 USING CHAT ID:', chatId, 'for automation plan generation');
         const planResponse = await fetch(`${BACKEND_URL}/api/chat/chats/${chatId}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -213,16 +215,33 @@ const Chat: React.FC = () => {
           const planResult = await planResponse.json();
           console.log('🤖 PLAN GENERATION RESPONSE:', planResult);
           
-          if (planResult.response && planResult.response.includes('[AUTOMATION_PLAN]')) {
+          let automationPlanContent: string | null = null;
+          let planData: any = null;
+          
+          if (planResult.is_automation_plan && planResult.response) {
+            automationPlanContent = planResult.response;
+          } else if (planResult.messages && planResult.messages.length > 0) {
+            const lastMessage = planResult.messages[planResult.messages.length - 1];
+            if (lastMessage.content && lastMessage.content.includes('[AUTOMATION_PLAN]')) {
+              automationPlanContent = lastMessage.content;
+            }
+          }
+          
+          if (automationPlanContent && automationPlanContent.includes('[AUTOMATION_PLAN]')) {
             console.log('🤖 PLAN GENERATED SUCCESSFULLY');
             setAvatarState('browsing');
             setAvatarMessage('Plan ready - starting automation...');
             
             try {
-              const planContent = planResult.response.split('[AUTOMATION_PLAN]')[1];
-              const planData = JSON.parse(planContent.trim());
+              const planContent = automationPlanContent.split('[AUTOMATION_PLAN]')[1];
+              planData = JSON.parse(planContent.trim());
               setAutomationPlans(prev => ({ ...prev, [planResult.id]: planData }));
               console.log('🤖 PLAN STORED:', planData);
+              
+              await addMessage({ 
+                role: 'assistant', 
+                content: `**🎯 Automation Plan Generated**\n\n**Task:** ${planData.task_description}\n\n**Steps to Execute:**\n${planData.steps.map((step: any, index: number) => `${index + 1}. **${step.type.toUpperCase()}**: ${step.description}`).join('\n')}\n\n**Expected Results:** ${planData.expected_results}\n\n*Plan ready for execution - starting automation...*`
+              });
               
               console.log('🤖 PLAN READY - TRIGGERING AUTOMATION WINDOW');
               setAvatarState('browsing');
@@ -269,40 +288,39 @@ const Chat: React.FC = () => {
           }
         
         let workflowSteps = [];
-        let latestMessages: any[] = [];
-        try {
-          const targetChatId = automationChatId;
-          if (targetChatId) {
-            const autoChat = await chatService.getChat(targetChatId);
-            latestMessages = (autoChat.data?.messages || []).slice(-10);
-          } else {
+        
+        const currentPlanId = currentChat?.id;
+        if (currentPlanId && automationPlans[currentPlanId]) {
+          workflowSteps = automationPlans[currentPlanId].steps || [];
+          console.log('🤖 USING STORED PLAN STEPS:', workflowSteps.length, 'steps');
+        }
+        
+        if (workflowSteps.length === 0) {
+          let latestMessages: any[] = [];
+          try {
+            const targetChatId = automationChatId || currentChat?.id;
+            if (targetChatId) {
+              const autoChat = await chatService.getChat(targetChatId);
+              latestMessages = (autoChat.data?.messages || []).slice(-10);
+            } else {
+              latestMessages = currentChat?.messages?.slice(-10) || [];
+            }
+          } catch {
             latestMessages = currentChat?.messages?.slice(-10) || [];
           }
-        } catch {
-          latestMessages = currentChat?.messages?.slice(-10) || [];
-        }
-        for (const msg of latestMessages) {
-          if (typeof msg.content === 'string' && msg.content.startsWith('[AUTOMATION_PLAN]')) {
-            try {
-              const planJson = msg.content.substring(msg.content.indexOf('\n') + 1);
-              const plan = JSON.parse(planJson);
-              if (plan.steps && Array.isArray(plan.steps)) {
-                workflowSteps = plan.steps;
-                break;
-              }
-            } catch {}
-          }
-        }
-        if (workflowSteps.length === 0) {
-          const latestAutomationMessages = latestMessages.filter((m: any) => typeof m.content === 'string' && m.content.startsWith('[AUTOMATION_STEP]')) || [];
-          workflowSteps = latestAutomationMessages.map((msg: any) => {
-            try {
-              const stepJson = msg.content.substring(msg.content.indexOf('\n') + 1);
-              return JSON.parse(stepJson);
-            } catch {
-              return null;
+          
+          for (const msg of latestMessages) {
+            if (typeof msg.content === 'string' && msg.content.startsWith('[AUTOMATION_PLAN]')) {
+              try {
+                const planJson = msg.content.substring(msg.content.indexOf('\n') + 1);
+                const plan = JSON.parse(planJson);
+                if (plan.steps && Array.isArray(plan.steps)) {
+                  workflowSteps = plan.steps;
+                  break;
+                }
+              } catch {}
             }
-          }).filter(Boolean);
+          }
         }
         
         await fetch(wfUrl, {

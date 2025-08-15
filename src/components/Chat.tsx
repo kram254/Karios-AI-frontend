@@ -238,10 +238,7 @@ const Chat: React.FC = () => {
               setAutomationPlans(prev => ({ ...prev, [planResult.id]: planData }));
               console.log('🤖 PLAN STORED:', planData);
               
-              await addMessage({ 
-                role: 'assistant', 
-                content: `**🎯 Automation Plan Generated**\n\n**Task:** ${planData.task_description}\n\n**Steps to Execute:**\n${planData.steps.map((step: any, index: number) => `${index + 1}. **${step.type.toUpperCase()}**: ${step.description}`).join('\n')}\n\n**Expected Results:** ${planData.expected_results}\n\n*Plan ready for execution - starting automation...*`
-              });
+
               
               console.log('🤖 PLAN READY - TRIGGERING AUTOMATION WINDOW');
               setAvatarState('browsing');

@@ -177,7 +177,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           console.log('📡 STATUS_UPDATE event received:', { status: data.status, url: data.url });
           const raw = data.status === 'inactive' ? 'idle' : data.status;
           const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
-          if (statusUnion) setAutomationStatus(statusUnion);
+          if (statusUnion) {
+            if (statusUnion === 'idle' && isAutomationActive) {
+              
+            } else {
+              setAutomationStatus(statusUnion);
+            }
+          }
           setLastHeartbeatAt(Date.now());
           if (onAutomationResult) {
             onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
@@ -187,7 +193,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           if (data.session && typeof data.session.status === 'string') {
             const sraw = data.session.status === 'inactive' ? 'idle' : data.session.status;
             const sUnion = (sraw === 'idle' || sraw === 'running' || sraw === 'paused' || sraw === 'error') ? sraw : undefined;
-            if (sUnion) setAutomationStatus(sUnion);
+            if (sUnion) {
+              if (sUnion === 'idle' && isAutomationActive) {
+                
+              } else {
+                setAutomationStatus(sUnion);
+              }
+            }
           }
           setLastHeartbeatAt(Date.now());
           if (onAutomationResult) {
@@ -366,7 +378,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       console.log('🚀 visibleMode:', visibleMode);
       const sessionId = `session_${Date.now()}`;
       console.log('🚀 Generated sessionId:', sessionId);
-      
+      setCurrentSession(sessionId);
+      setIsAutomationActive(true);
+      setAutomationStatus('running');
+
       console.log('🚀 Creating chat for Web Automation Agent...');
       const chatPayload = {
         title: 'Web Automation Agent',
@@ -439,12 +454,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       } else {
         console.error('🚀 WebAutomation start response not ok:', status, text);
         setAutomationStatus('error');
-        setIsAutomationActive(false);
+        setIsAutomationActive(true);
       }
     } catch (error) {
       console.error('🚀 Failed to start automation:', error);
       setAutomationStatus('error');
-      setIsAutomationActive(false);
+      setIsAutomationActive(true);
     }
   };
 

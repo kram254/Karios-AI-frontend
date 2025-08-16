@@ -13,7 +13,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   onAutomationResult,
   isVisible = false
 }) => {
-  const BACKEND_URL: string = (import.meta as any).env.VITE_BACKEND_URL;
+  const BACKEND_URL: string = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
+  const HEARTBEAT_INTERVAL_SEC: number = (() => {
+    const v = (import.meta as any).env?.VITE_AUTOMATION_HEARTBEAT_INTERVAL;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 10;
+  })();
   const [isOpen, setIsOpen] = useState(isVisible);
   const [isAutomationActive, setIsAutomationActive] = useState(false);
   const [currentSession, setCurrentSession] = useState<string | null>(null);
@@ -29,6 +34,8 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const draggingRef = useRef(false);
   const frameRef = useRef<number | null>(null);
   const posRef = useRef<{ x: number; y: number }>({ x: 120, y: 120 });
+  const [lastHeartbeatAt, setLastHeartbeatAt] = useState<number | null>(null);
+  const [connectionHealth, setConnectionHealth] = useState<'good' | 'warn' | 'lost'>('good');
 
   useEffect(() => {
     setIsOpen(isVisible);
@@ -74,6 +81,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     
     ws.onopen = () => {
       console.log('📡 WebSocket connection opened for session:', currentSession);
+      setLastHeartbeatAt(Date.now());
     };
     
     ws.onerror = (error) => {
@@ -110,6 +118,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         } else if (data.type === 'workflow_step_completed') {
           console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
           setAutomationStatus('running');
+          setLastHeartbeatAt(Date.now());
           if (onAutomationResult) {
             onAutomationResult({
               type: 'workflow_step_completed',
@@ -117,6 +126,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               step_index: data.step_index,
               progress: data.progress,
               result: data.result
+            });
+          }
+        } else if (data.type === 'workflow_step_failed') {
+          console.warn('📡 WORKFLOW_STEP_FAILED event received:', { step_index: data.step_index, error: data.error });
+          setAutomationStatus('error');
+          setLastHeartbeatAt(Date.now());
+          if (onAutomationResult) {
+            onAutomationResult({
+              type: 'workflow_step_failed',
+              sessionId: currentSession,
+              step_index: data.step_index,
+              error: data.error,
+              step_description: data.step_description
             });
           }
         } else if (data.type === 'workflow_error') {
@@ -156,6 +178,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           const raw = data.status === 'inactive' ? 'idle' : data.status;
           const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
           if (statusUnion) setAutomationStatus(statusUnion);
+          setLastHeartbeatAt(Date.now());
           if (onAutomationResult) {
             onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
           }
@@ -166,9 +189,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             const sUnion = (sraw === 'idle' || sraw === 'running' || sraw === 'paused' || sraw === 'error') ? sraw : undefined;
             if (sUnion) setAutomationStatus(sUnion);
           }
+          setLastHeartbeatAt(Date.now());
           if (onAutomationResult) {
             onAutomationResult({ type: 'session_update', session: data.session, sessionId: currentSession });
           }
+        } else if (data.type === 'workflow_heartbeat') {
+          // Backend heartbeat - update last seen
+          setLastHeartbeatAt(Date.now());
         } else if (data.type === 'action_started') {
           if (onAutomationResult) {
             onAutomationResult({
@@ -237,6 +264,33 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   useEffect(() => {
     setWorkflowDispatched(false);
   }, [currentSession]);
+
+  // Heartbeat watchdog - evaluate connection health
+  useEffect(() => {
+    const warnThreshold = HEARTBEAT_INTERVAL_SEC * 1.5 * 1000;
+    const lostThreshold = HEARTBEAT_INTERVAL_SEC * 3 * 1000;
+    let timer: number | undefined;
+    const tick = () => {
+      if (!isAutomationActive || !currentSession) {
+        setConnectionHealth('good');
+        timer = window.setTimeout(tick, 1000);
+        return;
+      }
+      const now = Date.now();
+      const last = lastHeartbeatAt || now;
+      const delta = now - last;
+      if (delta > lostThreshold) {
+        if (connectionHealth !== 'lost') setConnectionHealth('lost');
+      } else if (delta > warnThreshold) {
+        if (connectionHealth !== 'warn') setConnectionHealth('warn');
+      } else {
+        if (connectionHealth !== 'good') setConnectionHealth('good');
+      }
+      timer = window.setTimeout(tick, 1000);
+    };
+    timer = window.setTimeout(tick, 1000);
+    return () => { if (timer) window.clearTimeout(timer); };
+  }, [HEARTBEAT_INTERVAL_SEC, isAutomationActive, currentSession, lastHeartbeatAt, connectionHealth]);
 
   useEffect(() => {
     posRef.current = dialogPos;
@@ -620,6 +674,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                   label={automationStatus.toUpperCase()}
                   size="small"
                   color={getStatusColor()}
+                  sx={{ borderRadius: '8px' }}
+                />
+                <Chip
+                  label={connectionHealth === 'good' ? 'LIVE' : connectionHealth === 'warn' ? 'STALE' : 'OFFLINE'}
+                  size="small"
+                  color={connectionHealth === 'good' ? 'success' : connectionHealth === 'warn' ? 'warning' : 'error'}
                   sx={{ borderRadius: '8px' }}
                 />
               </Box>

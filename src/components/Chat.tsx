@@ -918,23 +918,6 @@ const Chat: React.FC = () => {
                         {msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]') ? (
                           <div className="automation-plan-message">
                             {(() => { let plan = automationPlans[msg.id]; try { const i = msg.content.indexOf('\n'); if (i >= 0) { const j = msg.content.slice(i + 1); if (j) plan = JSON.parse(j); } } catch {} return <PlanContainer plan={plan} isVisible={true} />; })()}
-                            <div style={{ marginTop: 12 }}>
-                              <button
-                                type="button"
-                                className="search-text-button"
-                                onClick={() => { 
-                                  try { 
-                                    console.log('Automation window button clicked - dispatching events');
-                                    window.dispatchEvent(new Event('automation:show')); 
-                                    window.dispatchEvent(new Event('automation:start')); 
-                                  } catch (e) { 
-                                    console.error('Failed to dispatch automation events:', e); 
-                                  } 
-                                }}
-                              >
-                                Open Web Automation Window
-                              </button>
-                            </div>
                           </div>
                         ) : msg.role === 'system' && msg.content.startsWith('[AUTOMATION_CONTROL]') ? (
                           <div className="automation-control-message">

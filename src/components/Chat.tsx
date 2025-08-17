@@ -194,7 +194,7 @@ const Chat: React.FC = () => {
         
         console.log('🤖 STARTING PLAN GENERATION');
         setAvatarState('thinking');
-        setAvatarMessage('Generating automation plan...');
+        setAvatarMessage('🤖 Crew Member 1: Analyzing prompt and generating PRP...');
         
         const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL;
         const chatId = automationChatId || currentChat?.id;
@@ -230,7 +230,7 @@ const Chat: React.FC = () => {
           if (automationPlanContent && automationPlanContent.includes('[AUTOMATION_PLAN]')) {
             console.log('🤖 PLAN GENERATED SUCCESSFULLY');
             setAvatarState('browsing');
-            setAvatarMessage('Plan ready - starting automation...');
+            setAvatarMessage('🎯 Plan ready - launching automation window...');
             
             try {
               const planContent = automationPlanContent.split('[AUTOMATION_PLAN]')[1];
@@ -242,7 +242,7 @@ const Chat: React.FC = () => {
               
               console.log('🤖 PLAN READY - TRIGGERING AUTOMATION WINDOW');
               setAvatarState('browsing');
-              setAvatarMessage('Starting automation execution...');
+              setAvatarMessage('🚀 Crew Member 2: Starting systematic execution...');
               
               setTimeout(() => {
                 try { 
@@ -954,6 +954,59 @@ const Chat: React.FC = () => {
                               Open Web Automation Window
                             </button>
                           </div>
+                        ) : msg.role === 'system' && msg.content.startsWith('[AUTOMATION_STOPPED]') ? (
+                          <div className="automation-stopped-container">
+                            {(() => { 
+                              let stoppedData: any = {}; 
+                              try { 
+                                const i = msg.content.indexOf('\n'); 
+                                if (i >= 0) { 
+                                  const j = msg.content.slice(i + 1); 
+                                  if (j) stoppedData = JSON.parse(j); 
+                                } 
+                              } catch {} 
+                              return (
+                                <div className="automation-stopped-info">
+                                  <div className="stopped-header">⚠️ Web Automation Stopped</div>
+                                  <div className="stopped-reason">Reason: {stoppedData.reason || 'Unknown'}</div>
+                                  <div className="stopped-context">Context: {stoppedData.context || 'No context available'}</div>
+                                  <div className="stopped-progress">Progress: {stoppedData.completed_steps || 0} of {stoppedData.total_steps || 0} steps completed</div>
+                                  <div className="stopped-last-action">Last Action: {stoppedData.last_action || 'Unknown'}</div>
+                                </div>
+                              );
+                            })()} 
+                          </div>
+                        ) : msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_RESULTS]') ? (
+                          <div className="automation-results-message">
+                            {(() => { 
+                              let resultsData: any = {}; 
+                              try { 
+                                const i = msg.content.indexOf('\n'); 
+                                if (i >= 0) { 
+                                  const j = msg.content.slice(i + 1); 
+                                  if (j) resultsData = JSON.parse(j); 
+                                } 
+                              } catch {} 
+                              return (
+                                <div className="automation-results-info">
+                                  <div className="results-header">🎉 Web Automation Results</div>
+                                  <div className="results-score">Score: {resultsData.score || 0}% {(resultsData.score || 0) >= 95 ? '✅' : '⚠️'}</div>
+                                  <div className="results-success">Status: {resultsData.success ? 'Success' : 'Partial'}</div>
+                                  <div className="results-explanation">{resultsData.explanation || 'No explanation available'}</div>
+                                  {resultsData.extracted_data && resultsData.extracted_data.length > 0 && (
+                                    <div className="results-data">
+                                      <div className="data-header">Extracted Data:</div>
+                                      <div className="data-items">
+                                        {resultsData.extracted_data.slice(0, 5).map((item: any, idx: number) => (
+                                          <div key={idx} className="data-item">{JSON.stringify(item).substring(0, 100)}...</div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()} 
+                          </div>
                         ) : msg.role === 'assistant' && (msg.content.startsWith('[SEARCH_RESULTS]') || msg.content.match(/https?:\/\//)) ? (
                           <div className="search-result-message">
                             <span className="search-result-badge">🌐 Search Result</span>
@@ -1345,12 +1398,23 @@ const Chat: React.FC = () => {
                   } else if (result.type === 'workflow_completed') {
                     console.log('🎯 Processing workflow_completed result:', { result: result.result, score: result.score });
                     try {
+                      const completionMessage = {
+                        score: result.score,
+                        success: result.result?.success || false,
+                        explanation: result.result?.explanation || 'Automation completed',
+                        extracted_data: result.result?.extracted_data || [],
+                        task_completion: result.result?.task_completion || {}
+                      };
+                      
                       await addMessage({
-                        content: `Web automation completed with score: ${result.score}%`,
-                        role: 'system',
+                        content: `[AUTOMATION_RESULTS]\n${JSON.stringify(completionMessage)}`,
+                        role: 'assistant',
                         chatId: automationChatId || undefined
                       });
                       console.log('🎯 Workflow completed message added to chat');
+                      
+                      setAvatarState('idle');
+                      setAvatarMessage('🎉 Automation completed successfully!');
                     } catch (e) {
                       console.error('🎯 Error adding workflow completed message:', e);
                     }
@@ -1359,6 +1423,23 @@ const Chat: React.FC = () => {
                     setAutomationActive(false);
                     setAutomationSessionId(null);
                     console.log('🎯 Automation session stopped (Chat)');
+                    
+                    try {
+                      await addMessage({
+                        content: `[AUTOMATION_STOPPED]\n${JSON.stringify({
+                          reason: result.reason || 'User stopped',
+                          context: result.context || 'Web automation session ended',
+                          completed_steps: result.completed_steps || 0,
+                          total_steps: result.total_steps || 0,
+                          last_action: result.last_action || 'Unknown'
+                        })}`,
+                        role: 'system',
+                        chatId: automationChatId || undefined
+                      });
+                      console.log('🎯 Session stopped message added to chat');
+                    } catch (e) {
+                      console.error('🎯 Error adding session stopped message:', e);
+                    }
                   } else {
                     console.log('🎯 Unknown automation result type:', result.type);
                   }

@@ -119,6 +119,32 @@ const Chat: React.FC = () => {
     };
   }, [setAvatarState, setAvatarMessage]);
 
+  // Auto-trigger automation window when automation plans are detected
+  useEffect(() => {
+    const automationPlanMessages = currentChat?.messages?.filter(msg => 
+      msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]')
+    ) || [];
+    
+    if (automationPlanMessages.length > 0) {
+      const latestPlanMessage = automationPlanMessages[automationPlanMessages.length - 1];
+      const planTriggeredKey = `automation_triggered_${latestPlanMessage.id}`;
+      
+      if (!sessionStorage.getItem(planTriggeredKey)) {
+        sessionStorage.setItem(planTriggeredKey, 'true');
+        console.log('Automation plan detected - auto-opening automation window');
+        
+        setTimeout(() => {
+          try {
+            window.dispatchEvent(new Event('automation:show'));
+            window.dispatchEvent(new Event('automation:start'));
+          } catch (e) {
+            console.error('Failed to auto-dispatch automation events:', e);
+          }
+        }, 1000);
+      }
+    }
+  }, [currentChat?.messages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('🚀 HANDLESUBMIT STARTED - message:', message.trim());
@@ -917,7 +943,18 @@ const Chat: React.FC = () => {
                        {/* Enhanced rendering for search result messages */}
                         {msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]') ? (
                           <div className="automation-plan-message">
-                            {(() => { let plan = automationPlans[msg.id]; try { const i = msg.content.indexOf('\n'); if (i >= 0) { const j = msg.content.slice(i + 1); if (j) plan = JSON.parse(j); } } catch {} return <PlanContainer plan={plan} isVisible={true} />; })()}
+                            {(() => { 
+                              let plan = automationPlans[msg.id]; 
+                              try { 
+                                const i = msg.content.indexOf('\n'); 
+                                if (i >= 0) { 
+                                  const j = msg.content.slice(i + 1); 
+                                  if (j) plan = JSON.parse(j); 
+                                } 
+                              } catch {} 
+                              
+                              return <PlanContainer plan={plan} isVisible={true} />; 
+                            })()}
                           </div>
                         ) : msg.role === 'system' && msg.content.startsWith('[AUTOMATION_CONTROL]') ? (
                           <div className="automation-control-message">

@@ -94,6 +94,23 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           ws.send(JSON.stringify({ type: 'get_status' }));
         } catch {}
       }, 100);
+      
+      // Start heartbeat to maintain connection
+      const heartbeatInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          } catch (e) {
+            console.error('Failed to send ping:', e);
+            clearInterval(heartbeatInterval);
+          }
+        } else {
+          clearInterval(heartbeatInterval);
+        }
+      }, 30000); // Send ping every 30 seconds
+      
+      // Store interval reference for cleanup
+      (ws as any).heartbeatInterval = heartbeatInterval;
     };
     
     ws.onmessage = (event) => {
@@ -107,6 +124,12 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     
     ws.onclose = (event) => {
       console.log('WebSocket disconnected:', event.code, event.reason);
+      
+      // Clear heartbeat interval
+      if ((ws as any).heartbeatInterval) {
+        clearInterval((ws as any).heartbeatInterval);
+      }
+      
       if (event.code !== 1000) {
         console.log('WebSocket closed unexpectedly, attempting reconnection in 2 seconds...');
         setTimeout(() => {
@@ -169,6 +192,14 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           return next;
         });
         setExecutionProgress(0);
+        break;
+      case 'pong':
+        // Heartbeat response - connection is alive
+        console.log('WebSocket heartbeat pong received');
+        break;
+      case 'keep_alive_response':
+        // Keep-alive response
+        console.log('WebSocket keep-alive response received');
         break;
       case 'action_started':
         setSession(prev => {

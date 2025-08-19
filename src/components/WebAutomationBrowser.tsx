@@ -197,6 +197,16 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         // Heartbeat response - connection is alive
         console.log('WebSocket heartbeat pong received');
         break;
+      case 'keep_alive':
+        // Server keep alive - respond to maintain connection
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          try {
+            wsRef.current.send(JSON.stringify({ type: 'keep_alive_response' }));
+          } catch (e) {
+            console.error('Failed to send keep_alive_response:', e);
+          }
+        }
+        break;
       case 'keep_alive_response':
         // Keep-alive response
         console.log('WebSocket keep-alive response received');

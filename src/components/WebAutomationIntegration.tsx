@@ -36,6 +36,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const posRef = useRef<{ x: number; y: number }>({ x: 120, y: 120 });
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState<number | null>(null);
   const [connectionHealth, setConnectionHealth] = useState<'good' | 'warn' | 'lost'>('good');
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
     setIsOpen(isVisible);
@@ -225,11 +226,21 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         } else if (data.type === 'connection_established') {
           console.log('📡 CONNECTION_ESTABLISHED event received');
           setLastHeartbeatAt(Date.now());
+          if (!currentSession && typeof data.sessionId === 'string') {
+            setCurrentSession(data.sessionId);
+          }
           if (onAutomationResult) {
             onAutomationResult({ type: 'connection_established', sessionId: currentSession });
           }
         } else if (data.type === 'keep_alive_response' || data.type === 'pong') {
           setLastHeartbeatAt(Date.now());
+        } else if (data.type === 'automation_session_selected') {
+          console.log('📡 AUTOMATION_SESSION_SELECTED event received:', data.sessionId);
+          if (!currentSession && typeof data.sessionId === 'string') {
+            setCurrentSession(data.sessionId);
+            setIsAutomationActive(true);
+            setAutomationStatus('running');
+          }
         } else if (data.type === 'action_started') {
           if (onAutomationResult) {
             onAutomationResult({
@@ -395,6 +406,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
   const startAutomation = async (url?: string) => {
     try {
+      if (isStarting) return;
+      if (currentSession) return;
+      setIsStarting(true);
       console.log('🚀 WebAutomation start requested with URL:', url);
       console.log('🚀 BACKEND_URL:', BACKEND_URL);
       console.log('🚀 visibleMode:', visibleMode);
@@ -482,6 +496,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       console.error('🚀 Failed to start automation:', error);
       setAutomationStatus('error');
       setIsAutomationActive(true);
+    }
+    finally {
+      setIsStarting(false);
     }
   };
 

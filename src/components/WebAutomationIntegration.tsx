@@ -188,6 +188,21 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           if (onAutomationResult) {
             onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
           }
+        } else if (data.type === 'workflow_status_update') {
+          console.log('📡 WORKFLOW_STATUS_UPDATE event received:', { status: data.status, url: data.url });
+          const raw = data.status === 'inactive' ? 'idle' : data.status;
+          const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
+          if (statusUnion) {
+            if (statusUnion === 'idle' && isAutomationActive) {
+              
+            } else {
+              setAutomationStatus(statusUnion);
+            }
+          }
+          setLastHeartbeatAt(Date.now());
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
+          }
         } else if (data.type === 'session_update') {
           console.log('📡 SESSION_UPDATE event received:', data.session);
           if (data.session && typeof data.session.status === 'string') {
@@ -206,7 +221,14 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             onAutomationResult({ type: 'session_update', session: data.session, sessionId: currentSession });
           }
         } else if (data.type === 'workflow_heartbeat') {
-          // Backend heartbeat - update last seen
+          setLastHeartbeatAt(Date.now());
+        } else if (data.type === 'connection_established') {
+          console.log('📡 CONNECTION_ESTABLISHED event received');
+          setLastHeartbeatAt(Date.now());
+          if (onAutomationResult) {
+            onAutomationResult({ type: 'connection_established', sessionId: currentSession });
+          }
+        } else if (data.type === 'keep_alive_response' || data.type === 'pong') {
           setLastHeartbeatAt(Date.now());
         } else if (data.type === 'action_started') {
           if (onAutomationResult) {

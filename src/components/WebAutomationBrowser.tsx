@@ -160,9 +160,13 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     switch (data.type) {
       case 'status_update':
         setSession(prev => {
+          const incoming = typeof data.status === 'string' ? data.status : prev.status;
+          const mapped = (incoming === 'inactive' || incoming === 'stopped' || incoming === 'completed')
+            ? 'idle'
+            : ((incoming === 'initializing' || incoming === 'planning' || incoming === 'executing_workflow') ? 'running' : incoming);
           const next = {
             ...prev,
-            status: data.status || prev.status,
+            status: mapped as WebAutomationSession['status'],
             url: typeof data.url === 'string' ? data.url : prev.url
           };
           if (onSessionUpdate) onSessionUpdate(next);
@@ -271,7 +275,11 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         break;
       case 'session_update':
         setSession(prev => {
-          const next = { ...prev, ...data.session };
+          const incoming = typeof data?.session?.status === 'string' ? data.session.status : prev.status;
+          const mapped = (incoming === 'inactive' || incoming === 'stopped' || incoming === 'completed')
+            ? 'idle'
+            : ((incoming === 'initializing' || incoming === 'planning' || incoming === 'executing_workflow') ? 'running' : incoming);
+          const next = { ...prev, ...data.session, status: mapped as WebAutomationSession['status'] };
           if (onSessionUpdate) onSessionUpdate(next);
           return next;
         });
@@ -332,15 +340,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           const next = {
             ...prev,
             status: 'completed' as const,
-            results: data.results || prev.results,
-            score: data.score || prev.score
+            results: (data.results ?? data.result ?? prev.results),
+            score: (typeof data.score === 'number' ? data.score : (data.results?.score ?? data.result?.score ?? prev.score))
           };
           if (onSessionUpdate) onSessionUpdate(next);
           return next;
         });
         setExecutionProgress(100);
         
-        const score = data.score || data.result?.score || 0;
+        const score = (typeof data.score === 'number' ? data.score : (data.results?.score ?? data.result?.score ?? 0));
         console.log('🎯 WORKFLOW_COMPLETED - Score received:', score);
         
         if (score >= 92) {

@@ -109,6 +109,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       ws.onopen = () => {
         console.log('📡 WebSocket connection opened for session:', currentSession);
         setLastHeartbeatAt(Date.now());
+        setConnectionHealth('good');
         // Request latest status shortly after connection
         setTimeout(() => {
           try { ws.send(JSON.stringify({ type: 'get_status' })); } catch {}
@@ -124,12 +125,16 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
       ws.onerror = (error) => {
         console.error('📡 WebSocket error:', error);
+        setConnectionHealth('lost');
+        setAutomationStatus('error');
       };
 
       ws.onclose = (event) => {
         console.log('📡 WebSocket connection closed:', event.code, event.reason);
         if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
         if (!stopped && event.code !== 1000) {
+          setConnectionHealth('lost');
+          setAutomationStatus('paused');
           console.log('📡 Attempting reconnection in 2000ms...');
           if (reconnectTimerRef.current) { window.clearTimeout(reconnectTimerRef.current); }
           reconnectTimerRef.current = window.setTimeout(() => {
@@ -233,7 +238,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             }
           } else if (data.type === 'status_update') {
             console.log('📡 STATUS_UPDATE event received:', { status: data.status, url: data.url });
-            const raw = data.status === 'inactive' ? 'idle' : data.status;
+            const raw = (data.status === 'inactive' || data.status === 'stopped' || data.status === 'completed')
+              ? 'idle'
+              : (data.status === 'initializing' ? 'running' : data.status);
             const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
             if (statusUnion) {
               if (statusUnion === 'idle' && isAutomationActive) {
@@ -248,7 +255,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             }
           } else if (data.type === 'workflow_status_update') {
             console.log('📡 WORKFLOW_STATUS_UPDATE event received:', { status: data.status, url: data.url });
-            const raw = data.status === 'inactive' ? 'idle' : data.status;
+            const raw = (data.status === 'inactive' || data.status === 'stopped' || data.status === 'completed')
+              ? 'idle'
+              : ((data.status === 'planning' || data.status === 'executing_workflow') ? 'running' : data.status);
             const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
             if (statusUnion) {
               if (statusUnion === 'idle' && isAutomationActive) {
@@ -259,12 +268,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             }
             setLastHeartbeatAt(Date.now());
             if (onAutomationResult) {
-              onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
+              onAutomationResult({ type: 'workflow_status_update', sessionId: currentSession, status: data.status, url: data.url });
             }
           } else if (data.type === 'session_update') {
             console.log('📡 SESSION_UPDATE event received:', data.session);
             if (data.session && typeof data.session.status === 'string') {
-              const sraw = data.session.status === 'inactive' ? 'idle' : data.session.status;
+              const sraw = (data.session.status === 'inactive' || data.session.status === 'stopped' || data.session.status === 'completed') ? 'idle' : data.session.status;
               const sUnion = (sraw === 'idle' || sraw === 'running' || sraw === 'paused' || sraw === 'error') ? sraw : undefined;
               if (sUnion) {
                 if (sUnion === 'idle' && isAutomationActive) {
@@ -295,7 +304,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setLastHeartbeatAt(Date.now());
           } else if (data.type === 'automation_session_selected') {
             console.log('📡 AUTOMATION_SESSION_SELECTED event received:', data.sessionId);
-            if (!currentSession && typeof data.sessionId === 'string') {
+            if (typeof data.sessionId === 'string' && data.sessionId !== currentSession) {
               setCurrentSession(data.sessionId);
               setIsAutomationActive(true);
               setAutomationStatus('running');
@@ -337,13 +346,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               });
             }
           } else if (data.type === 'workflow_completed') {
-            console.log('📡 WORKFLOW_COMPLETED event received:', { result: data.result, score: data.score });
+            console.log('📡 WORKFLOW_COMPLETED event received:', { results: (data.results ?? data.result), score: data.score });
             if (onAutomationResult) {
-              onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, result: data.result, score: data.score });
+              onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, results: (data.results ?? data.result), score: data.score });
               console.log('📡 onAutomationResult called for workflow_completed');
             }
+            setIsAutomationActive(false);
+            setAutomationStatus('idle');
             try {
-              const score = typeof data.score === 'number' ? data.score : (typeof data.result?.score === 'number' ? data.result.score : undefined);
+              const score = typeof data.score === 'number' ? data.score : (
+                typeof data.results?.score === 'number' ? data.results.score : (
+                  typeof data.result?.score === 'number' ? data.result.score : undefined
+                )
+              );
               console.log('📡 Extracted score for auto-close check:', score);
               if (typeof score === 'number' && score >= 92) {
                 console.log('📡 Score >= 92, auto-closing window');
@@ -849,7 +864,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         </DialogTitle>
 
         <DialogContent sx={{ p: 0, bgcolor: '#0b0f14', display: isMinimized ? 'none' : 'block' }}>
-          <PlanContainer plan={currentPlan} isVisible={false} />
+          <PlanContainer plan={currentPlan} isVisible={showPlan} />
           <Box sx={{
             width: '100%',
             height: showPlan ? 'calc(100% - 200px)' : '100%',

@@ -38,6 +38,23 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [connectionHealth, setConnectionHealth] = useState<'good' | 'warn' | 'lost'>('good');
   const [isStarting, setIsStarting] = useState(false);
 
+  // WebSocket refs and helpers
+  const wsRef = useRef<WebSocket | null>(null);
+  const heartbeatRef = useRef<number | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+
+  const buildWsUrl = (sid: string): string => {
+    try {
+      const base = new URL(BACKEND_URL);
+      const wsProto = base.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${wsProto}//${base.host}/api/web-automation/ws/automation/${sid}`;
+    } catch {
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      return `${wsProto}//${host}/api/web-automation/ws/automation/${sid}`;
+    }
+  };
+
   useEffect(() => {
     setIsOpen(isVisible);
   }, [isVisible]);
@@ -73,238 +90,288 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   useEffect(() => {
     if (!currentSession) {
       console.log('📡 No current session, skipping WebSocket connection');
+      // Ensure any previous sockets/timers are cleared
+      if (reconnectTimerRef.current) { window.clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+      if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+      if (wsRef.current) { try { wsRef.current.close(); } catch {} wsRef.current = null; }
       return;
     }
-    
-    const wsUrl = `${BACKEND_URL.replace('http', 'ws')}/api/web-automation/ws/automation/${currentSession}`;
-    console.log('📡 Connecting to WebSocket:', wsUrl);
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      console.log('📡 WebSocket connection opened for session:', currentSession);
-      setLastHeartbeatAt(Date.now());
-    };
-    
-    ws.onerror = (error) => {
-      console.error('📡 WebSocket error:', error);
-    };
-    
-    ws.onclose = (event) => {
-      console.log('📡 WebSocket connection closed:', event.code, event.reason);
-    };
-    
-    ws.onmessage = (event) => {
-      console.log('📡 WebSocket message received:', event.data);
-      try {
-        const data = JSON.parse(event.data);
-        console.log('📡 Parsed WebSocket data:', data);
-        
-        if (data.type === 'plan_created') {
-          console.log('📡 PLAN_CREATED event received:', data.plan);
-          setCurrentPlan(data.plan);
-          setShowPlan(true);
-          setIsOpen(true);
-          console.log('📡 Plan state updated, calling onAutomationResult');
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
-            console.log('📡 onAutomationResult called for plan_created');
+
+    let stopped = false;
+
+    const connect = () => {
+      if (stopped) return;
+      const wsUrl = buildWsUrl(currentSession);
+      console.log('📡 Connecting to WebSocket:', wsUrl);
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('📡 WebSocket connection opened for session:', currentSession);
+        setLastHeartbeatAt(Date.now());
+        // Request latest status shortly after connection
+        setTimeout(() => {
+          try { ws.send(JSON.stringify({ type: 'get_status' })); } catch {}
+        }, 100);
+        // Start heartbeat ping
+        if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); }
+        heartbeatRef.current = window.setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            try { ws.send(JSON.stringify({ type: 'ping' })); } catch (e) { console.error('📡 Failed to send ping:', e); }
           }
-        } else if (data.type === 'execution_started') {
-          console.log('📡 EXECUTION_STARTED event received');
-          setIsOpen(true);
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'execution_started', sessionId: currentSession });
-            console.log('📡 onAutomationResult called for execution_started');
-          }
-        } else if (data.type === 'workflow_step_completed') {
-          console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
-          setAutomationStatus('running');
+        }, Math.max(HEARTBEAT_INTERVAL_SEC, 5) * 1000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('📡 WebSocket error:', error);
+      };
+
+      ws.onclose = (event) => {
+        console.log('📡 WebSocket connection closed:', event.code, event.reason);
+        if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+        if (!stopped && event.code !== 1000) {
+          console.log('📡 Attempting reconnection in 2000ms...');
+          if (reconnectTimerRef.current) { window.clearTimeout(reconnectTimerRef.current); }
+          reconnectTimerRef.current = window.setTimeout(() => {
+            connect();
+          }, 2000);
+        }
+      };
+
+      ws.onmessage = (event) => {
+        console.log('📡 WebSocket message received:', event.data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📡 Parsed WebSocket data:', data);
           setLastHeartbeatAt(Date.now());
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'workflow_step_completed',
-              sessionId: currentSession,
-              step_index: data.step_index,
-              progress: data.progress,
-              result: data.result
-            });
-          }
-        } else if (data.type === 'workflow_step_failed') {
-          console.warn('📡 WORKFLOW_STEP_FAILED event received:', { step_index: data.step_index, error: data.error });
-          setAutomationStatus('error');
-          setLastHeartbeatAt(Date.now());
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'workflow_step_failed',
-              sessionId: currentSession,
-              step_index: data.step_index,
-              error: data.error,
-              step_description: data.step_description
-            });
-          }
-        } else if (data.type === 'workflow_error') {
-          console.warn('📡 WORKFLOW_ERROR event received:', { step_index: data.step_index, error: data.error });
-          setAutomationStatus('error');
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'workflow_error',
-              sessionId: currentSession,
-              step_index: data.step_index,
-              error: data.error,
-              corrections: data.corrections
-            });
-          }
-        } else if (data.type === 'quality_improvement_started') {
-          console.log('📡 QUALITY_IMPROVEMENT_STARTED event received:', { attempt: data.attempt });
-          setAutomationStatus('running');
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'quality_improvement_started',
-              sessionId: currentSession,
-              attempt: data.attempt,
-              steps: data.steps
-            });
-          }
-        } else if (data.type === 'quality_improvement_completed') {
-          console.log('📡 QUALITY_IMPROVEMENT_COMPLETED event received:', { attempt: data.attempt });
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'quality_improvement_completed',
-              sessionId: currentSession,
-              attempt: data.attempt
-            });
-          }
-        } else if (data.type === 'status_update') {
-          console.log('📡 STATUS_UPDATE event received:', { status: data.status, url: data.url });
-          const raw = data.status === 'inactive' ? 'idle' : data.status;
-          const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
-          if (statusUnion) {
-            if (statusUnion === 'idle' && isAutomationActive) {
-              
-            } else {
-              setAutomationStatus(statusUnion);
+
+          if (data.type === 'plan_created') {
+            console.log('📡 PLAN_CREATED event received:', data.plan);
+            setCurrentPlan(data.plan);
+            setShowPlan(true);
+            setIsOpen(true);
+            console.log('📡 Plan state updated, calling onAutomationResult');
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
+              console.log('📡 onAutomationResult called for plan_created');
             }
-          }
-          setLastHeartbeatAt(Date.now());
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
-          }
-        } else if (data.type === 'workflow_status_update') {
-          console.log('📡 WORKFLOW_STATUS_UPDATE event received:', { status: data.status, url: data.url });
-          const raw = data.status === 'inactive' ? 'idle' : data.status;
-          const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
-          if (statusUnion) {
-            if (statusUnion === 'idle' && isAutomationActive) {
-              
-            } else {
-              setAutomationStatus(statusUnion);
+          } else if (data.type === 'execution_started') {
+            console.log('📡 EXECUTION_STARTED event received');
+            setIsOpen(true);
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'execution_started', sessionId: currentSession });
+              console.log('📡 onAutomationResult called for execution_started');
             }
-          }
-          setLastHeartbeatAt(Date.now());
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
-          }
-        } else if (data.type === 'session_update') {
-          console.log('📡 SESSION_UPDATE event received:', data.session);
-          if (data.session && typeof data.session.status === 'string') {
-            const sraw = data.session.status === 'inactive' ? 'idle' : data.session.status;
-            const sUnion = (sraw === 'idle' || sraw === 'running' || sraw === 'paused' || sraw === 'error') ? sraw : undefined;
-            if (sUnion) {
-              if (sUnion === 'idle' && isAutomationActive) {
-                
+          } else if (data.type === 'workflow_step_completed') {
+            console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
+            setAutomationStatus('running');
+            setLastHeartbeatAt(Date.now());
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'workflow_step_completed',
+                sessionId: currentSession,
+                step_index: data.step_index,
+                progress: data.progress,
+                result: data.result
+              });
+            }
+          } else if (data.type === 'workflow_step_failed') {
+            console.warn('📡 WORKFLOW_STEP_FAILED event received:', { step_index: data.step_index, error: data.error });
+            setAutomationStatus('error');
+            setLastHeartbeatAt(Date.now());
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'workflow_step_failed',
+                sessionId: currentSession,
+                step_index: data.step_index,
+                error: data.error,
+                step_description: data.step_description
+              });
+            }
+          } else if (data.type === 'workflow_error') {
+            console.warn('📡 WORKFLOW_ERROR event received:', { step_index: data.step_index, error: data.error });
+            setAutomationStatus('error');
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'workflow_error',
+                sessionId: currentSession,
+                step_index: data.step_index,
+                error: data.error,
+                corrections: data.corrections
+              });
+            }
+          } else if (data.type === 'error') {
+            console.warn('📡 ERROR event received:', data?.message || data);
+            setAutomationStatus('error');
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'error',
+                sessionId: currentSession,
+                message: data.message,
+                code: data.code
+              });
+            }
+          } else if (data.type === 'quality_improvement_started') {
+            console.log('📡 QUALITY_IMPROVEMENT_STARTED event received:', { attempt: data.attempt });
+            setAutomationStatus('running');
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'quality_improvement_started',
+                sessionId: currentSession,
+                attempt: data.attempt,
+                steps: data.steps
+              });
+            }
+          } else if (data.type === 'quality_improvement_completed') {
+            console.log('📡 QUALITY_IMPROVEMENT_COMPLETED event received:', { attempt: data.attempt });
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'quality_improvement_completed',
+                sessionId: currentSession,
+                attempt: data.attempt
+              });
+            }
+          } else if (data.type === 'status_update') {
+            console.log('📡 STATUS_UPDATE event received:', { status: data.status, url: data.url });
+            const raw = data.status === 'inactive' ? 'idle' : data.status;
+            const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
+            if (statusUnion) {
+              if (statusUnion === 'idle' && isAutomationActive) {
+                // keep running until server confirms stop
               } else {
-                setAutomationStatus(sUnion);
+                setAutomationStatus(statusUnion);
               }
             }
-          }
-          setLastHeartbeatAt(Date.now());
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'session_update', session: data.session, sessionId: currentSession });
-          }
-        } else if (data.type === 'workflow_heartbeat') {
-          setLastHeartbeatAt(Date.now());
-        } else if (data.type === 'connection_established') {
-          console.log('📡 CONNECTION_ESTABLISHED event received');
-          setLastHeartbeatAt(Date.now());
-          if (!currentSession && typeof data.sessionId === 'string') {
-            setCurrentSession(data.sessionId);
-          }
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'connection_established', sessionId: currentSession });
-          }
-        } else if (data.type === 'keep_alive_response' || data.type === 'pong') {
-          setLastHeartbeatAt(Date.now());
-        } else if (data.type === 'automation_session_selected') {
-          console.log('📡 AUTOMATION_SESSION_SELECTED event received:', data.sessionId);
-          if (!currentSession && typeof data.sessionId === 'string') {
-            setCurrentSession(data.sessionId);
-            setIsAutomationActive(true);
-            setAutomationStatus('running');
-          }
-        } else if (data.type === 'action_started') {
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'action_started',
-              sessionId: currentSession,
-              actionId: data.actionId,
-              actionType: data.actionType,
-              coordinates: data.coordinates
-            });
-          }
-        } else if (data.type === 'action_completed') {
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'action_completed',
-              sessionId: currentSession,
-              actionId: data.actionId,
-              result: data.result
-            });
-          }
-        } else if (data.type === 'action_failed') {
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'action_failed',
-              sessionId: currentSession,
-              actionId: data.actionId,
-              error: data.error || data.result?.message
-            });
-          }
-        } else if (data.type === 'screenshot_update') {
-          if (onAutomationResult) {
-            onAutomationResult({
-              type: 'screenshot_update',
-              sessionId: currentSession,
-              screenshot: data.screenshot
-            });
-          }
-        } else if (data.type === 'workflow_completed') {
-          console.log('📡 WORKFLOW_COMPLETED event received:', { result: data.result, score: data.score });
-          if (onAutomationResult) {
-            onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, result: data.result, score: data.score });
-            console.log('📡 onAutomationResult called for workflow_completed');
-          }
-          try {
-            const score = typeof data.score === 'number' ? data.score : (typeof data.result?.score === 'number' ? data.result.score : undefined);
-            console.log('📡 Extracted score for auto-close check:', score);
-            if (typeof score === 'number' && score >= 92) {
-              console.log('📡 Score >= 92, auto-closing window');
-              setIsOpen(false);
-            } else {
-              console.log('📡 Score < 92 or invalid, keeping window open');
+            setLastHeartbeatAt(Date.now());
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
             }
-          } catch (e) {
-            console.error('📡 Error processing workflow_completed score:', e);
+          } else if (data.type === 'workflow_status_update') {
+            console.log('📡 WORKFLOW_STATUS_UPDATE event received:', { status: data.status, url: data.url });
+            const raw = data.status === 'inactive' ? 'idle' : data.status;
+            const statusUnion = (raw === 'idle' || raw === 'running' || raw === 'paused' || raw === 'error') ? raw : undefined;
+            if (statusUnion) {
+              if (statusUnion === 'idle' && isAutomationActive) {
+                // keep running until server confirms stop
+              } else {
+                setAutomationStatus(statusUnion);
+              }
+            }
+            setLastHeartbeatAt(Date.now());
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
+            }
+          } else if (data.type === 'session_update') {
+            console.log('📡 SESSION_UPDATE event received:', data.session);
+            if (data.session && typeof data.session.status === 'string') {
+              const sraw = data.session.status === 'inactive' ? 'idle' : data.session.status;
+              const sUnion = (sraw === 'idle' || sraw === 'running' || sraw === 'paused' || sraw === 'error') ? sraw : undefined;
+              if (sUnion) {
+                if (sUnion === 'idle' && isAutomationActive) {
+                  // keep running until server confirms stop
+                } else {
+                  setAutomationStatus(sUnion);
+                }
+              }
+            }
+            setLastHeartbeatAt(Date.now());
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'session_update', session: data.session, sessionId: currentSession });
+            }
+          } else if (data.type === 'workflow_heartbeat') {
+            setLastHeartbeatAt(Date.now());
+          } else if (data.type === 'connection_established') {
+            console.log('📡 CONNECTION_ESTABLISHED event received');
+            setLastHeartbeatAt(Date.now());
+            if (!currentSession && typeof data.sessionId === 'string') {
+              setCurrentSession(data.sessionId);
+            }
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'connection_established', sessionId: currentSession });
+            }
+          } else if (data.type === 'keep_alive') {
+            try { wsRef.current?.send(JSON.stringify({ type: 'keep_alive_response' })); } catch {}
+          } else if (data.type === 'keep_alive_response' || data.type === 'pong') {
+            setLastHeartbeatAt(Date.now());
+          } else if (data.type === 'automation_session_selected') {
+            console.log('📡 AUTOMATION_SESSION_SELECTED event received:', data.sessionId);
+            if (!currentSession && typeof data.sessionId === 'string') {
+              setCurrentSession(data.sessionId);
+              setIsAutomationActive(true);
+              setAutomationStatus('running');
+            }
+          } else if (data.type === 'action_started') {
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'action_started',
+                sessionId: currentSession,
+                actionId: data.actionId,
+                actionType: data.actionType,
+                coordinates: data.coordinates
+              });
+            }
+          } else if (data.type === 'action_completed') {
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'action_completed',
+                sessionId: currentSession,
+                actionId: data.actionId,
+                result: data.result
+              });
+            }
+          } else if (data.type === 'action_failed') {
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'action_failed',
+                sessionId: currentSession,
+                actionId: data.actionId,
+                error: data.error || data.result?.message
+              });
+            }
+          } else if (data.type === 'screenshot_update') {
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'screenshot_update',
+                sessionId: currentSession,
+                screenshot: data.screenshot
+              });
+            }
+          } else if (data.type === 'workflow_completed') {
+            console.log('📡 WORKFLOW_COMPLETED event received:', { result: data.result, score: data.score });
+            if (onAutomationResult) {
+              onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, result: data.result, score: data.score });
+              console.log('📡 onAutomationResult called for workflow_completed');
+            }
+            try {
+              const score = typeof data.score === 'number' ? data.score : (typeof data.result?.score === 'number' ? data.result.score : undefined);
+              console.log('📡 Extracted score for auto-close check:', score);
+              if (typeof score === 'number' && score >= 92) {
+                console.log('📡 Score >= 92, auto-closing window');
+                setIsOpen(false);
+              } else {
+                console.log('📡 Score < 92 or invalid, keeping window open');
+              }
+            } catch (e) {
+              console.error('📡 Error processing workflow_completed score:', e);
+            }
+          } else {
+            console.log('📡 Unknown WebSocket message type:', data.type);
           }
-        } else {
-          console.log('📡 Unknown WebSocket message type:', data.type);
+        } catch (e) {
+          console.error('📡 Error parsing WebSocket message:', e, 'Raw data:', event.data);
         }
-      } catch (e) {
-        console.error('📡 Error parsing WebSocket message:', e, 'Raw data:', event.data);
-      }
+      };
     };
-    
-    return () => ws.close();
-  }, [currentSession, BACKEND_URL, workflowDispatched, onAutomationResult]);
+
+    connect();
+
+    return () => {
+      stopped = true;
+      if (reconnectTimerRef.current) { window.clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+      if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+      if (wsRef.current) { try { wsRef.current.close(); } catch {} wsRef.current = null; }
+    };
+  }, [currentSession, BACKEND_URL, HEARTBEAT_INTERVAL_SEC, workflowDispatched, onAutomationResult]);
 
   useEffect(() => {
     setWorkflowDispatched(false);

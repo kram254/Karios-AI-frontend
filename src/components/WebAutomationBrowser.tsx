@@ -1,6 +1,25 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Paper, IconButton, TextField, Button, Typography, Chip, LinearProgress } from '@mui/material';
-import { PlayArrow, Pause, Stop, Refresh, Screenshot, Visibility, VisibilityOff } from '@mui/icons-material';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Box,
+  Paper,
+  Button,
+  Typography,
+  IconButton,
+  Chip,
+  TextField,
+  LinearProgress
+} from '@mui/material';
+import {
+  PlayArrow,
+  Pause,
+  Stop,
+  Visibility,
+  VisibilityOff,
+  Screenshot,
+  ExpandMore,
+  ExpandLess
+} from '@mui/icons-material';
+import { WorkflowVisualization } from './WorkflowVisualization';
 
 const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
 
@@ -56,6 +75,10 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const [executionProgress, setExecutionProgress] = useState(0);
   const [currentScreenshot, setCurrentScreenshot] = useState<string>('');
   const [actionOverlay, setActionOverlay] = useState<{x: number, y: number, type: string} | null>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<any[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
+  const [taskDescription, setTaskDescription] = useState<string>('');
+  const [showWorkflowViz, setShowWorkflowViz] = useState<boolean>(false);
   
   const browserFrameRef = useRef<HTMLDivElement>(null);
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -158,6 +181,34 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const handleWebSocketMessage = (data: any) => {
     switch (data.type) {
+      case 'plan_created':
+        if (data.plan && data.plan.steps) {
+          setWorkflowSteps(data.plan.steps);
+          setTaskDescription(data.plan.task_description || data.task_description || '');
+          setCurrentStepIndex(-1);
+        }
+        break;
+        
+      case 'step_started':
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index);
+        }
+        break;
+        
+      case 'step_completed':
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index + 1);
+        }
+        break;
+        
+      case 'execution_started':
+        setCurrentStepIndex(0);
+        break;
+        
+      case 'execution_completed':
+        setCurrentStepIndex(workflowSteps.length);
+        break;
+        
       case 'status_update':
         setSession(prev => {
           const incoming = typeof data.status === 'string' ? data.status : prev.status;
@@ -671,10 +722,42 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           </Box>
         </Paper>
 
-        <Paper sx={{ width: 200, p: 1, bgcolor: '#2a2a2a', overflow: 'hidden' }}>
-          <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
-            Actions Queue ({session.actions.length})
-          </Typography>
+        <Box sx={{ width: 300, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {workflowSteps.length > 0 && (
+            <Paper sx={{ bgcolor: '#2a2a2a' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 1,
+                  cursor: 'pointer'
+                }}
+                onClick={() => setShowWorkflowViz(!showWorkflowViz)}
+              >
+                <Typography variant="h6" sx={{ color: 'white' }}>
+                  Workflow Progress
+                </Typography>
+                <IconButton size="small" sx={{ color: 'white' }}>
+                  {showWorkflowViz ? <ExpandLess /> : <ExpandMore />}
+                </IconButton>
+              </Box>
+              {showWorkflowViz && (
+                <Box sx={{ p: 1, pt: 0 }}>
+                  <WorkflowVisualization
+                    steps={workflowSteps}
+                    currentStep={currentStepIndex}
+                    taskDescription={taskDescription}
+                  />
+                </Box>
+              )}
+            </Paper>
+          )}
+          
+          <Paper sx={{ flex: 1, p: 1, bgcolor: '#2a2a2a', overflow: 'hidden' }}>
+            <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
+              Actions Queue ({session.actions.length})
+            </Typography>
           
           <Box sx={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
             {session.actions.map((action, index) => (
@@ -728,6 +811,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             ))}
           </Box>
         </Paper>
+        </Box>
       </Box>
 
       <style>

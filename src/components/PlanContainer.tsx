@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Clock, Target, CheckCircle } from 'lucide-react';
-import { Box, Typography, Paper, Chip, IconButton } from '@mui/material';
+import {
+  Box,
+  Paper,
+  Typography,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  IconButton
+} from '@mui/material';
+import { ExpandMore, CheckCircle, ExpandLess, GpsFixed, AccessTime, KeyboardArrowUp, KeyboardArrowDown } from '@mui/icons-material';
+import { WorkflowVisualization } from './WorkflowVisualization';
 
 interface PlanStep {
   id: string;
@@ -28,10 +42,11 @@ interface PlanContainerProps {
   isVisible: boolean;
 }
 
-const PlanContainer: React.FC<PlanContainerProps> = ({ plan, isVisible }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+export const PlanContainer: React.FC<PlanContainerProps> = ({ plan }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [showWorkflowViz, setShowWorkflowViz] = useState(false);
 
-  if (!isVisible || !plan) return null;
+  if (!plan) return null;
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -42,7 +57,7 @@ const PlanContainer: React.FC<PlanContainerProps> = ({ plan, isVisible }) => {
   return (
     <Box sx={{ m: 2, bgcolor: '#1a1a1a', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
       <Paper
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => setExpanded(!expanded)}
         sx={{
           p: 2,
           bgcolor: '#2a2a2a',
@@ -64,7 +79,7 @@ const PlanContainer: React.FC<PlanContainerProps> = ({ plan, isVisible }) => {
               bgcolor: 'rgba(59,130,246,0.15)',
               color: '#60a5fa'
             }}>
-              <Target size={16} />
+              <GpsFixed sx={{ fontSize: 16 }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>Automation Plan</Typography>
@@ -73,18 +88,18 @@ const PlanContainer: React.FC<PlanContainerProps> = ({ plan, isVisible }) => {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Clock size={12} />
+              <AccessTime sx={{ fontSize: 12 }} />
               <Typography variant="caption">{formatDuration(plan.estimated_duration)}</Typography>
             </Box>
             <Chip label={`${plan.steps.length} steps`} size="small" />
             <IconButton size="small" sx={{ color: 'white' }}>
-              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {expanded ? <KeyboardArrowUp sx={{ fontSize: 16 }} /> : <KeyboardArrowDown sx={{ fontSize: 16 }} />}
             </IconButton>
           </Box>
         </Box>
       </Paper>
 
-      {isExpanded && (
+      {expanded && (
         <Box sx={{ p: 2, bgcolor: '#1a1a1a' }}>
           <Box sx={{ mb: 3 }}>
             <Typography variant="h6" sx={{ color: 'white', mb: 1, fontWeight: 600 }}>Strategy</Typography>
@@ -132,9 +147,38 @@ const PlanContainer: React.FC<PlanContainerProps> = ({ plan, isVisible }) => {
             ))}
           </Box>
 
+          <Paper sx={{ bgcolor: '#2a2a2a' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                p: 1,
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowWorkflowViz(!showWorkflowViz)}
+            >
+              <Typography variant="h6" sx={{ color: 'white' }}>
+                Workflow Diagram
+              </Typography>
+              <IconButton size="small" sx={{ color: 'white' }}>
+                {showWorkflowViz ? <ExpandLess /> : <ExpandMore />}
+              </IconButton>
+            </Box>
+            {showWorkflowViz && (
+              <Box sx={{ p: 1, pt: 0 }}>
+                <WorkflowVisualization
+                  steps={plan.steps}
+                  currentStep={-1}
+                  taskDescription={plan.task_description}
+                />
+              </Box>
+            )}
+          </Paper>
+
           <Paper sx={{ p: 2, bgcolor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <CheckCircle size={16} color="#22c55e" />
+              <CheckCircle sx={{ fontSize: 16, color: '#22c55e' }} />
               <Box>
                 <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>Success Criteria</Typography>
                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>{plan.success_criteria}</Typography>

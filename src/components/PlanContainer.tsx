@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Clock, Target, CheckCircle } from 'lucide-react';
+import { Box, Typography, Paper, Chip, IconButton } from '@mui/material';
 
 interface PlanStep {
   id: string;
@@ -39,92 +40,110 @@ const PlanContainer: React.FC<PlanContainerProps> = ({ plan, isVisible }) => {
   };
 
   return (
-    <div className="plan-container">
-      <div 
-        className="plan-header"
+    <Box sx={{ m: 2, bgcolor: '#1a1a1a', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <Paper
         onClick={() => setIsExpanded(!isExpanded)}
+        sx={{
+          p: 2,
+          bgcolor: '#2a2a2a',
+          color: 'white',
+          cursor: 'pointer',
+          borderRadius: '12px 12px 0 0',
+          '&:hover': { bgcolor: '#333' }
+        }}
       >
-        <div className="plan-header-content">
-          <div className="plan-icon">
-            <Target className="w-4 h-4" />
-          </div>
-          <div className="plan-title">
-            <h3>Automation Plan</h3>
-            <p>{plan.objective}</p>
-          </div>
-          <div className="plan-meta">
-            <div className="plan-duration">
-              <Clock className="w-3 h-3" />
-              <span>{formatDuration(plan.estimated_duration)}</span>
-            </div>
-            <div className="plan-steps-count">
-              {plan.steps.length} steps
-            </div>
-          </div>
-        </div>
-        <div className="plan-toggle">
-          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </div>
-      </div>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '8px',
+              bgcolor: 'rgba(59,130,246,0.15)',
+              color: '#60a5fa'
+            }}>
+              <Target size={16} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>Automation Plan</Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>{plan.objective}</Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Clock size={12} />
+              <Typography variant="caption">{formatDuration(plan.estimated_duration)}</Typography>
+            </Box>
+            <Chip label={`${plan.steps.length} steps`} size="small" />
+            <IconButton size="small" sx={{ color: 'white' }}>
+              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </IconButton>
+          </Box>
+        </Box>
+      </Paper>
 
       {isExpanded && (
-        <div className="plan-content">
-          <div className="plan-reasoning">
-            <h4>Strategy</h4>
-            <p>{plan.reasoning}</p>
-          </div>
+        <Box sx={{ p: 2, bgcolor: '#1a1a1a' }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ color: 'white', mb: 1, fontWeight: 600 }}>Strategy</Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>{plan.reasoning}</Typography>
+          </Box>
 
-          <div className="plan-steps">
-            <h4>Execution Steps</h4>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ color: 'white', mb: 2, fontWeight: 600 }}>Execution Steps</Typography>
             {plan.steps.map((step, index) => (
-              <div key={step.id} className="plan-step">
-                <div className="step-header">
-                  <div className="step-number">{index + 1}</div>
-                  <div className="step-info">
-                    <h5>{step.title}</h5>
-                    <p className="step-description">{step.description}</p>
-                  </div>
-                  <div className="step-action-type">{step.action_type}</div>
-                </div>
+              <Paper key={step.id} sx={{ p: 2, mb: 2, bgcolor: '#2a2a2a', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Chip label={index + 1} size="small" sx={{ minWidth: '32px' }} />
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ color: 'white', fontWeight: 600 }}>{step.title}</Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>{step.description}</Typography>
+                    </Box>
+                  </Box>
+                  <Chip label={step.action_type} size="small" variant="outlined" />
+                </Box>
                 
-                <div className="step-details">
+                <Box sx={{ mt: 2, display: 'grid', gap: 1 }}>
                   {step.target && (
-                    <div className="step-detail">
-                      <span className="detail-label">Target:</span>
-                      <span className="detail-value">{step.target}</span>
-                    </div>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', minWidth: '60px' }}>Target:</Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>{step.target}</Typography>
+                    </Box>
                   )}
                   {step.value && (
-                    <div className="step-detail">
-                      <span className="detail-label">Value:</span>
-                      <span className="detail-value">{step.value}</span>
-                    </div>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', minWidth: '60px' }}>Value:</Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>{step.value}</Typography>
+                    </Box>
                   )}
-                  <div className="step-detail">
-                    <span className="detail-label">Expected:</span>
-                    <span className="detail-value">{step.expected_outcome}</span>
-                  </div>
-                  <div className="step-reasoning">
-                    <span className="detail-label">Reasoning:</span>
-                    <span className="detail-value">{step.reasoning}</span>
-                  </div>
-                </div>
-              </div>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', minWidth: '60px' }}>Expected:</Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>{step.expected_outcome}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', minWidth: '60px' }}>Reasoning:</Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>{step.reasoning}</Typography>
+                  </Box>
+                </Box>
+              </Paper>
             ))}
-          </div>
+          </Box>
 
-          <div className="plan-success-criteria">
-            <div className="success-icon">
-              <CheckCircle className="w-4 h-4" />
-            </div>
-            <div>
-              <h4>Success Criteria</h4>
-              <p>{plan.success_criteria}</p>
-            </div>
-          </div>
-        </div>
+          <Paper sx={{ p: 2, bgcolor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CheckCircle size={16} color="#22c55e" />
+              <Box>
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>Success Criteria</Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>{plan.success_criteria}</Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import Chat from "./components/Chat";
-import { Sidebar } from './components/Sidebar';
+import Chat from './components/Chat';
+import WebAutomationIntegration from './components/WebAutomationIntegration';
+import AutomationWorkspace from './components/AutomationWorkspace';
 import { Settings } from './components/Settings';
 import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -165,6 +166,9 @@ function App() {
                   
                   {/* Chat */}
                   <Route path="/chat" element={<Chat />} />
+                  
+                  {/* Automation Workspace - Lindy-like Canvas UI */}
+                  <Route path="/automation-workspace" element={<AutomationWorkspace />} />
                   
                   {/* Agent Chat Interface */}
                   <Route path="/agent-chat/:agentId" element={

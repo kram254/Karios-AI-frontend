@@ -152,12 +152,16 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
           if (data.type === 'plan_created') {
             console.log('📡 PLAN_CREATED event received:', data.plan);
+            if (data.execution_session_id && data.execution_session_id !== currentSession) {
+              console.log('📡 Updating session to execution session:', data.execution_session_id);
+              setCurrentSession(data.execution_session_id);
+            }
             setCurrentPlan(data.plan);
             setShowPlan(true);
             setIsOpen(true);
             console.log('📡 Plan state updated, calling onAutomationResult');
             if (onAutomationResult) {
-              onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: currentSession });
+              onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: data.execution_session_id || currentSession });
               console.log('📡 onAutomationResult called for plan_created');
             }
           } else if (data.type === 'execution_started') {
@@ -305,6 +309,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           } else if (data.type === 'automation_session_selected') {
             console.log('📡 AUTOMATION_SESSION_SELECTED event received:', data.sessionId);
             if (typeof data.sessionId === 'string' && data.sessionId !== currentSession) {
+              console.log('📡 Switching to execution session:', data.sessionId);
               setCurrentSession(data.sessionId);
               setIsAutomationActive(true);
               setAutomationStatus('running');

@@ -198,7 +198,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         setExecutionProgress(0);
         break;
       case 'pong':
-        // Heartbeat response - connection is alive
         console.log('WebSocket heartbeat pong received');
         break;
       case 'keep_alive':
@@ -316,11 +315,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           return next;
         });
         setActionOverlay(null);
-        break;
-      case 'pong':
-        // Heartbeat acknowledgement
-        // No state change needed; keep for diagnostics
-        console.log('📶 PONG received');
         break;
       case 'quality_improvement_started':
         console.log('✨ QUALITY_IMPROVEMENT_STARTED:', data);

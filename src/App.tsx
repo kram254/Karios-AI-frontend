@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Chat from './components/Chat';
 import WebAutomationIntegration from './components/WebAutomationIntegration';
 import AutomationWorkspace from './components/AutomationWorkspace';
+import { Sidebar } from './components/Sidebar';
 import { Settings } from './components/Settings';
 import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';

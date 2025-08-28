@@ -30,6 +30,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   const [dialogPos, setDialogPos] = useState<{ x: number; y: number }>({ x: 120, y: 120 });
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [workflowDispatched, setWorkflowDispatched] = useState(false);
+  const [currentCrewMember, setCurrentCrewMember] = useState<number>(0);
+  const [crewMemberStatus, setCrewMemberStatus] = useState<{
+    [key: number]: 'idle' | 'active' | 'completed'
+  }>({ 1: 'idle', 2: 'idle', 3: 'idle' });
   const paperRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
   const frameRef = useRef<number | null>(null);
@@ -159,6 +163,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setCurrentPlan(data.plan);
             setShowPlan(true);
             setIsOpen(true);
+            setCurrentCrewMember(1);
+            setCrewMemberStatus(prev => ({
+              ...prev,
+              1: 'completed',
+              2: 'active'
+            }));
             console.log('📡 Plan state updated, calling onAutomationResult');
             if (onAutomationResult) {
               onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: data.execution_session_id || currentSession });
@@ -167,6 +177,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           } else if (data.type === 'execution_started') {
             console.log('📡 EXECUTION_STARTED event received');
             setIsOpen(true);
+            setCurrentCrewMember(2);
+            setCrewMemberStatus(prev => ({
+              ...prev,
+              2: 'active'
+            }));
             if (onAutomationResult) {
               onAutomationResult({ type: 'execution_started', sessionId: currentSession });
               console.log('📡 onAutomationResult called for execution_started');
@@ -175,6 +190,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
             setAutomationStatus('running');
             setLastHeartbeatAt(Date.now());
+            setCurrentCrewMember(2);
+            setCrewMemberStatus(prev => ({
+              ...prev,
+              2: 'active'
+            }));
             if (onAutomationResult) {
               onAutomationResult({
                 type: 'workflow_step_completed',
@@ -223,6 +243,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           } else if (data.type === 'quality_improvement_started') {
             console.log('📡 QUALITY_IMPROVEMENT_STARTED event received:', { attempt: data.attempt });
             setAutomationStatus('running');
+            setCurrentCrewMember(3);
+            setCrewMemberStatus(prev => ({
+              ...prev,
+              2: 'completed',
+              3: 'active'
+            }));
             if (onAutomationResult) {
               onAutomationResult({
                 type: 'quality_improvement_started',
@@ -233,6 +259,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             }
           } else if (data.type === 'quality_improvement_completed') {
             console.log('📡 QUALITY_IMPROVEMENT_COMPLETED event received:', { attempt: data.attempt });
+            setCurrentCrewMember(3);
+            setCrewMemberStatus(prev => ({
+              ...prev,
+              3: 'active'
+            }));
             if (onAutomationResult) {
               onAutomationResult({
                 type: 'quality_improvement_completed',
@@ -350,8 +381,33 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 screenshot: data.screenshot
               });
             }
+          } else if (data.type === 'crew_member_started') {
+            console.log('📡 CREW_MEMBER_STARTED event received:', { member: data.member, status: data.status });
+            const memberNum = data.member;
+            if (memberNum >= 1 && memberNum <= 3) {
+              setCurrentCrewMember(memberNum);
+              setCrewMemberStatus(prev => ({
+                ...prev,
+                [memberNum]: 'active'
+              }));
+            }
+          } else if (data.type === 'crew_member_completed') {
+            console.log('📡 CREW_MEMBER_COMPLETED event received:', { member: data.member, status: data.status });
+            const memberNum = data.member;
+            if (memberNum >= 1 && memberNum <= 3) {
+              setCrewMemberStatus(prev => ({
+                ...prev,
+                [memberNum]: 'completed'
+              }));
+            }
           } else if (data.type === 'workflow_completed') {
             console.log('📡 WORKFLOW_COMPLETED event received:', { results: (data.results ?? data.result), score: data.score });
+            setCurrentCrewMember(3);
+            setCrewMemberStatus({
+              1: 'completed',
+              2: 'completed',
+              3: 'completed'
+            });
             if (onAutomationResult) {
               onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, results: (data.results ?? data.result), score: data.score });
               console.log('📡 onAutomationResult called for workflow_completed');
@@ -504,6 +560,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       setCurrentSession(sessionId);
       setIsAutomationActive(true);
       setAutomationStatus('running');
+      setCurrentCrewMember(1);
+      setCrewMemberStatus({
+        1: 'active',
+        2: 'idle',
+        3: 'idle'
+      });
 
       console.log('🚀 Creating chat for Web Automation Agent...');
       const chatPayload = {
@@ -823,6 +885,57 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                   color={connectionHealth === 'good' ? 'success' : connectionHealth === 'warn' ? 'warning' : 'error'}
                   sx={{ borderRadius: '8px' }}
                 />
+              </Box>
+            )}
+            
+            {isAutomationActive && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+                {[1, 2, 3].map((memberNum) => (
+                  <Box
+                    key={memberNum}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: '6px',
+                      bgcolor: crewMemberStatus[memberNum] === 'completed' ? 'rgba(34,197,94,0.2)' :
+                              crewMemberStatus[memberNum] === 'active' ? 'rgba(59,130,246,0.2)' :
+                              'rgba(107,114,128,0.2)',
+                      border: `1px solid ${
+                        crewMemberStatus[memberNum] === 'completed' ? '#22c55e' :
+                        crewMemberStatus[memberNum] === 'active' ? '#3b82f6' :
+                        '#6b7280'
+                      }`,
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        bgcolor: crewMemberStatus[memberNum] === 'completed' ? '#22c55e' :
+                                crewMemberStatus[memberNum] === 'active' ? '#3b82f6' :
+                                '#6b7280',
+                        animation: crewMemberStatus[memberNum] === 'active' ? 'pulse 2s infinite' : 'none'
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: crewMemberStatus[memberNum] === 'completed' ? '#22c55e' :
+                               crewMemberStatus[memberNum] === 'active' ? '#3b82f6' :
+                               '#6b7280',
+                        fontWeight: 600,
+                        fontSize: '10px'
+                      }}
+                    >
+                      {memberNum === 1 ? 'PLAN' : memberNum === 2 ? 'EXEC' : 'SCORE'}
+                    </Typography>
+                  </Box>
+                ))}
               </Box>
             )}
           </Box>

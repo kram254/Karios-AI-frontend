@@ -1166,15 +1166,15 @@ const Chat: React.FC = () => {
 
       {/* Input Form - Using updated chat.css classes */}
       <div className="chat-input-wrapper">
-        <form onSubmit={handleSubmit} className="chat-input-container-expanded">
-          <div className="chat-input-top-section">
+        <form onSubmit={handleSubmit} className="w-full max-w-4xl">
+          <div className={uploadedImages.length > 0 ? "chat-input-container-expanded neon-input" : "chat-input-container neon-input"}>
             <button 
               type="button" 
-              className="chat-action-button" 
+              className="chat-action-button neon-btn-secondary" 
               onClick={handlePlusButtonClick}
               disabled={isProcessing}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 neon-icon" />
             </button>
             <input 
               type="file" 
@@ -1238,11 +1238,11 @@ const Chat: React.FC = () => {
             <div className="chat-input-actions">
               {/* Send button */}
               <button 
-                type="submit"
-                disabled={(!message.trim() && uploadedImages.length === 0) || isProcessing}
-                className="chat-send-button disabled:opacity-50 disabled:cursor-not-allowed"
+                type="submit" 
+                className="chat-send-button neon-btn-primary"
+                disabled={isProcessing || (!message.trim() && uploadedImages.length === 0)}
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4 neon-icon" />
               </button>
             </div>
           </div>
@@ -1251,7 +1251,7 @@ const Chat: React.FC = () => {
             <SearchLockTooltip show={currentChat?.chat_type === 'internet_search'}>
                <button 
                  type="button" 
-                 className={`search-text-button ${isSearchMode ? 'search-active' : ''}`}
+                 className={`search-text-button neon-btn-secondary ${isSearchMode ? 'search-active' : ''}`}
                  onClick={() => {
                    if (currentChat?.chat_type === 'internet_search') return;
                    // Only use toggleSearchMode - it now handles internetSearchEnabled synchronization
@@ -1260,7 +1260,7 @@ const Chat: React.FC = () => {
                  disabled={currentChat?.chat_type === 'internet_search'}
                  style={currentChat?.chat_type === 'internet_search' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
                >
-                 <Globe className="w-4 h-4 mr-2" />
+                 <Globe className="w-4 h-4 neon-icon" />
                  Search
                </button>
              </SearchLockTooltip>
@@ -1493,13 +1493,13 @@ const Chat: React.FC = () => {
                   onClick={() => removeUploadedImage(img.name)}
                   type="button"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 neon-icon" />
                 </button>
               </div>
             ))}
           </div>
         )}
-        <div className="chat-ai-notice">Karios AI | Verify important Info.</div>
+        <div className="chat-ai-notice neon-text">Karios AI | Verify important Info.</div>
         
         {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater

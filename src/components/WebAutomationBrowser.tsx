@@ -605,45 +605,57 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       <Paper sx={{ p: 2, mb: 1, bgcolor: '#2a2a2a', color: 'white' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
           <TextField
+            className="neon-input"
+            size="small"
+            placeholder="Enter URL..."
             value={currentUrl}
             onChange={(e) => setCurrentUrl(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && navigateToUrl()}
-            placeholder="Enter URL..."
-            size="small"
-            sx={{ 
-              flex: 1,
-              '& .MuiOutlinedInput-root': { color: 'white' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555' }
-            }}
+            onKeyPress={(e) => e.key === 'Enter' && handleNavigate()}
+            sx={{ flex: 1 }}
           />
-          <Button onClick={navigateToUrl} variant="outlined" size="small">
+          <Button
+            className="neon-btn-primary"
+            variant="contained"
+            onClick={handleNavigate}
+            size="small"
+          >
             Go
           </Button>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton
-            onClick={session.status === 'running' ? pauseAutomation : startAutomation}
+          <Button
+            className="neon-btn-primary"
+            variant="contained"
+            startIcon={session.status === 'running' ? <Pause /> : <PlayArrow />}
+            onClick={session.status === 'running' ? handlePause : handleStart}
             disabled={session.status === 'error'}
-            sx={{ color: session.status === 'running' ? '#ff9800' : '#4caf50' }}
           >
-            {session.status === 'running' ? <Pause /> : <PlayArrow />}
-          </IconButton>
+            {session.status === 'running' ? 'Pause' : 'Start'}
+          </Button>
           
-          <IconButton onClick={stopAutomation} sx={{ color: '#f44336' }}>
-            <Stop />
-          </IconButton>
+          <Button
+            className="neon-btn-secondary"
+            variant="outlined"
+            startIcon={<Stop />}
+            onClick={handleStop}
+            disabled={session.status === 'idle'}
+          >
+            Stop
+          </Button>
           
           <IconButton onClick={takeScreenshot} sx={{ color: '#2196f3' }}>
             <Screenshot />
           </IconButton>
           
-          <IconButton
+          <Button
+            className="neon-btn-secondary"
+            variant="outlined"
+            startIcon={isVisible ? <VisibilityOff /> : <Visibility />}
             onClick={() => setIsVisible(!isVisible)}
-            sx={{ color: isVisible ? '#4caf50' : '#757575' }}
           >
-            {isVisible ? <Visibility /> : <VisibilityOff />}
-          </IconButton>
+            {isVisible ? 'Hide' : 'Show'}
+          </Button>
           
           <Button
             onClick={() => setIsRecording(!isRecording)}
@@ -675,13 +687,12 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       </Paper>
 
       <Box sx={{ display: 'flex', flex: 1, gap: 1 }}>
-        <Paper sx={{ flex: 1, p: 1, bgcolor: '#2a2a2a', position: 'relative' }}>
+        <Paper className="neon-card" sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
             Browser View
           </Typography>
           
           <Box
-            ref={browserFrameRef}
             sx={{
               width: '100%',
               height: 'calc(100% - 40px)',
@@ -724,7 +735,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
         <Box sx={{ width: 300, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {workflowSteps.length > 0 && (
-            <Paper sx={{ bgcolor: '#2a2a2a' }}>
+            <Paper className="neon-card">
               <Box
                 sx={{
                   display: 'flex',
@@ -754,7 +765,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             </Paper>
           )}
           
-          <Paper sx={{ flex: 1, p: 1, bgcolor: '#2a2a2a', overflow: 'hidden' }}>
+          <Paper className="neon-card" sx={{ flex: 1, p: 1, overflow: 'hidden' }}>
             <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
               Actions Queue ({session.actions.length})
             </Typography>

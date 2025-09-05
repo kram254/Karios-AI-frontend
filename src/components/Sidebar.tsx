@@ -94,16 +94,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`bg-[#0A0A0A] text-white border-r border-[#2A2A2A] transition-all duration-300 flex flex-col ${
+      className={`neon-card border-r border-neon-purple/20 transition-all duration-300 flex flex-col ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
       {/* Header */}
-      <div className="p-4 border-b border-[#2A2A2A] flex items-center justify-between">
+      <div className="p-4 neon-section-header flex items-center justify-between">
         {!isCollapsed && <h1 className="text-xl font-bold">Karios AI</h1>}
         <button
           onClick={onCollapse}
-          className="p-2 hover:bg-[#2A2A2A] rounded-lg transition-colors"
+          className="neon-btn-secondary p-2 rounded-lg"
         >
           {isCollapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -114,15 +114,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Main Navigation */}
-      <div className="border-b border-[#2A2A2A] py-2">
+      <div className="border-b border-neon-purple/20 py-2">
         {/* Chat Section */}
         <button
           onClick={() => navigate('/chat')}
-          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-            isActive('/chat') ? 'bg-[#2A2A2A]' : ''
+          className={`w-full flex items-center p-4 transition-colors ${
+            isActive('/chat') ? 'neon-tab-active' : 'neon-btn-secondary'
           }`}
         >
-          <MessageSquare className="w-5 h-5 text-cyan-500" />
+          <MessageSquare className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">Chat</span>}
         </button>
 
@@ -130,45 +130,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleCreateNewChat}
           disabled={creatingChat}
-          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
+          className={`w-full flex items-center p-4 neon-btn-secondary transition-colors ${
             creatingChat ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
-          <Plus className="w-5 h-5 text-cyan-500" />
+          <Plus className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">New Chat</span>}
         </button>
 
         {/* Agent Management */}
         <button
           onClick={handleNavigateToAgents}
-          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-            isActive('/agents') ? 'bg-[#2A2A2A] text-cyan-500' : ''
+          className={`w-full flex items-center p-4 transition-colors ${
+            isActive('/agents') ? 'neon-tab-active' : 'neon-btn-secondary'
           }`}
-          style={{ color: isActive('/agents') ? '#00F3FF' : 'white' }}
         >
-          <Bot className={`w-5 h-5 ${isActive('/agents') ? 'text-cyan-500' : ''}`} />
+          <Bot className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">Agents</span>}
         </button>
 
         {/* Agent Chat */}
         <button
           onClick={handleShowAgentModal}
-          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-            location.pathname.includes('/agent-chat') ? 'bg-[#2A2A2A]' : ''
+          className={`w-full flex items-center p-4 transition-colors ${
+            location.pathname.includes('/agent-chat') ? 'neon-tab-active' : 'neon-btn-secondary'
           }`}
         >
-          <Bot className="w-5 h-5 text-cyan-500" />
+          <Bot className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">Agent Chat</span>}
         </button>
 
         {/* Knowledge Management */}
         <button
           onClick={() => navigate('/knowledge')}
-          className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-            isActive('/knowledge') ? 'bg-[#2A2A2A]' : ''
+          className={`w-full flex items-center p-4 transition-colors ${
+            isActive('/knowledge') ? 'neon-tab-active' : 'neon-btn-secondary'
           }`}
         >
-          <Database className="w-5 h-5 text-cyan-500" />
+          <Database className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">Knowledge</span>}
         </button>
 
@@ -180,21 +179,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <button
               onClick={() => navigate('/dashboard')}
-              className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-                isActive('/dashboard') ? 'bg-[#2A2A2A]' : ''
+              className={`w-full flex items-center p-4 transition-colors ${
+                isActive('/dashboard') ? 'neon-tab-active' : 'neon-btn-secondary'
               }`}
             >
-              <LayoutDashboard className="w-5 h-5 text-cyan-500" />
+              <LayoutDashboard className="w-5 h-5 text-neon-cyan neon-icon" />
               {!isCollapsed && <span className="ml-3">Main Dashboard</span>}
             </button>
             {!isCollapsed && (
               <button
                 onClick={() => navigate('/agent-config')}
-                className={`w-full flex items-center p-3 pl-8 hover:bg-[#2A2A2A] transition-colors ${
-                  isActive('/agent-config') ? 'bg-[#2A2A2A]' : ''
+                className={`w-full flex items-center p-3 pl-8 transition-colors ${
+                  isActive('/agent-config') ? 'neon-tab-active' : 'neon-btn-secondary'
                 }`}
               >
-                <Bot className="w-4 h-4 text-cyan-500" />
+                <Bot className="w-4 h-4 text-neon-cyan neon-icon" />
                 <span className="ml-3 text-sm">Agent Config</span>
               </button>
             )}
@@ -202,24 +201,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Divider */}
-        <div className="py-2 border-b border-[#2A2A2A]" />
+        <div className="py-2 border-b border-neon-purple/20" />
 
         {/* User Management - Only for SUPER_ADMIN and RESELLER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER].includes(user.role) && (
           <button
             onClick={() => navigate('/users')}
-            className={`w-full flex items-center p-4 hover:bg-[#2A2A2A] transition-colors ${
-              isActive('/users') ? 'bg-[#2A2A2A]' : ''
+            className={`w-full flex items-center p-4 transition-colors ${
+              isActive('/users') ? 'neon-tab-active' : 'neon-btn-secondary'
             }`}
           >
-            <Users className="w-5 h-5 text-cyan-500" />
+            <Users className="w-5 h-5 text-neon-cyan neon-icon" />
             {!isCollapsed && <span className="ml-3">Users</span>}
           </button>
         )}
       </div>
 
       {/* Conversations Heading */}
-      <div className="py-2 border-b border-[#2A2A2A]">
+      <div className="py-2 border-b border-neon-purple/20">
         {!isCollapsed && (
           <div className="px-4 py-2 text-sm font-medium text-gray-400">
             Conversations
@@ -233,8 +232,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           chats.map((chat) => (
             <div 
               key={chat.id}
-              className={`relative w-full flex items-center p-4 hover:bg-[#2A2A2A] group transition-colors ${
-                currentChat?.id === chat.id ? 'bg-[#2A2A2A]' : ''
+              className={`relative w-full flex items-center p-4 group transition-colors ${
+                currentChat?.id === chat.id ? 'neon-tab-active' : 'neon-btn-secondary'
               }`}
               style={{ position: 'relative' }}
             >
@@ -242,7 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="flex-1 flex items-center cursor-pointer" 
                 onClick={() => handleChatSelect(chat)}
               >
-                <MessageSquare className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                <MessageSquare className="w-5 h-5 text-neon-cyan neon-icon flex-shrink-0" />
                 {!isCollapsed && (
                   <div className="ml-3 text-left overflow-hidden">
                     <div className="font-medium truncate">{chat.title}</div>

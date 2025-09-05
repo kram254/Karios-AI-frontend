@@ -73,17 +73,17 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className="w-[800px] bg-[#0A0A0A] rounded-xl border border-[#00F3FF]/20 overflow-hidden shadow-2xl"
+          className="w-[800px] neon-card overflow-hidden shadow-2xl"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-[#00F3FF]/20">
+          <div className="flex items-center justify-between p-6 neon-section-header">
             <div className="flex items-center space-x-3">
-              <SettingsIcon className="w-6 h-6 text-[#00F3FF]" />
+              <SettingsIcon className="w-6 h-6 text-neon-cyan neon-icon" />
               <h2 className="text-xl font-bold">{t('settings')}</h2>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-[#1A1A1A] transition-colors"
+              className="neon-btn-secondary p-2 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
@@ -91,15 +91,15 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           <div className="flex h-[600px]">
             {/* Sidebar */}
-            <div className="w-64 border-r border-[#00F3FF]/20 p-4">
+            <div className="w-64 border-r border-neon-purple/20 p-4">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-[#1A1A1A] text-[#00F3FF]'
-                      : 'text-gray-400 hover:bg-[#1A1A1A]/50 hover:text-white'
+                      ? 'neon-tab-active'
+                      : 'neon-tab-inactive'
                   }`}
                 >
                   {tab.icon}
@@ -118,10 +118,10 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                     <div className="relative">
                       <button
                         onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-                        className="w-full flex items-center justify-between p-4 rounded-lg border border-[#00F3FF]/20 hover:border-[#00F3FF]/50 transition-colors"
+                        className="w-full flex items-center justify-between p-4 neon-input"
                       >
                         <div className="flex items-center space-x-3">
-                          <Languages className="w-5 h-5 text-[#00F3FF]" />
+                          <Languages className="w-5 h-5 text-neon-cyan neon-icon" />
                           <span className="mr-2">{language.flag}</span>
                           <span>{language.name}</span>
                         </div>
@@ -129,7 +129,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                       </button>
 
                       {isLanguageDropdownOpen && (
-                        <div className="absolute left-0 right-0 mt-1 bg-[#1A1A1A] border border-[#00F3FF]/20 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                        <div className="absolute left-0 right-0 mt-1 neon-card shadow-lg z-10 max-h-60 overflow-y-auto">
                           {languages.map((lang) => (
                             <button
                               key={lang.code}
@@ -137,7 +137,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                                 setLanguage(lang);
                                 setIsLanguageDropdownOpen(false);
                               }}
-                              className={`w-full text-left p-3 flex items-center hover:bg-[#2A2A2A] transition-colors ${language.code === lang.code ? 'bg-[#2A2A2A]' : ''}`}
+                              className={`w-full text-left p-3 flex items-center neon-btn-secondary transition-colors ${language.code === lang.code ? 'neon-tab-active' : ''}`}
                             >
                               <span className="mr-2">{lang.flag}</span>
                               <span>{lang.name}</span>
@@ -152,9 +152,9 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                   <div>
                     <h3 className="text-lg font-medium mb-4">{t('notifications')}</h3>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-[#00F3FF]/20">
+                      <div className="flex items-center justify-between p-4 neon-card">
                         <div className="flex items-center space-x-3">
-                          <Bell className="w-5 h-5 text-[#00F3FF]" />
+                          <Bell className="w-5 h-5 text-neon-cyan neon-icon" />
                           <div>
                             <p className="font-medium">{t('push_notifications')}</p>
                             <p className="text-sm text-gray-400">{t('get_notified_about_new_messages')}</p>
@@ -162,13 +162,13 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                         </div>
                         <button
                           onClick={() => setNotifications(!notifications)}
-                          className={`w-12 h-6 rounded-full transition-colors ${
-                            notifications ? 'bg-[#00F3FF]' : 'bg-gray-600'
+                          className={`w-12 h-6 rounded-full neon-toggle-track transition-colors ${
+                            notifications ? 'neon-toggle-thumb' : ''
                           }`}
                         >
                           <div
-                            className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                              notifications ? 'translate-x-7' : 'translate-x-1'
+                            className={`w-4 h-4 rounded-full transition-transform ${
+                              notifications ? 'translate-x-7 neon-toggle-thumb' : 'translate-x-1 bg-gray-400'
                             }`}
                           />
                         </button>
@@ -188,10 +188,10 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                         <button
                           key={role.id}
                           onClick={() => setSelectedRole(role.id)}
-                          className={`p-4 rounded-lg border transition-colors ${
+                          className={`p-4 rounded-lg transition-colors ${
                             selectedRole === role.id
-                              ? 'border-[#00F3FF] bg-[#1A1A1A]'
-                              : 'border-[#00F3FF]/20 hover:border-[#00F3FF]/50'
+                              ? 'neon-btn-primary'
+                              : 'neon-btn-secondary'
                           }`}
                         >
                           <div className="flex items-center space-x-3">
@@ -213,7 +213,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                       step="0.1"
                       value={temperature}
                       onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                      className="w-full accent-[#00F3FF]"
+                      className="w-full accent-neon-cyan"
                     />
                     <div className="flex justify-between text-sm text-gray-400 mt-2">
                       <span>{t('focused')}</span>
@@ -229,10 +229,10 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                         <button
                           key={tokens}
                           onClick={() => setMaxTokens(tokens)}
-                          className={`p-3 rounded-lg border ${
+                          className={`p-3 rounded-lg ${
                             maxTokens === tokens
-                              ? 'border-[#00F3FF] bg-[#1A1A1A]'
-                              : 'border-[#00F3FF]/20 hover:border-[#00F3FF]/50'
+                              ? 'neon-btn-primary'
+                              : 'neon-btn-secondary'
                           }`}
                         >
                           <span>{tokens}</span>
@@ -248,9 +248,9 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                   <div>
                     <h3 className="text-lg font-medium mb-4">{t('privacy')}</h3>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-[#00F3FF]/20">
+                      <div className="flex items-center justify-between p-4 neon-card">
                         <div className="flex items-center space-x-3">
-                          <Lock className="w-5 h-5 text-[#00F3FF]" />
+                          <Lock className="w-5 h-5 text-neon-cyan neon-icon" />
                           <div>
                             <p className="font-medium">{t('auto_save_conversations')}</p>
                             <p className="text-sm text-gray-400">{t('save_chat_history_automatically')}</p>
@@ -258,13 +258,13 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
                         </div>
                         <button
                           onClick={() => setAutoSave(!autoSave)}
-                          className={`w-12 h-6 rounded-full transition-colors ${
-                            autoSave ? 'bg-[#00F3FF]' : 'bg-gray-600'
+                          className={`w-12 h-6 rounded-full neon-toggle-track transition-colors ${
+                            autoSave ? 'neon-toggle-thumb' : ''
                           }`}
                         >
                           <div
-                            className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                              autoSave ? 'translate-x-7' : 'translate-x-1'
+                            className={`w-4 h-4 rounded-full transition-transform ${
+                              autoSave ? 'translate-x-7 neon-toggle-thumb' : 'translate-x-1 bg-gray-400'
                             }`}
                           />
                         </button>
@@ -277,17 +277,17 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-[#00F3FF]/20">
+          <div className="p-6 border-t border-neon-purple/20">
             <div className="flex justify-end space-x-4">
               <button
                 onClick={onClose}
-                className="px-6 py-2 rounded-lg border border-[#00F3FF]/20 hover:bg-[#1A1A1A] transition-colors"
+                className="px-6 py-2 neon-btn-secondary"
               >
                 {t('cancel')}
               </button>
               <button
                 onClick={handleSaveSettings}
-                className="px-6 py-2 rounded-lg bg-[#00F3FF] text-black hover:bg-[#00F3FF]/90 transition-colors"
+                className="px-6 py-2 neon-btn-primary"
               >
                 {t('save_changes')}
               </button>

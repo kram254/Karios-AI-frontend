@@ -2,21 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --neon-purple: #8b5cf6;
+  --neon-teal: #14b8a6;
+  --neon-orange: #f59e0b;
+  --neon-blue: #3b82f6;
+  --neon-green: #10b981;
+  --neon-pink: #ec4899;
+  --neon-cyan: #00F3FF;
+  --dark-primary: #0f0f23;
+  --dark-secondary: #1a1a2e;
+  --dark-tertiary: #16213e;
+  --dark-card: #1f1f3a;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
 @layer base {
   html, body {
     @apply h-full w-full m-0 p-0;
   }
 
   body {
-    @apply bg-[#0A0A0A] text-white;
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #080808;
-    color: #FFFFFF;
+    background: linear-gradient(135deg, var(--dark-primary) 0%, var(--dark-secondary) 100%);
+    color: var(--text-primary);
+    min-height: 100vh;
   }
 
   #root {
@@ -29,9 +46,164 @@
 }
 
 @layer components {
+  .neon-power-btn {
+    @apply rounded-full w-6 h-6 flex items-center justify-center transition-all duration-300;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+    border: 2px solid rgba(139, 92, 246, 0.8);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.8), 0 0 60px rgba(139, 92, 246, 0.4);
+    filter: drop-shadow(0 0 8px var(--neon-purple));
+    animation: neon-pulse 2s infinite;
+  }
+
+  .neon-power-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 40px rgba(139, 92, 246, 1), 0 0 80px rgba(139, 92, 246, 0.6);
+    filter: drop-shadow(0 0 15px var(--neon-purple));
+  }
+
+  .neon-power-btn.teal {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.1));
+    border-color: rgba(20, 184, 166, 0.8);
+    box-shadow: 0 0 30px rgba(20, 184, 166, 0.8), 0 0 60px rgba(20, 184, 166, 0.4);
+    filter: drop-shadow(0 0 8px var(--neon-teal));
+  }
+
+  .neon-power-btn.teal:hover {
+    box-shadow: 0 0 40px rgba(20, 184, 166, 1), 0 0 80px rgba(20, 184, 166, 0.6);
+    filter: drop-shadow(0 0 15px var(--neon-teal));
+  }
+
+  .neon-card {
+    background: rgba(31, 31, 58, 0.8);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    transition: all 0.3s ease;
+  }
+
+  .neon-card:hover {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.4);
+  }
+
+  .neon-input {
+    background: rgba(15, 15, 35, 0.9);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: 8px;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+  }
+
+  .neon-input:focus {
+    outline: none;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.8);
+  }
+
+  .neon-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .neon-btn-primary {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(139, 92, 246, 0.6);
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(139, 92, 246, 0.1);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    transform: translateZ(0);
+  }
+
+  .neon-btn-primary:hover {
+    transform: scale(1.05) translateZ(0);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.8), 0 0 60px rgba(139, 92, 246, 0.4);
+    border-color: rgba(139, 92, 246, 0.8);
+  }
+
+  .neon-btn-secondary {
+    background: rgba(31, 31, 58, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+  }
+
+  .neon-btn-secondary:hover {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+    border-color: rgba(148, 163, 184, 0.5);
+    color: var(--text-primary);
+  }
+
+  .neon-tab-active {
+    background: rgba(59, 130, 246, 0.1);
+    border-bottom: 2px solid var(--neon-blue);
+    text-shadow: 0 0 10px var(--neon-blue);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.1);
+    color: var(--text-primary);
+  }
+
+  .neon-tab-inactive {
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+  }
+
+  .neon-tab-inactive:hover {
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    color: var(--text-primary);
+  }
+
+  .neon-icon {
+    filter: drop-shadow(0 0 8px currentColor);
+    transition: all 0.2s ease;
+  }
+
+  .neon-icon:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 15px currentColor);
+  }
+
+  .neon-toggle-track {
+    background: rgba(31, 31, 58, 0.8);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+
+  .neon-toggle-thumb {
+    background: linear-gradient(135deg, var(--neon-purple), #a855f7);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(139, 92, 246, 0.1);
+  }
+
+  .neon-code {
+    background: rgba(15, 15, 35, 0.9);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+  }
+
+  .neon-log {
+    background: rgba(15, 15, 35, 0.5);
+    border-left: 3px solid rgba(20, 184, 166, 0.5);
+    transition: all 0.3s ease;
+  }
+
+  .neon-log:hover {
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+    background: rgba(15, 15, 35, 0.7);
+  }
+
+  .neon-section-header {
+    background: rgba(139, 92, 246, 0.1);
+    border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+    text-shadow: 0 0 10px currentColor;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+  }
+
   .neon-border {
-    @apply shadow-[0_0_12px_#00F3FF55,inset_0_0_8px_#00F3FF33];
-    animation: pulse 1.5s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.55), inset 0 0 8px rgba(0, 243, 255, 0.33);
+    animation: neon-pulse 1.5s ease-in-out infinite;
   }
 
   /* Typing Indicator */
@@ -131,55 +303,135 @@
     animation: neon-border-flow 3s linear infinite;
   }
 
-  /* Override MUI defaults for dark theme */
   .MuiPaper-root {
-    background-color: #1A1A1A !important;
-    color: #FFFFFF !important;
+    background: var(--dark-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(139, 92, 246, 0.2) !important;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3) !important;
+    backdrop-filter: blur(10px) !important;
   }
 
   .MuiTypography-root {
-    color: #FFFFFF !important;
+    color: var(--text-primary) !important;
   }
 
   .MuiButton-contained {
-    background-color: #00F3FF !important;
-    color: #000000 !important;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(139, 92, 246, 0.6)) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid rgba(139, 92, 246, 0.6) !important;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .MuiButton-contained:hover {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.8), 0 0 60px rgba(139, 92, 246, 0.4) !important;
+    transform: scale(1.05) !important;
   }
 
   .MuiButton-outlined {
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #FFFFFF !important;
+    border-color: rgba(139, 92, 246, 0.4) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .MuiButton-outlined:hover {
+    border-color: rgba(139, 92, 246, 0.6) !important;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+    background: rgba(139, 92, 246, 0.1) !important;
   }
 
   .MuiButton-text {
-    color: #00F3FF !important;
+    color: var(--neon-cyan) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .MuiButton-text:hover {
+    text-shadow: 0 0 10px currentColor !important;
+    background: rgba(0, 243, 255, 0.1) !important;
   }
 
   .MuiTab-root {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .MuiTab-root:hover {
+    color: var(--text-primary) !important;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3) !important;
   }
 
   .MuiTab-root.Mui-selected {
-    color: #00F3FF !important;
+    color: var(--neon-blue) !important;
+    text-shadow: 0 0 10px var(--neon-blue) !important;
+    background: rgba(59, 130, 246, 0.1) !important;
   }
 
   .MuiTabs-indicator {
-    background-color: #00F3FF !important;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)) !important;
+    height: 3px !important;
+    box-shadow: 0 0 10px var(--neon-blue) !important;
   }
 
   .MuiInputBase-root {
-    color: #FFFFFF !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: var(--text-primary) !important;
+    background: rgba(15, 15, 35, 0.9) !important;
+    border: 1px solid rgba(139, 92, 246, 0.4) !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .MuiInputBase-root:hover {
+    border-color: rgba(139, 92, 246, 0.6) !important;
+  }
+
+  .MuiInputBase-root.Mui-focused {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(139, 92, 246, 0.1) !important;
+    border-color: rgba(139, 92, 246, 0.8) !important;
   }
 
   .MuiInputLabel-root {
-    color: rgba(255, 255, 255, 0.7) !important;
+    color: var(--text-secondary) !important;
   }
 
   .MuiInputLabel-root.Mui-focused {
-    color: #00F3FF !important;
+    color: var(--neon-purple) !important;
+    text-shadow: 0 0 8px currentColor !important;
   }
-}
+
+  .MuiSwitch-track {
+    background: rgba(31, 31, 58, 0.8) !important;
+    border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  }
+
+  .MuiSwitch-thumb {
+    background: linear-gradient(135deg, var(--neon-purple), #a855f7) !important;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5) !important;
+  }
+
+  .MuiCard-root {
+    background: var(--dark-card) !important;
+    border: 1px solid rgba(139, 92, 246, 0.2) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3) !important;
+    transition: all 0.3s ease !important;
+  }
+
+  .MuiCard-root:hover {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(139, 92, 246, 0.1) !important;
+    border-color: rgba(139, 92, 246, 0.4) !important;
+  }
+
+  .MuiIconButton-root {
+    transition: all 0.2s ease !important;
+    filter: drop-shadow(0 0 8px currentColor) !important;
+  }
+
+  .MuiIconButton-root:hover {
+    transform: scale(1.1) !important;
+    filter: drop-shadow(0 0 15px currentColor) !important;
+  }
 
 @keyframes typing {
   0%, 100% {
@@ -192,12 +444,37 @@
   }
 }
 
-@keyframes pulse {
+@keyframes neon-pulse {
   0%, 100% {
-    opacity: 1;
+    opacity: 0.8;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.5;
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes neon-glow {
+  0% {
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.8), 0 0 60px rgba(139, 92, 246, 0.4);
+  }
+}
+
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+    transform: rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+    transform: rotate(360deg);
   }
 }
 
@@ -211,4 +488,14 @@
   100% {
     background-position: 0% 50%;
   }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
 }

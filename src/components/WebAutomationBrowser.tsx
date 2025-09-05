@@ -504,7 +504,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     }
   };
 
-  const navigateToUrl = async () => {
+  const handleNavigate = async () => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/web-automation/navigate`, {
         method: 'POST',
@@ -521,6 +521,22 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     } catch (error) {
       console.error('Failed to navigate:', error);
     }
+  };
+
+  const handleStart = () => {
+    startAutomation();
+  };
+
+  const handlePause = () => {
+    pauseAutomation();
+  };
+
+  const handleStop = () => {
+    stopAutomation();
+  };
+
+  const handleTakeScreenshot = () => {
+    takeScreenshot();
   };
 
   const addAction = (actionType: string, target?: string, value?: string, coordinates?: [number, number]) => {

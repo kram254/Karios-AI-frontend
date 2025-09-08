@@ -73,6 +73,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [executionProgress, setExecutionProgress] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [lastError, setLastError] = useState<any>(null);
   const [currentScreenshot, setCurrentScreenshot] = useState<string>('');
   const [actionOverlay, setActionOverlay] = useState<{x: number, y: number, type: string} | null>(null);
   const [workflowSteps, setWorkflowSteps] = useState<any[]>([]);
@@ -186,7 +189,36 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           setWorkflowSteps(data.plan.steps);
           setTaskDescription(data.plan.task_description || data.task_description || '');
           setCurrentStepIndex(-1);
+          setExecutionProgress(5);
         }
+        break;
+        
+      case 'workflow_step_started':
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index);
+          const progress = workflowSteps.length > 0 ? (data.step_index / workflowSteps.length) * 100 : 0;
+          setExecutionProgress(Math.min(progress, 95));
+        }
+        break;
+        
+      case 'workflow_step_completed':
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index);
+          const progress = workflowSteps.length > 0 ? ((data.step_index + 1) / workflowSteps.length) * 100 : 0;
+          setExecutionProgress(Math.min(progress, 95));
+        }
+        setActionOverlay(null);
+        break;
+      case 'workflow_step_failed':
+        console.warn('⚠️ WORKFLOW_STEP_FAILED:', data);
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index);
+        }
+        setSession(prev => {
+          const next = { ...prev, status: 'error' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
         break;
         
       case 'step_started':
@@ -203,10 +235,12 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         
       case 'execution_started':
         setCurrentStepIndex(0);
+        setExecutionProgress(10);
         break;
         
       case 'execution_completed':
         setCurrentStepIndex(workflowSteps.length);
+        setExecutionProgress(100);
         break;
         
       case 'status_update':
@@ -336,7 +370,11 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         break;
       case 'workflow_step_completed':
         console.log('🔁 WORKFLOW_STEP_COMPLETED:', data);
-        setExecutionProgress(typeof data.progress === 'number' ? data.progress : 0);
+        const completedProgress = typeof data.progress === 'number' ? data.progress : 
+          (workflowSteps.length > 0 && typeof data.step_index === 'number' ? 
+            ((data.step_index + 1) / workflowSteps.length) * 100 : executionProgress);
+        setExecutionProgress(Math.min(completedProgress, 95));
+        setCurrentStepIndex(typeof data.step_index === 'number' ? data.step_index : currentStepIndex);
         setSession(prev => {
           const next = {
             ...prev,
@@ -350,30 +388,41 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         break;
       case 'workflow_error':
         console.warn('⚠️ WORKFLOW_ERROR:', data);
+        setErrorMessage(data.error || data.message || 'Workflow error occurred');
+        setLastError(data);
         setSession(prev => {
           const next = { ...prev, status: 'error' as const };
           if (onSessionUpdate) onSessionUpdate(next);
           return next;
         });
         setActionOverlay(null);
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index);
+        }
+        break;
+      case 'workflow_step_failed':
+        console.warn('⚠️ WORKFLOW_STEP_FAILED:', data);
+        setErrorMessage(data.error || data.message || `Step ${data.step_index + 1} failed`);
+        setLastError(data);
+        if (data.step_index !== undefined) {
+          setCurrentStepIndex(data.step_index);
+        }
+        setSession(prev => {
+          const next = { ...prev, status: 'error' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
         break;
       case 'error':
-        // Generic error from server
         console.error('🛑 ERROR event:', data?.message || data);
+        setErrorMessage(data?.message || 'An error occurred');
+        setLastError(data);
         setSession(prev => {
           const next = { ...prev, status: 'error' as const };
           if (onSessionUpdate) onSessionUpdate(next);
           return next;
         });
         setActionOverlay(null);
-        break;
-      case 'quality_improvement_started':
-        console.log('✨ QUALITY_IMPROVEMENT_STARTED:', data);
-        setSession(prev => {
-          const next = { ...prev, status: 'running' as const };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
-        });
         break;
       case 'quality_improvement_completed':
         console.log('✅ QUALITY_IMPROVEMENT_COMPLETED:', data);
@@ -422,6 +471,8 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const startAutomation = async () => {
     try {
+      setIsStarting(true);
+      setErrorMessage('');
       setSession(prev => ({ ...prev, status: 'running' }));
       setExecutionProgress(0);
       
@@ -438,10 +489,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       if (response.ok) {
         const result = await response.json();
         console.log('Automation started:', result);
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to start automation:', error);
+      setErrorMessage(`Failed to start automation: ${error instanceof Error ? error.message : String(error)}`);
       setSession(prev => ({ ...prev, status: 'error' }));
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -645,9 +701,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             variant="contained"
             startIcon={session.status === 'running' ? <Pause /> : <PlayArrow />}
             onClick={session.status === 'running' ? handlePause : handleStart}
-            disabled={session.status === 'error'}
+            disabled={session.status === 'error' || isStarting}
           >
-            {session.status === 'running' ? 'Pause' : 'Start'}
+            {isStarting ? 'Starting...' : (session.status === 'running' ? 'Pause' : 'Start')}
           </Button>
           
           <Button
@@ -660,7 +716,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             Stop
           </Button>
           
-          <IconButton onClick={takeScreenshot} sx={{ color: '#2196f3' }}>
+          <IconButton onClick={handleTakeScreenshot} sx={{ color: '#2196f3' }}>
             <Screenshot />
           </IconButton>
           
@@ -693,12 +749,58 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           />
         </Box>
 
-        {session.status === 'running' && (
-          <LinearProgress 
-            sx={{ mt: 1, bgcolor: '#333', '& .MuiLinearProgress-bar': { bgcolor: '#00f3ff' } }}
-            value={executionProgress}
-            variant="determinate"
-          />
+        {(session.status === 'running' || session.status === 'paused') && (
+          <Box sx={{ mt: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="caption" sx={{ color: '#ccc' }}>
+                {currentStepIndex >= 0 && workflowSteps.length > 0 
+                  ? `Step ${currentStepIndex + 1} of ${workflowSteps.length}` 
+                  : 'Initializing...'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#00f3ff' }}>
+                {executionProgress.toFixed(1)}%
+              </Typography>
+            </Box>
+            <LinearProgress 
+              sx={{ 
+                bgcolor: '#333', 
+                '& .MuiLinearProgress-bar': { bgcolor: '#00f3ff' },
+                height: 6,
+                borderRadius: 3
+              }}
+              value={executionProgress}
+              variant="determinate"
+            />
+            {currentStepIndex >= 0 && workflowSteps[currentStepIndex] && (
+              <Typography variant="caption" sx={{ color: '#aaa', mt: 0.5, display: 'block' }}>
+                {workflowSteps[currentStepIndex].description || workflowSteps[currentStepIndex].action || 'Processing...'}
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        {session.status === 'error' && errorMessage && (
+          <Box sx={{ 
+            mt: 1, 
+            p: 1, 
+            bgcolor: '#4d1a1a', 
+            border: '1px solid #ff4444',
+            borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Typography variant="body2" sx={{ color: '#ff9999', flex: 1 }}>
+              ❌ {errorMessage}
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setErrorMessage('')}
+              sx={{ color: '#ff9999', minWidth: 'auto', p: 0.5 }}
+            >
+              ✕
+            </Button>
+          </Box>
         )}
       </Paper>
 
@@ -787,55 +889,112 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             </Typography>
           
           <Box sx={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
-            {session.actions.map((action, index) => (
-              <Paper
-                key={action.id}
-                sx={{
-                  p: 1,
-                  mb: 1,
-                  bgcolor: action.status === 'executing' ? '#1a4d1a' :
-                           action.status === 'completed' ? '#0d4f0d' :
-                           action.status === 'failed' ? '#4d1a1a' : '#333',
-                  border: index === session.currentActionIndex ? '2px solid #00f3ff' : 'none'
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                  <Chip
-                    label={action.type}
-                    size="small"
-                    sx={{ fontSize: '0.7rem', height: 20 }}
-                  />
-                  <Chip
-                    label={action.status}
-                    size="small"
-                    color={
-                      action.status === 'completed' ? 'success' :
-                      action.status === 'failed' ? 'error' :
-                      action.status === 'executing' ? 'warning' : 'default'
-                    }
-                    sx={{ fontSize: '0.7rem', height: 20 }}
-                  />
-                </Box>
-                
-                {action.target && (
-                  <Typography variant="caption" sx={{ color: '#ccc', display: 'block' }}>
-                    Target: {action.target}
+            {session.actions.length === 0 ? (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '60%', 
+                color: '#666',
+                flexDirection: 'column',
+                gap: 1
+              }}>
+                <Typography variant="body2">No actions recorded yet</Typography>
+                <Typography variant="caption">
+                  Actions will appear here during automation
+                </Typography>
+              </Box>
+            ) : (
+              session.actions.map((action, index) => (
+                <Paper
+                  key={action.id}
+                  sx={{
+                    p: 1,
+                    mb: 1,
+                    bgcolor: action.status === 'executing' ? '#1a4d1a' :
+                             action.status === 'completed' ? '#0d4f0d' :
+                             action.status === 'failed' ? '#4d1a1a' : '#333',
+                    border: index === session.currentActionIndex ? '2px solid #00f3ff' : 'none',
+                    position: 'relative',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {action.status === 'executing' && (
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 2,
+                      bgcolor: '#00f3ff',
+                      animation: 'pulse 1.5s infinite'
+                    }} />
+                  )}
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Chip
+                      label={action.type}
+                      size="small"
+                      sx={{ fontSize: '0.7rem', height: 20 }}
+                    />
+                    <Chip
+                      label={action.status}
+                      size="small"
+                      color={
+                        action.status === 'completed' ? 'success' :
+                        action.status === 'failed' ? 'error' :
+                        action.status === 'executing' ? 'warning' : 'default'
+                      }
+                      sx={{ fontSize: '0.7rem', height: 20 }}
+                    />
+                    {index === session.currentActionIndex && (
+                      <Chip
+                        label="CURRENT"
+                        size="small"
+                        color="info"
+                        sx={{ fontSize: '0.6rem', height: 18 }}
+                      />
+                    )}
+                  </Box>
+                  
+                  {action.target && (
+                    <Typography variant="caption" sx={{ 
+                      color: '#ccc', 
+                      display: 'block',
+                      wordBreak: 'break-all',
+                      maxWidth: '100%'
+                    }}>
+                      Target: {action.target}
+                    </Typography>
+                  )}
+                  
+                  {action.value && (
+                    <Typography variant="caption" sx={{ 
+                      color: '#ccc', 
+                      display: 'block',
+                      wordBreak: 'break-word'
+                    }}>
+                      Value: {action.value}
+                    </Typography>
+                  )}
+                  
+                  {action.coordinates && (
+                    <Typography variant="caption" sx={{ color: '#ccc', display: 'block' }}>
+                      Coords: ({action.coordinates[0]}, {action.coordinates[1]})
+                    </Typography>
+                  )}
+                  
+                  <Typography variant="caption" sx={{ 
+                    color: '#888', 
+                    display: 'block', 
+                    mt: 0.5,
+                    fontSize: '0.65rem'
+                  }}>
+                    {new Date(action.timestamp).toLocaleTimeString()}
                   </Typography>
-                )}
-                
-                {action.value && (
-                  <Typography variant="caption" sx={{ color: '#ccc', display: 'block' }}>
-                    Value: {action.value}
-                  </Typography>
-                )}
-                
-                {action.coordinates && (
-                  <Typography variant="caption" sx={{ color: '#ccc', display: 'block' }}>
-                    Coords: ({action.coordinates[0]}, {action.coordinates[1]})
-                  </Typography>
-                )}
-              </Paper>
-            ))}
+                </Paper>
+              ))
+            )}
           </Box>
         </Paper>
         </Box>

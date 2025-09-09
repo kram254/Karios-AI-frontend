@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Grid, Typography, Box, Button, CircularProgress } from '@mui/material';
-import { TrendingDown, Savings, Receipt, Key, CreditCard, Refresh } from '@mui/icons-material';
+import { ShowChart, AccountBalanceWallet, LibraryBooks, Key, CreditCard, Refresh, ArrowForward, Receipt } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../../services/api/user.service';
 import { monitoringService } from '../../services/api/monitoring.service';
@@ -103,14 +103,14 @@ export const CustomerDashboard: React.FC = () => {
                             fontFamily: 'Inter, sans-serif',
                             mb: 0.5
                         }}>
-                            AI Agent Overview
+                            Financial Overview
                         </Typography>
                         <Typography sx={{ 
                             fontSize: '0.875rem', 
                             color: 'rgba(255, 255, 255, 0.6)',
                             fontFamily: 'Inter, sans-serif'
                         }}>
-                            Manage your AI agents, monitor usage, and track system performance.
+                            Track expenses, detect anomalies, and manage your wealth intelligently.
                         </Typography>
                     </div>
                     <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
@@ -163,7 +163,7 @@ export const CustomerDashboard: React.FC = () => {
                                 }
                             }}
                         >
-                            New Chat
+                            Export
                         </Button>
                     </Box>
                 </div>
@@ -173,60 +173,50 @@ export const CustomerDashboard: React.FC = () => {
                         <Grid item xs={12} md={4}>
                             <Box sx={{
                                 position: 'relative',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                backgroundImage: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%)',
-                                backdropFilter: 'blur(10px)',
+                                background: 'linear-gradient(135deg, #0ea5e9 0%, #1e40af 100%)',
                                 borderRadius: '12px',
-                                p: 2.5,
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                overflow: 'hidden'
+                                p: 3,
+                                overflow: 'hidden',
+                                height: '160px'
                             }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography sx={{
-                                        fontSize: '0.75rem',
-                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        fontSize: '0.875rem',
+                                        color: 'rgba(255, 255, 255, 0.8)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 0.5,
                                         fontFamily: 'Inter, sans-serif'
                                     }}>
-                                        <TrendingDown sx={{ fontSize: '16px' }} />
-                                        Available Credits
+                                        <ShowChart sx={{ fontSize: '18px' }} />
+                                        Weekly Outflow
                                     </Typography>
                                     <Typography sx={{ fontSize: '0.75rem', color: '#f97316', fontFamily: 'Inter, sans-serif' }}>
-                                        +12.4%
+                                        -12.4%
                                     </Typography>
                                 </Box>
                                 <Typography sx={{
-                                    fontSize: '2rem',
-                                    fontWeight: 500,
-                                    mb: 3,
+                                    fontSize: '2.25rem',
+                                    fontWeight: 600,
+                                    mb: 2,
                                     fontFamily: 'Inter, sans-serif'
                                 }}>
-                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : credits}
+                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : `$${credits.toLocaleString()}`}
                                 </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Button sx={{
-                                        fontSize: '0.75rem',
-                                        textDecoration: 'underline',
-                                        textUnderlineOffset: '2px',
+                                        fontSize: '0.875rem',
                                         color: 'white',
                                         p: 0,
                                         minWidth: 'auto',
-                                        fontFamily: 'Inter, sans-serif'
+                                        fontFamily: 'Inter, sans-serif',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        '&:hover': { opacity: 0.8 }
                                     }}>
                                         View Details
-                                    </Button>
-                                    <Button sx={{
-                                        minWidth: '28px',
-                                        width: '28px',
-                                        height: '28px',
-                                        borderRadius: '50%',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
-                                    }}>
-                                        <Key sx={{ fontSize: '16px' }} />
+                                        <ArrowForward sx={{ fontSize: '16px' }} />
                                     </Button>
                                 </Box>
                             </Box>
@@ -235,60 +225,50 @@ export const CustomerDashboard: React.FC = () => {
                         <Grid item xs={12} md={4}>
                             <Box sx={{
                                 position: 'relative',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                backgroundImage: 'linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(190, 24, 93, 0.1) 100%)',
-                                backdropFilter: 'blur(10px)',
+                                background: 'linear-gradient(135deg, #ec4899 0%, #f59e0b 100%)',
                                 borderRadius: '12px',
-                                p: 2.5,
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                overflow: 'hidden'
+                                p: 3,
+                                overflow: 'hidden',
+                                height: '160px'
                             }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography sx={{
-                                        fontSize: '0.75rem',
-                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        fontSize: '0.875rem',
+                                        color: 'rgba(255, 255, 255, 0.8)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 0.5,
                                         fontFamily: 'Inter, sans-serif'
                                     }}>
-                                        <Savings sx={{ fontSize: '16px' }} />
-                                        Active Chats
+                                        <AccountBalanceWallet sx={{ fontSize: '18px' }} />
+                                        Savings Balance
                                     </Typography>
-                                    <Typography sx={{ fontSize: '0.75rem', color: '#f97316', fontFamily: 'Inter, sans-serif' }}>
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#10b981', fontFamily: 'Inter, sans-serif' }}>
                                         +18.7%
                                     </Typography>
                                 </Box>
                                 <Typography sx={{
-                                    fontSize: '2rem',
-                                    fontWeight: 500,
-                                    mb: 3,
+                                    fontSize: '2.25rem',
+                                    fontWeight: 600,
+                                    mb: 2,
                                     fontFamily: 'Inter, sans-serif'
                                 }}>
-                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : activeChats}
+                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : `$${(activeChats * 4150).toLocaleString()}`}
                                 </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Button sx={{
-                                        fontSize: '0.75rem',
-                                        textDecoration: 'underline',
-                                        textUnderlineOffset: '2px',
+                                        fontSize: '0.875rem',
                                         color: 'white',
                                         p: 0,
                                         minWidth: 'auto',
-                                        fontFamily: 'Inter, sans-serif'
+                                        fontFamily: 'Inter, sans-serif',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        '&:hover': { opacity: 0.8 }
                                     }}>
                                         View Details
-                                    </Button>
-                                    <Button sx={{
-                                        minWidth: '28px',
-                                        width: '28px',
-                                        height: '28px',
-                                        borderRadius: '50%',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
-                                    }}>
-                                        <Key sx={{ fontSize: '16px' }} />
+                                        <ArrowForward sx={{ fontSize: '16px' }} />
                                     </Button>
                                 </Box>
                             </Box>
@@ -297,60 +277,50 @@ export const CustomerDashboard: React.FC = () => {
                         <Grid item xs={12} md={4}>
                             <Box sx={{
                                 position: 'relative',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                backgroundImage: 'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)',
-                                backdropFilter: 'blur(10px)',
+                                background: 'linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%)',
                                 borderRadius: '12px',
-                                p: 2.5,
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                overflow: 'hidden'
+                                p: 3,
+                                overflow: 'hidden',
+                                height: '160px'
                             }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography sx={{
-                                        fontSize: '0.75rem',
-                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        fontSize: '0.875rem',
+                                        color: 'rgba(255, 255, 255, 0.8)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 0.5,
                                         fontFamily: 'Inter, sans-serif'
                                     }}>
-                                        <Receipt sx={{ fontSize: '16px' }} />
-                                        Knowledge Items
+                                        <LibraryBooks sx={{ fontSize: '18px' }} />
+                                        Total Volume
                                     </Typography>
-                                    <Typography sx={{ fontSize: '0.75rem', color: '#f97316', fontFamily: 'Inter, sans-serif' }}>
-                                        +7.1%
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#10b981', fontFamily: 'Inter, sans-serif' }}>
+                                        +71%
                                     </Typography>
                                 </Box>
                                 <Typography sx={{
-                                    fontSize: '2rem',
-                                    fontWeight: 500,
-                                    mb: 3,
+                                    fontSize: '2.25rem',
+                                    fontWeight: 600,
+                                    mb: 2,
                                     fontFamily: 'Inter, sans-serif'
                                 }}>
-                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : knowledgeItems}
+                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : `$${(knowledgeItems * 7800).toLocaleString()}`}
                                 </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Button sx={{
-                                        fontSize: '0.75rem',
-                                        textDecoration: 'underline',
-                                        textUnderlineOffset: '2px',
+                                        fontSize: '0.875rem',
                                         color: 'white',
                                         p: 0,
                                         minWidth: 'auto',
-                                        fontFamily: 'Inter, sans-serif'
+                                        fontFamily: 'Inter, sans-serif',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        '&:hover': { opacity: 0.8 }
                                     }}>
                                         View Details
-                                    </Button>
-                                    <Button sx={{
-                                        minWidth: '28px',
-                                        width: '28px',
-                                        height: '28px',
-                                        borderRadius: '50%',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: 'white',
-                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
-                                    }}>
-                                        <Key sx={{ fontSize: '16px' }} />
+                                        <ArrowForward sx={{ fontSize: '16px' }} />
                                     </Button>
                                 </Box>
                             </Box>

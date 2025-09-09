@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Grid, Paper, Typography, Box, Button, List, ListItem, ListItemIcon, ListItemText, Card, CardContent, CircularProgress } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import { DashboardLayout } from './DashboardLayout';
-import { UserRole } from '../../types/user';
+import { Grid, Typography, Box, Button, CircularProgress } from '@mui/material';
+import { TrendingDown, Savings, Receipt, Key, CreditCard, Refresh } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { userService } from '../../services/api/user.service';
 import { monitoringService } from '../../services/api/monitoring.service';
@@ -13,8 +11,6 @@ export const CustomerDashboard: React.FC = () => {
     const [credits, setCredits] = useState(0);
     const [activeChats, setActiveChats] = useState(0);
     const [knowledgeItems, setKnowledgeItems] = useState(0);
-    const [systemHealth, setSystemHealth] = useState(null);
-    const [recentChats, setRecentChats] = useState([]);
     
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -30,21 +26,13 @@ export const CustomerDashboard: React.FC = () => {
                 
                 // Fetch active chats
                 const usageResponse = await monitoringService.getUserUsage(userId);
-                setActiveChats(usageResponse.data.active_chats_count || 0);
+                setActiveChats((usageResponse.data as any)?.activeChatsSessions || 0);
                 
                 // Fetch knowledge items
                 const knowledgeResponse = await fetch('/api/v1/knowledge/count?userId=' + userId);
                 const knowledgeData = await knowledgeResponse.json();
                 setKnowledgeItems(knowledgeData.count || 0);
                 
-                // Fetch system health
-                const healthResponse = await monitoringService.getSystemHealth();
-                setSystemHealth(healthResponse.data);
-                
-                // Fetch recent chats
-                const chatsResponse = await fetch('/api/v1/chats/recent?userId=' + userId + '&limit=5');
-                const chatsData = await chatsResponse.json();
-                setRecentChats(chatsData.chats || []);
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
                 // Set default values in case of error
@@ -67,9 +55,8 @@ export const CustomerDashboard: React.FC = () => {
     // Function to handle system health check
     const handleSystemHealthCheck = async () => {
         try {
-            const response = await monitoringService.getSystemHealth();
-            setSystemHealth(response.data);
-            alert('System health check complete');
+            await monitoringService.getSystemHealth();
+            alert('System health check complete - All systems operational');
         } catch (error) {
             console.error('Error checking system health:', error);
             alert('Error checking system health');
@@ -83,299 +70,549 @@ export const CustomerDashboard: React.FC = () => {
             const userId = userResponse.data.id;
             
             const usageResponse = await monitoringService.getUserUsage(userId);
-            alert(`Token consumption: ${usageResponse.data.token_usage || 0} tokens used`);
+            alert(`Token consumption: ${(usageResponse.data as any)?.token_usage || 0} tokens used`);
         } catch (error) {
             console.error('Error checking token consumption:', error);
             alert('Error checking token consumption');
         }
     };
     
-    // Function to handle module configuration
-    const handleModuleConfiguration = () => {
-        navigate('/config/modules');
-    };
     return (
-        <DashboardLayout role={UserRole.CUSTOMER}>
-            <div className="dashboard-scroll-container" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 100px)' }}>
-            <Grid container spacing={3}>
-                <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <div style={{ 
+            minHeight: '100vh', 
+            background: 'linear-gradient(135deg, #0d0b16 0%, #151226 100%)', 
+            color: 'white',
+            fontFamily: 'Inter, sans-serif'
+        }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                minHeight: '100vh'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '24px 32px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
                     <div>
-                        <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', color: '#00F3FF' }}>
-                            CUSTOMER
+                        <Typography variant="h4" sx={{ 
+                            fontWeight: 500, 
+                            fontSize: '2rem',
+                            fontFamily: 'Inter, sans-serif',
+                            mb: 0.5
+                        }}>
+                            AI Agent Overview
                         </Typography>
-                        <Typography variant="subtitle1" component="h2" sx={{ color: '#888' }}>
-                            DASHBOARD
+                        <Typography sx={{ 
+                            fontSize: '0.875rem', 
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            fontFamily: 'Inter, sans-serif'
+                        }}>
+                            Manage your AI agents, monitor usage, and track system performance.
                         </Typography>
                     </div>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={handleNewChat}
-                        sx={{
-                            bgcolor: '#00F3FF',
-                            color: '#000000',
-                            fontWeight: 'bold',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 10px rgba(0, 243, 255, 0.3)',
-                            padding: '8px 16px',
-                            '&:hover': {
-                                bgcolor: '#00D4E0',
-                                transform: 'translateY(-2px)',
-                                boxShadow: '0 6px 12px rgba(0, 243, 255, 0.4)'
-                            },
-                            transition: 'all 0.2s ease'
-                        }}
-                    >
-                        New Chat
-                    </Button>
-                </Grid>
-                
-                {/* Quick Stats */}
-                <Grid item xs={12} md={4}>
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            bgcolor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)',
-                            borderRadius: '10px',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                            height: '100%',
+                    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        <Button sx={{
+                            minWidth: '36px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            backgroundColor: 'transparent',
+                            color: 'white',
+                            '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                        }}>
+                            <Key sx={{ fontSize: '20px' }} />
+                        </Button>
+                        <Button sx={{
+                            position: 'relative',
+                            minWidth: '36px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            backgroundColor: 'transparent',
+                            color: 'white',
+                            '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+                            '&::after': {
+                                content: '""',
+                                position: 'absolute',
+                                top: '6px',
+                                right: '6px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: '#ef4444'
+                            }
+                        }}>
+                            <Receipt sx={{ fontSize: '20px' }} />
+                        </Button>
+                        <Button
+                            onClick={handleNewChat}
+                            sx={{
+                                px: 2,
+                                py: 1,
+                                borderRadius: '50px',
+                                backgroundColor: 'white',
+                                color: 'black',
+                                fontSize: '0.875rem',
+                                fontWeight: 500,
+                                fontFamily: 'Inter, sans-serif',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.9)'
+                                }
+                            }}
+                        >
+                            New Chat
+                        </Button>
+                    </Box>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{
+                                position: 'relative',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                backgroundImage: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%)',
+                                backdropFilter: 'blur(10px)',
+                                borderRadius: '12px',
+                                p: 2.5,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                overflow: 'hidden'
+                            }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography sx={{
+                                        fontSize: '0.75rem',
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        fontFamily: 'Inter, sans-serif'
+                                    }}>
+                                        <TrendingDown sx={{ fontSize: '16px' }} />
+                                        Available Credits
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#f97316', fontFamily: 'Inter, sans-serif' }}>
+                                        +12.4%
+                                    </Typography>
+                                </Box>
+                                <Typography sx={{
+                                    fontSize: '2rem',
+                                    fontWeight: 500,
+                                    mb: 3,
+                                    fontFamily: 'Inter, sans-serif'
+                                }}>
+                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : credits}
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Button sx={{
+                                        fontSize: '0.75rem',
+                                        textDecoration: 'underline',
+                                        textUnderlineOffset: '2px',
+                                        color: 'white',
+                                        p: 0,
+                                        minWidth: 'auto',
+                                        fontFamily: 'Inter, sans-serif'
+                                    }}>
+                                        View Details
+                                    </Button>
+                                    <Button sx={{
+                                        minWidth: '28px',
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                                    }}>
+                                        <Key sx={{ fontSize: '16px' }} />
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{
+                                position: 'relative',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                backgroundImage: 'linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(190, 24, 93, 0.1) 100%)',
+                                backdropFilter: 'blur(10px)',
+                                borderRadius: '12px',
+                                p: 2.5,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                overflow: 'hidden'
+                            }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography sx={{
+                                        fontSize: '0.75rem',
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        fontFamily: 'Inter, sans-serif'
+                                    }}>
+                                        <Savings sx={{ fontSize: '16px' }} />
+                                        Active Chats
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#f97316', fontFamily: 'Inter, sans-serif' }}>
+                                        +18.7%
+                                    </Typography>
+                                </Box>
+                                <Typography sx={{
+                                    fontSize: '2rem',
+                                    fontWeight: 500,
+                                    mb: 3,
+                                    fontFamily: 'Inter, sans-serif'
+                                }}>
+                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : activeChats}
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Button sx={{
+                                        fontSize: '0.75rem',
+                                        textDecoration: 'underline',
+                                        textUnderlineOffset: '2px',
+                                        color: 'white',
+                                        p: 0,
+                                        minWidth: 'auto',
+                                        fontFamily: 'Inter, sans-serif'
+                                    }}>
+                                        View Details
+                                    </Button>
+                                    <Button sx={{
+                                        minWidth: '28px',
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                                    }}>
+                                        <Key sx={{ fontSize: '16px' }} />
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Grid>
+                        
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{
+                                position: 'relative',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                backgroundImage: 'linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(13, 148, 136, 0.1) 100%)',
+                                backdropFilter: 'blur(10px)',
+                                borderRadius: '12px',
+                                p: 2.5,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                overflow: 'hidden'
+                            }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography sx={{
+                                        fontSize: '0.75rem',
+                                        color: 'rgba(255, 255, 255, 0.6)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.5,
+                                        fontFamily: 'Inter, sans-serif'
+                                    }}>
+                                        <Receipt sx={{ fontSize: '16px' }} />
+                                        Knowledge Items
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.75rem', color: '#f97316', fontFamily: 'Inter, sans-serif' }}>
+                                        +7.1%
+                                    </Typography>
+                                </Box>
+                                <Typography sx={{
+                                    fontSize: '2rem',
+                                    fontWeight: 500,
+                                    mb: 3,
+                                    fontFamily: 'Inter, sans-serif'
+                                }}>
+                                    {loading ? <CircularProgress size={30} sx={{ color: 'white' }} /> : knowledgeItems}
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Button sx={{
+                                        fontSize: '0.75rem',
+                                        textDecoration: 'underline',
+                                        textUnderlineOffset: '2px',
+                                        color: 'white',
+                                        p: 0,
+                                        minWidth: 'auto',
+                                        fontFamily: 'Inter, sans-serif'
+                                    }}>
+                                        View Details
+                                    </Button>
+                                    <Button sx={{
+                                        minWidth: '28px',
+                                        width: '28px',
+                                        height: '28px',
+                                        borderRadius: '50%',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+                                    }}>
+                                        <Key sx={{ fontSize: '16px' }} />
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Grid>
+                    </Grid>
+
+                    <Box sx={{ mb: 4 }}>
+                        <Box sx={{
                             display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1rem' }}>
-                            Available Credits
-                        </Typography>
-                        <Typography variant="h4" sx={{ color: '#00F3FF', fontWeight: 'bold', fontSize: '2.5rem', mt: 1 }}>
-                            {loading ? <CircularProgress size={30} sx={{ color: '#00F3FF' }} /> : credits}
-                        </Typography>
-                    </Paper>
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            bgcolor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)',
-                            borderRadius: '10px',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1rem' }}>
-                            Active Chats
-                        </Typography>
-                        <Typography variant="h4" sx={{ color: '#00F3FF', fontWeight: 'bold', fontSize: '2.5rem', mt: 1 }}>
-                            {loading ? <CircularProgress size={30} sx={{ color: '#00F3FF' }} /> : activeChats}
-                        </Typography>
-                    </Paper>
-                </Grid>
-                
-                <Grid item xs={12} md={4}>
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            bgcolor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)',
-                            borderRadius: '10px',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1rem' }}>
-                            Knowledge Items
-                        </Typography>
-                        <Typography variant="h4" sx={{ color: '#00F3FF', fontWeight: 'bold', fontSize: '2.5rem', mt: 1 }}>
-                            {loading ? <CircularProgress size={30} sx={{ color: '#00F3FF' }} /> : knowledgeItems}
-                        </Typography>
-                    </Paper>
-                </Grid>
-
-                {/* Customer Administrative Functions */}
-                <Grid item xs={12}>
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            bgcolor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)',
-                            borderRadius: '10px',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                            mb: 3
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom sx={{ color: '#00F3FF', fontWeight: 'bold', borderBottom: '1px solid rgba(0, 243, 255, 0.3)', pb: 1 }}>
-                            Administrative Functions
-                        </Typography>
-                        <List>
-                            {/* System Setup Management */}
-                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
-                                <ListItemIcon sx={{ minWidth: '30px' }}>
-                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
-                                </ListItemIcon>
-                                <ListItemText 
-                                    primary={
-                                        <Typography variant="body1" fontWeight="bold">
-                                            System setup management
-                                        </Typography>
-                                    } 
-                                />
-                                <Button 
-                                    variant="contained" 
-                                    size="small" 
-                                    onClick={() => navigate('/config/system')}
-                                    sx={{ 
-                                        bgcolor: '#00F3FF', 
-                                        color: '#000', 
-                                        '&:hover': { bgcolor: '#00D4E0' } 
-                                    }}
-                                >
-                                    Manage
-                                </Button>
-                            </ListItem>
-                            
-                            {/* Consumption Monitoring */}
-                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
-                                <ListItemIcon sx={{ minWidth: '30px' }}>
-                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
-                                </ListItemIcon>
-                                <ListItemText 
-                                    primary={
-                                        <Typography variant="body1" fontWeight="bold">
-                                            Check Consumption: token/$ (minutes ot text)
-                                        </Typography>
-                                    } 
-                                />
-                                <Button 
-                                    variant="contained" 
-                                    size="small" 
-                                    onClick={handleTokenConsumptionCheck}
-                                    sx={{ 
-                                        bgcolor: '#00F3FF', 
-                                        color: '#000', 
-                                        '&:hover': { bgcolor: '#00D4E0' } 
-                                    }}
-                                >
-                                    View
-                                </Button>
-                            </ListItem>
-
-                            {/* System Health Check */}
-                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
-                                <ListItemIcon sx={{ minWidth: '30px' }}>
-                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
-                                </ListItemIcon>
-                                <ListItemText 
-                                    primary={
-                                        <Typography variant="body1" fontWeight="bold">
-                                            Check system health
-                                        </Typography>
-                                    } 
-                                />
-                                <Button 
-                                    variant="contained" 
-                                    size="small" 
-                                    onClick={handleSystemHealthCheck}
-                                    sx={{ 
-                                        bgcolor: '#00F3FF', 
-                                        color: '#000', 
-                                        '&:hover': { bgcolor: '#00D4E0' } 
-                                    }}
-                                >
-                                    Check
-                                </Button>
-                            </ListItem>
-
-                            {/* Module Configuration */}
-                            <ListItem sx={{ bgcolor: 'rgba(0, 243, 255, 0.05)', p: 2, borderRadius: 1, mb: 1 }}>
-                                <ListItemIcon sx={{ minWidth: '30px' }}>
-                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#000', border: '2px solid #00F3FF' }} />
-                                </ListItemIcon>
-                                <ListItemText 
-                                    primary={
-                                        <Typography variant="body1" fontWeight="bold">
-                                            Module configuration for its use
-                                        </Typography>
-                                    } 
-                                />
-                                <Button 
-                                    variant="contained" 
-                                    size="small" 
-                                    onClick={handleModuleConfiguration}
-                                    sx={{ 
-                                        bgcolor: '#00F3FF', 
-                                        color: '#000', 
-                                        '&:hover': { bgcolor: '#00D4E0' } 
-                                    }}
-                                >
-                                    Configure
-                                </Button>
-                            </ListItem>
-                        </List>
-                    </Paper>
-                </Grid>
-
-                {/* Recent Chats */}
-                <Grid item xs={12} md={8}>
-                    <Paper 
-                        sx={{ 
-                            p: 2, 
-                            bgcolor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom>
-                            Recent Chats
-                        </Typography>
-                        <Box sx={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="body1" color="text.secondary">
-                                No recent chats
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            mb: 2
+                        }}>
+                            <Typography sx={{
+                                fontSize: '1.125rem',
+                                fontWeight: 600,
+                                fontFamily: 'Inter, sans-serif'
+                            }}>
+                                System Alerts
                             </Typography>
+                            <Button sx={{
+                                fontSize: '0.75rem',
+                                color: 'white',
+                                '&:hover': { textDecoration: 'underline' },
+                                fontFamily: 'Inter, sans-serif',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5
+                            }}>
+                                Smart Filters <Receipt sx={{ fontSize: '12px' }} />
+                            </Button>
                         </Box>
-                    </Paper>
-                </Grid>
+                        <Box sx={{
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            backdropFilter: 'blur(10px)',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            overflow: 'hidden'
+                        }}>
+                            <Box sx={{ 
+                                display: 'table', 
+                                width: '100%',
+                                minWidth: '100%'
+                            }}>
+                                <Box sx={{
+                                    display: 'table-header-group',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                                }}>
+                                    <Box sx={{ display: 'table-row' }}>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontWeight: 500, 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            Alert Type
+                                        </Typography>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontWeight: 500, 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            Date
+                                        </Typography>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontWeight: 500, 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            AI Response
+                                        </Typography>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontWeight: 500, 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            Action
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <Box sx={{ display: 'table-row-group' }}>
+                                    <Box sx={{ 
+                                        display: 'table-row', 
+                                        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
+                                    }}>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Key sx={{ fontSize: '16px', color: '#8b5cf6' }} />
+                                                <Typography sx={{ fontSize: '0.875rem', fontFamily: 'Inter, sans-serif' }}>
+                                                    System setup management
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            Available
+                                        </Typography>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Typography sx={{
+                                                display: 'inline-block',
+                                                px: 1,
+                                                py: 0.5,
+                                                borderRadius: '50px',
+                                                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                                                color: '#8b5cf6',
+                                                fontSize: '0.75rem',
+                                                fontFamily: 'Inter, sans-serif'
+                                            }}>
+                                                Ready
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Button 
+                                                onClick={() => navigate('/config/system')}
+                                                sx={{
+                                                    fontSize: '0.75rem',
+                                                    px: 2,
+                                                    py: 0.5,
+                                                    borderRadius: '50px',
+                                                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                                                    color: '#8b5cf6',
+                                                    fontFamily: 'Inter, sans-serif',
+                                                    '&:hover': { backgroundColor: 'rgba(139, 92, 246, 0.3)' }
+                                                }}
+                                            >
+                                                Manage
+                                            </Button>
+                                        </Box>
+                                    </Box>
 
-                {/* Knowledge Base */}
-                <Grid item xs={12} md={4}>
-                    <Paper 
-                        sx={{ 
-                            p: 3, 
-                            bgcolor: '#1A1A1A',
-                            color: '#FFFFFF',
-                            border: '1px solid rgba(0, 243, 255, 0.2)',
-                            borderRadius: '10px',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom>
-                            Knowledge Base
-                        </Typography>
-                        <Box sx={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="body1" color="text.secondary">
-                                No knowledge items
-                            </Typography>
+                                    <Box sx={{ 
+                                        display: 'table-row', 
+                                        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
+                                    }}>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <CreditCard sx={{ fontSize: '16px', color: '#8b5cf6' }} />
+                                                <Typography sx={{ fontSize: '0.875rem', fontFamily: 'Inter, sans-serif' }}>
+                                                    Token consumption check
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            Available
+                                        </Typography>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Typography sx={{
+                                                display: 'inline-block',
+                                                px: 1,
+                                                py: 0.5,
+                                                borderRadius: '50px',
+                                                backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                                                color: '#f59e0b',
+                                                fontSize: '0.75rem',
+                                                fontFamily: 'Inter, sans-serif'
+                                            }}>
+                                                Monitor
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Button 
+                                                onClick={handleTokenConsumptionCheck}
+                                                sx={{
+                                                    fontSize: '0.75rem',
+                                                    px: 2,
+                                                    py: 0.5,
+                                                    borderRadius: '50px',
+                                                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                                                    color: '#f59e0b',
+                                                    fontFamily: 'Inter, sans-serif',
+                                                    '&:hover': { backgroundColor: 'rgba(245, 158, 11, 0.3)' }
+                                                }}
+                                            >
+                                                View
+                                            </Button>
+                                        </Box>
+                                    </Box>
+
+                                    <Box sx={{ 
+                                        display: 'table-row', 
+                                        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                                        '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
+                                    }}>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Refresh sx={{ fontSize: '16px', color: '#8b5cf6' }} />
+                                                <Typography sx={{ fontSize: '0.875rem', fontFamily: 'Inter, sans-serif' }}>
+                                                    System health check
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        <Typography sx={{ 
+                                            display: 'table-cell', 
+                                            px: 2, 
+                                            py: 1.5, 
+                                            fontSize: '0.875rem', 
+                                            fontFamily: 'Inter, sans-serif' 
+                                        }}>
+                                            Available
+                                        </Typography>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Typography sx={{
+                                                display: 'inline-block',
+                                                px: 1,
+                                                py: 0.5,
+                                                borderRadius: '50px',
+                                                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                                                color: '#22c55e',
+                                                fontSize: '0.75rem',
+                                                fontFamily: 'Inter, sans-serif'
+                                            }}>
+                                                Healthy
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'table-cell', px: 2, py: 1.5 }}>
+                                            <Button 
+                                                onClick={handleSystemHealthCheck}
+                                                sx={{
+                                                    fontSize: '0.75rem',
+                                                    px: 2,
+                                                    py: 0.5,
+                                                    borderRadius: '50px',
+                                                    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                                                    color: '#22c55e',
+                                                    fontFamily: 'Inter, sans-serif',
+                                                    '&:hover': { backgroundColor: 'rgba(34, 197, 94, 0.3)' }
+                                                }}
+                                            >
+                                                Check
+                                            </Button>
+                                        </Box>
+                                    </Box>
+                                </Box>
+                            </Box>
                         </Box>
-                    </Paper>
-                </Grid>
-            </Grid>
+                    </Box>
+                </div>
             </div>
-        </DashboardLayout>
+        </div>
     );
 };

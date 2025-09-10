@@ -3,6 +3,14 @@ export interface SystemHealth {
     memory_usage: number;
     disk_usage: number;
     timestamp: string;
+    database?: {
+        connections: number;
+        status: string;
+    };
+    api?: {
+        total_calls: number;
+        status: string;
+    };
     metadata: {
         memory: {
             total: number;

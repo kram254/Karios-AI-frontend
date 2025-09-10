@@ -596,7 +596,7 @@ export const CustomerDashboard: React.FC = () => {
                                 </Box>
                                 <Box sx={{ flex: 1, minHeight: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', fontFamily: 'Inter, sans-serif' }}>
-                                        Token Usage: {tokenUsage.toLocaleString()} / Month
+                                        Token Usage: {(tokenUsage || 0).toLocaleString()} / Month
                                     </Typography>
                                 </Box>
                             </Box>
@@ -783,7 +783,7 @@ export const CustomerDashboard: React.FC = () => {
                                         </Box>
                                         <Box component="td" sx={{ px: 2, py: 1.5 }}>
                                             <Typography sx={{ fontSize: '0.875rem', fontFamily: 'Inter, sans-serif' }}>
-                                                {apiCalls.toLocaleString()} API calls
+                                                {(apiCalls || 0).toLocaleString()} API calls
                                             </Typography>
                                         </Box>
                                         <Box component="td" sx={{ px: 2, py: 1.5 }}>
@@ -838,7 +838,7 @@ export const CustomerDashboard: React.FC = () => {
                                         </Box>
                                         <Box component="td" sx={{ px: 2, py: 1.5 }}>
                                             <Typography sx={{ fontSize: '0.875rem', fontFamily: 'Inter, sans-serif' }}>
-                                                {tokenUsage.toLocaleString()} tokens used
+                                                {(tokenUsage || 0).toLocaleString()} tokens used
                                             </Typography>
                                         </Box>
                                         <Box component="td" sx={{ px: 2, py: 1.5 }}>
@@ -1004,7 +1004,7 @@ export const CustomerDashboard: React.FC = () => {
                                         fontFamily: 'Inter, sans-serif',
                                         mb: 1
                                     }}>
-                                        {knowledgeItems.toLocaleString()}
+                                        {(knowledgeItems || 0).toLocaleString()}
                                     </Typography>
                                     <Typography sx={{ 
                                         color: 'rgba(255, 255, 255, 0.6)', 
@@ -1075,7 +1075,7 @@ export const CustomerDashboard: React.FC = () => {
                                                 Available Credits
                                             </Typography>
                                             <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
-                                                {credits.toLocaleString()}
+                                                {(credits || 0).toLocaleString()}
                                             </Typography>
                                         </Box>
                                         <Box sx={{ 
@@ -1137,7 +1137,7 @@ export const CustomerDashboard: React.FC = () => {
                                             This Month
                                         </Typography>
                                         <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'Inter, sans-serif', mb: 1 }}>
-                                            {tokenUsage.toLocaleString()}
+                                            {(tokenUsage || 0).toLocaleString()}
                                         </Typography>
                                         <Typography sx={{ fontSize: '0.75rem', fontFamily: 'Inter, sans-serif', color: 'rgba(255, 255, 255, 0.6)' }}>
                                             Total Tokens Used

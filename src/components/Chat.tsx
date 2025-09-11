@@ -29,7 +29,7 @@ interface Message {
 
 // Moved Attachment interface to chat.service.ts
 
-interface Chat {
+interface ChatData {
   id: string;
   title: string;
   messages: Message[];
@@ -42,7 +42,13 @@ interface Chat {
   internet_search?: boolean;
 }
 
-const Chat: React.FC = () => {
+interface ChatProps {
+  chatId?: string;
+  onMessage?: (message: string) => void;
+  compact?: boolean;
+}
+
+const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
   const { 
     currentChat, 
     addMessage, 
@@ -422,6 +428,11 @@ const Chat: React.FC = () => {
       // Store the message content before any async operations
       const userMessage = messageContent;
       
+      // Call the onMessage callback if provided
+      if (onMessage) {
+        onMessage(userMessage);
+      }
+      
       // Clear the input field and uploaded images immediately for better UX
       setMessage("");
       const imagesToSend = [...uploadedImages];
@@ -624,14 +635,13 @@ const Chat: React.FC = () => {
   // Modern welcome screen inspired by DeepSeek
   if (!currentChat) {
     return (
-      <div className="flex flex-col items-center justify-center h-full bg-[#0A0A0A] text-white relative overflow-hidden">
+      <div className={`flex flex-col ${compact ? 'h-full' : 'h-screen'} bg-gradient-to-br from-[#0A0A0A] to-[#1A1A2E] text-white relative overflow-hidden`}>
         {/* Center content area with improved responsiveness */}
         <div className="flex flex-col items-center justify-center w-full mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-12 md:py-16 relative z-10">
           {/* AI Avatar with enhanced glow */}
           <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#00F3FF] to-[#0077B6] flex items-center justify-center mb-6 sm:mb-8 shadow-lg shadow-[#00F3FF]/30 pulse-glow">
             <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-black" />
           </div>
-          
           {/* Welcome Message with enhanced typography */}
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-[#00F3FF] to-[#00D4E0] bg-clip-text text-transparent neon-text">
             Hi, I'm Karios AI.
@@ -748,8 +758,8 @@ const Chat: React.FC = () => {
         <AgentInfoBanner agentId={currentChat.agent_id} />
       )}
 
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* Messages Display Area */}
+      <div className={`flex-1 overflow-y-auto ${compact ? 'px-2 py-2' : 'px-4 py-4'} space-y-4`}>
         {/* Search results are now presented as part of the AI's response in chat bubbles */}
         
         {/* Always render chat messages - search results will appear as agent responses */}

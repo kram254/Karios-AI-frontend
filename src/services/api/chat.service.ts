@@ -49,6 +49,9 @@ export interface ChatTitleUpdate {
 export interface MessageCreate {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  attachments?: Attachment[];
+  suppress_ai_response?: boolean;
+  search_only_mode?: boolean;
 }
 
 export interface AgentChatCreate {

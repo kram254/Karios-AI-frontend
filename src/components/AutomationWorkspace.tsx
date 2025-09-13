@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Drawer, IconButton, Typography, Chip, Avatar, Card, Button, Fade, Grow } from '@mui/material';
-import { ChevronLeft, ChevronRight, PlayArrow, Pause, Stop, Person, Settings, Visibility } from '@mui/icons-material';
+import { Box, Drawer, IconButton, Typography, Chip, Avatar, Card, Button, Fade, Grow, Tab, Tabs } from '@mui/material';
+import { ChevronLeft, ChevronRight, PlayArrow, Pause, Stop, Person, Settings, Visibility, Computer, Web } from '@mui/icons-material';
 import { AutomationCanvas } from './AutomationCanvas';
 import Chat from './Chat';
+import { LiveViewBrowser } from './LiveViewBrowser';
 
 interface AutomationWorkspaceProps {
   chatId?: string;
@@ -18,6 +19,9 @@ export const AutomationWorkspace: React.FC<AutomationWorkspaceProps> = ({
   const [taskStatus, setTaskStatus] = useState<string>('idle');
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [activeProfile, setActiveProfile] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [sandboxSession, setSandboxSession] = useState<string | undefined>(undefined);
+  const [liveViewUrl, setLiveViewUrl] = useState<string | undefined>(undefined);
 
   const sidebarWidth = 400;
 
@@ -395,10 +399,68 @@ export const AutomationWorkspace: React.FC<AutomationWorkspaceProps> = ({
           </IconButton>
         )}
 
-        <AutomationCanvas 
-          taskId={currentTask?.id}
-          onTaskUpdate={setCurrentTask}
-        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ 
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
+            bgcolor: 'rgba(26,26,26,0.9)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <Tabs
+              value={activeTab}
+              onChange={(_, value) => setActiveTab(value)}
+              sx={{
+                minHeight: 48,
+                '& .MuiTab-root': {
+                  color: 'rgba(255,255,255,0.6)',
+                  minHeight: 48,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&.Mui-selected': {
+                    color: '#4f46e5'
+                  }
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: '#4f46e5',
+                  height: 3
+                }
+              }}
+            >
+              <Tab
+                icon={<Computer />}
+                label="Automation Canvas"
+                iconPosition="start"
+              />
+              <Tab
+                icon={<Web />}
+                label="Live Browser View"
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
+
+          <Box sx={{ flex: 1, overflow: 'hidden' }}>
+            {activeTab === 0 && (
+              <AutomationCanvas 
+                taskId={currentTask?.id}
+                onTaskUpdate={setCurrentTask}
+              />
+            )}
+            
+            {activeTab === 1 && (
+              <LiveViewBrowser 
+                sessionId={sandboxSession}
+                liveViewUrl={liveViewUrl}
+                onSessionUpdate={(sessionId, url) => {
+                  setSandboxSession(sessionId);
+                  setLiveViewUrl(url);
+                }}
+                onStatusChange={(status) => {
+                  setTaskStatus(status);
+                }}
+              />
+            )}
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

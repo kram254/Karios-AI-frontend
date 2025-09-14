@@ -97,6 +97,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   }, []);
 
   const initializeWebSocket = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      return;
+    }
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
       wsRef.current = null;
@@ -157,14 +160,14 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       }
       
       // Only reconnect if not a normal closure and session is still active
-      if (event.code !== 1000 && event.code !== 1001 && sessionId) {
-        console.log('WebSocket closed unexpectedly, attempting reconnection in 3 seconds...');
+      if (event.code !== 1000 && event.code !== 1001 && sessionId && wsRef.current === ws) {
+        console.log('WebSocket closed unexpectedly, attempting reconnection in 5 seconds...');
         setTimeout(() => {
-          if (sessionId && wsRef.current?.readyState !== WebSocket.OPEN) {
+          if (sessionId && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
             console.log('Attempting WebSocket reconnection...');
             initializeWebSocket();
           }
-        }, 3000);
+        }, 5000);
       }
     };
     
@@ -179,7 +182,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     if (!sessionId) return;
     if (session.sessionId !== sessionId) {
       setSession(prev => ({ ...prev, sessionId }));
-      initializeWebSocket();
+      if (wsRef.current?.readyState !== WebSocket.OPEN) {
+        initializeWebSocket();
+      }
     }
   }, [sessionId]);
 

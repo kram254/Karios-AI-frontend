@@ -317,8 +317,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
           } catch (e) {
             console.error('[ChatContext][addMessage] Failed to fetch target chat by ID:', chatId, e);
-            toast.error('Cannot send message: target chat not found');
-            return;
+            const newChat = await createNewChat();
+            if (newChat) {
+              chatToUse = newChat;
+              setCurrentChat(newChat);
+            } else {
+              toast.error('Cannot send message: Unable to create chat');
+              return;
+            }
           }
         }
       }

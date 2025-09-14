@@ -133,7 +133,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         } else {
           clearInterval(heartbeatInterval);
         }
-      }, 30000); // Send ping every 30 seconds
+      }, 45000); // Send ping every 45 seconds
       
       // Store interval reference for cleanup
       (ws as any).heartbeatInterval = heartbeatInterval;
@@ -156,14 +156,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         clearInterval((ws as any).heartbeatInterval);
       }
       
-      if (event.code !== 1000) {
-        console.log('WebSocket closed unexpectedly, attempting reconnection in 2 seconds...');
+      // Only reconnect if not a normal closure and session is still active
+      if (event.code !== 1000 && event.code !== 1001 && sessionId) {
+        console.log('WebSocket closed unexpectedly, attempting reconnection in 3 seconds...');
         setTimeout(() => {
-          if (sessionId) {
+          if (sessionId && wsRef.current?.readyState !== WebSocket.OPEN) {
             console.log('Attempting WebSocket reconnection...');
             initializeWebSocket();
           }
-        }, 2000);
+        }, 3000);
       }
     };
     

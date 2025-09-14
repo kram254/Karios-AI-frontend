@@ -77,7 +77,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [lastError, setLastError] = useState<any>(null);
   const [currentScreenshot, setCurrentScreenshot] = useState<string>('');
-  const [actionOverlay, setActionOverlay] = useState<{x: number, y: number, type: string} | null>(null);
+  const [actionOverlay, setActionOverlay] = useState<{x?: number, y?: number, type: string, message?: string, stepType?: string} | null>(null);
   const [workflowSteps, setWorkflowSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
   const [taskDescription, setTaskDescription] = useState<string>('');
@@ -200,26 +200,45 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         break;
         
       case 'workflow_step_started':
-        if (data.step_index !== undefined) {
-          setCurrentStepIndex(data.step_index);
-          const progress = workflowSteps.length > 0 ? (data.step_index / workflowSteps.length) * 100 : 0;
+        if (data.step_number !== undefined) {
+          setCurrentStepIndex(data.step_number - 1);
+          const progress = data.total_steps > 0 ? ((data.step_number - 1) / data.total_steps) * 100 : 0;
           setExecutionProgress(Math.min(progress, 95));
+          setActionOverlay({
+            type: 'executing',
+            message: `Step ${data.step_number}: ${data.step_type}`,
+            stepType: data.step_type
+          });
         }
         break;
         
       case 'workflow_step_completed':
-        if (data.step_index !== undefined) {
-          setCurrentStepIndex(data.step_index);
-          const progress = workflowSteps.length > 0 ? ((data.step_index + 1) / workflowSteps.length) * 100 : 0;
+        if (data.step_number !== undefined) {
+          setCurrentStepIndex(data.step_number);
+          const progress = data.total_steps > 0 ? (data.step_number / data.total_steps) * 100 : 0;
           setExecutionProgress(Math.min(progress, 95));
+          if (data.screenshot) {
+            setCurrentScreenshot(data.screenshot);
+          }
         }
-        setActionOverlay(null);
+        setActionOverlay({
+          type: 'success',
+          message: data.message || `Step ${data.step_number} completed`,
+          stepType: data.step_type
+        });
+        setTimeout(() => setActionOverlay(null), 2000);
         break;
       case 'workflow_step_failed':
         console.warn('⚠️ WORKFLOW_STEP_FAILED:', data);
-        if (data.step_index !== undefined) {
-          setCurrentStepIndex(data.step_index);
+        if (data.step_number !== undefined) {
+          setCurrentStepIndex(data.step_number);
         }
+        setActionOverlay({
+          type: 'error',
+          message: data.message || `Step ${data.step_number} failed`,
+          stepType: data.step_type
+        });
+        setErrorMessage(data.error || data.message || `Step ${data.step_index + 1} failed`);
         setSession(prev => {
           const next = { ...prev, status: 'error' as const };
           if (onSessionUpdate) onSessionUpdate(next);
@@ -244,9 +263,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         setExecutionProgress(10);
         break;
         
-      case 'execution_completed':
-        setCurrentStepIndex(workflowSteps.length);
+      case 'workflow_completed':
+        setCurrentStepIndex(data.total_steps || workflowSteps.length);
         setExecutionProgress(100);
+        setActionOverlay({
+          type: data.overall_success ? 'success' : 'warning',
+          message: `Workflow completed: ${data.successful_steps}/${data.total_steps} steps (${data.success_rate?.toFixed(1)}%)`,
+          stepType: 'complete'
+        });
+        setTimeout(() => setActionOverlay(null), 3000);
         break;
         
       case 'status_update':
@@ -275,37 +300,39 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           return next;
         });
         break;
-      case 'plan_created':
-        // Plan received; keep status managed by Integration, just reflect minimal progress
-        setExecutionProgress(p => (p < 5 ? 5 : p));
-        break;
-      case 'execution_started':
-        // Execution phase begins
-        setSession(prev => {
-          const next = { ...prev, status: 'running' as const };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
+        
+      case 'browser_initializing':
+        setActionOverlay({
+          type: 'loading',
+          message: data.message || 'Initializing browser...',
+          stepType: 'browser_init'
         });
-        setExecutionProgress(0);
         break;
-      case 'pong':
-        console.log('WebSocket heartbeat pong received');
+        
+      case 'browser_ready':
+        setActionOverlay({
+          type: 'success',
+          message: data.message || 'Browser ready',
+          stepType: 'browser_init'
+        });
+        setTimeout(() => setActionOverlay(null), 1500);
         break;
-      case 'keep_alive':
-        // Server keep alive - respond to maintain connection
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          try {
-            wsRef.current.send(JSON.stringify({ type: 'keep_alive_response' }));
-          } catch (e) {
-            console.error('Failed to send keep_alive_response:', e);
-          }
-        }
+        
+      case 'browser_fallback':
+        setActionOverlay({
+          type: 'warning',
+          message: data.message || 'Using fallback mode',
+          stepType: 'browser_init'
+        });
+        setTimeout(() => setActionOverlay(null), 2000);
         break;
-      case 'keep_alive_response':
-        // Keep-alive response
-        console.log('WebSocket keep-alive response received');
-        break;
+        
       case 'action_started':
+        setActionOverlay({
+          type: 'executing',
+          message: data.message || `${data.action}: ${data.target}`,
+          stepType: data.action
+        });
         setSession(prev => {
           const exists = prev.actions.some(a => a.id === data.actionId);
           if (exists) return prev;
@@ -329,7 +356,17 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           });
         }
         break;
+        
       case 'action_completed':
+        if (data.screenshot) {
+          setCurrentScreenshot(data.screenshot);
+        }
+        setActionOverlay({
+          type: 'success',
+          message: data.message || `${data.action} completed`,
+          stepType: data.action
+        });
+        setTimeout(() => setActionOverlay(null), 1500);
         setSession(prev => {
           const exists = prev.actions.some(a => a.id === data.actionId);
           if (!exists) {
@@ -344,7 +381,33 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           return prev;
         });
         updateActionStatus(data.actionId, 'completed');
-        setActionOverlay(null);
+        break;
+        
+      case 'execution_started':
+        setSession(prev => {
+          const next = { ...prev, status: 'running' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        setExecutionProgress(0);
+        break;
+        
+      case 'pong':
+        console.log('WebSocket heartbeat pong received');
+        break;
+        
+      case 'keep_alive':
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          try {
+            wsRef.current.send(JSON.stringify({ type: 'keep_alive_response' }));
+          } catch (e) {
+            console.error('Failed to send keep_alive_response:', e);
+          }
+        }
+        break;
+        
+      case 'keep_alive_response':
+        console.log('WebSocket keep-alive response received');
         break;
       case 'action_failed':
         setSession(prev => {
@@ -374,24 +437,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           return next;
         });
         break;
-      case 'workflow_step_completed':
-        console.log('🔁 WORKFLOW_STEP_COMPLETED:', data);
-        const completedProgress = typeof data.progress === 'number' ? data.progress : 
-          (workflowSteps.length > 0 && typeof data.step_index === 'number' ? 
-            ((data.step_index + 1) / workflowSteps.length) * 100 : executionProgress);
-        setExecutionProgress(Math.min(completedProgress, 95));
-        setCurrentStepIndex(typeof data.step_index === 'number' ? data.step_index : currentStepIndex);
-        setSession(prev => {
-          const next = {
-            ...prev,
-            currentActionIndex: typeof data.step_index === 'number' ? data.step_index : prev.currentActionIndex,
-            status: 'running' as const
-          };
-          if (onSessionUpdate) onSessionUpdate(next);
-          setActionOverlay(null);
-          return next;
-        });
-        break;
       case 'workflow_error':
         console.warn('⚠️ WORKFLOW_ERROR:', data);
         setErrorMessage(data.error || data.message || 'Workflow error occurred');
@@ -405,30 +450,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         if (data.step_index !== undefined) {
           setCurrentStepIndex(data.step_index);
         }
-        break;
-      case 'workflow_step_failed':
-        console.warn('⚠️ WORKFLOW_STEP_FAILED:', data);
-        setErrorMessage(data.error || data.message || `Step ${data.step_index + 1} failed`);
-        setLastError(data);
-        if (data.step_index !== undefined) {
-          setCurrentStepIndex(data.step_index);
-        }
-        setSession(prev => {
-          const next = { ...prev, status: 'error' as const };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
-        });
-        break;
-      case 'error':
-        console.error('🛑 ERROR event:', data?.message || data);
-        setErrorMessage(data?.message || 'An error occurred');
-        setLastError(data);
-        setSession(prev => {
-          const next = { ...prev, status: 'error' as const };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
-        });
-        setActionOverlay(null);
         break;
       case 'quality_improvement_completed':
         console.log('✅ QUALITY_IMPROVEMENT_COMPLETED:', data);
@@ -637,6 +658,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const renderActionOverlay = () => {
     if (!actionOverlay || !screenshotCanvasRef.current) return null;
+    if (actionOverlay.x === undefined || actionOverlay.y === undefined) return null;
 
     const canvas = screenshotCanvasRef.current;
     const rect = canvas.getBoundingClientRect();

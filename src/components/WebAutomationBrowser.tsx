@@ -23,6 +23,15 @@ import { WorkflowVisualization } from './WorkflowVisualization';
 
 const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
 
+interface E2BSandboxInfo {
+  success: boolean;
+  sandbox_id?: string;
+  url?: string;
+  status?: string;
+  template_id?: string;
+  message?: string;
+}
+
 interface WebAutomationAction {
   id: string;
   type: string;
@@ -82,10 +91,13 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
   const [taskDescription, setTaskDescription] = useState<string>('');
   const [showWorkflowViz, setShowWorkflowViz] = useState<boolean>(false);
+  const [sandboxInfo, setSandboxInfo] = useState<E2BSandboxInfo | null>(null);
+  const [e2bMode, setE2bMode] = useState<boolean>(false);
   
   const browserFrameRef = useRef<HTMLDivElement>(null);
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const sandboxIframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     initializeWebSocket();
@@ -187,6 +199,26 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       }
     }
   }, [sessionId]);
+
+  const fetchSandboxInfo = async () => {
+    try {
+      const sid = sessionId || session.sessionId;
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/sandbox-info/${sid}`);
+      const data: E2BSandboxInfo = await response.json();
+      
+      if (data.success && data.sandbox_id) {
+        setSandboxInfo(data);
+        setE2bMode(true);
+        console.log('E2B sandbox detected:', data);
+      } else {
+        setE2bMode(false);
+        console.log('No E2B sandbox found, using local browser');
+      }
+    } catch (error) {
+      console.error('Failed to fetch sandbox info:', error);
+      setE2bMode(false);
+    }
+  };
 
   const handleWebSocketMessage = (data: any) => {
     switch (data.type) {

@@ -120,7 +120,6 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
     return cleanMarkdown(fixed);
   }, [content, role]);
 
-  // Load message context when clicked on indicator
   const handleContextView = async () => {
     if (!messageId || !chatId) return;
     
@@ -137,12 +136,211 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
     setContextOpen(false);
   };
 
+  const isAutomationPlan = content.startsWith('[AUTOMATION_PLAN]');
+  
+  if (isAutomationPlan) {
+    try {
+      const planData = JSON.parse(content.replace('[AUTOMATION_PLAN]\n', ''));
+      return (
+        <>
+          <div className="automation-plan-container">
+            <div className="plan-header">
+              <div className="plan-title">🤖 Web Automation Plan</div>
+              <div className="plan-description">{planData.task_description}</div>
+            </div>
+            
+            {planData.steps && planData.steps.length > 0 && (
+              <div className="plan-steps">
+                <div className="steps-title">Execution Steps:</div>
+                {planData.steps.map((step: any, index: number) => (
+                  <div key={step.id || index} className="plan-step">
+                    <div className="step-number">{step.id || index + 1}</div>
+                    <div className="step-content">
+                      <div className="step-description">{step.description}</div>
+                      <div className="step-action">Action: {step.action}</div>
+                      {step.details && (
+                        <div className="step-details">
+                          {Object.entries(step.details).map(([key, value]) => (
+                            <span key={key} className="step-detail">
+                              {key}: {String(value)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className={`step-status ${step.status}`}>{step.status}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="plan-actions">
+              <button 
+                className="automation-launch-btn"
+                onClick={() => {
+                  window.dispatchEvent(new Event('automation:show'));
+                  window.dispatchEvent(new Event('automation:start'));
+                }}
+              >
+                🚀 Launch Web Automation Window
+              </button>
+            </div>
+          </div>
+          
+          <style>{`
+            .automation-plan-container {
+              background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+              border-radius: 12px;
+              padding: 20px;
+              margin: 10px 0;
+              border: 1px solid #3b82f6;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            }
+            
+            .plan-header {
+              margin-bottom: 16px;
+            }
+            
+            .plan-title {
+              font-size: 18px;
+              font-weight: 600;
+              color: white;
+              margin-bottom: 8px;
+            }
+            
+            .plan-description {
+              color: #e2e8f0;
+              font-size: 14px;
+              line-height: 1.5;
+            }
+            
+            .plan-steps {
+              margin: 16px 0;
+            }
+            
+            .steps-title {
+              font-weight: 600;
+              color: white;
+              margin-bottom: 12px;
+              font-size: 16px;
+            }
+            
+            .plan-step {
+              display: flex;
+              align-items: flex-start;
+              gap: 12px;
+              margin-bottom: 12px;
+              padding: 12px;
+              background: rgba(255, 255, 255, 0.08);
+              border-radius: 8px;
+              border-left: 3px solid #3b82f6;
+            }
+            
+            .step-number {
+              background: #3b82f6;
+              color: white;
+              width: 24px;
+              height: 24px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+              font-weight: 600;
+              flex-shrink: 0;
+            }
+            
+            .step-content {
+              flex: 1;
+            }
+            
+            .step-description {
+              color: white;
+              font-weight: 500;
+              margin-bottom: 4px;
+            }
+            
+            .step-action {
+              color: #cbd5e1;
+              font-size: 12px;
+              margin-bottom: 4px;
+            }
+            
+            .step-details {
+              display: flex;
+              gap: 8px;
+              flex-wrap: wrap;
+            }
+            
+            .step-detail {
+              background: rgba(255, 255, 255, 0.1);
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-size: 11px;
+              color: #e2e8f0;
+            }
+            
+            .step-status {
+              padding: 4px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 500;
+              text-transform: uppercase;
+            }
+            
+            .step-status.pending {
+              background: rgba(251, 191, 36, 0.2);
+              color: #fbbf24;
+              border: 1px solid #fbbf24;
+            }
+            
+            .step-status.running {
+              background: rgba(59, 130, 246, 0.2);
+              color: #3b82f6;
+              border: 1px solid #3b82f6;
+            }
+            
+            .step-status.completed {
+              background: rgba(34, 197, 94, 0.2);
+              color: #22c55e;
+              border: 1px solid #22c55e;
+            }
+            
+            .plan-actions {
+              margin-top: 16px;
+              display: flex;
+              justify-content: center;
+            }
+            
+            .automation-launch-btn {
+              background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.2s;
+              font-size: 14px;
+            }
+            
+            .automation-launch-btn:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            }
+          `}</style>
+        </>
+      );
+    } catch (error) {
+      console.error('Failed to parse automation plan:', error);
+    }
+  }
+
   return (
     <>
       <div className="markdown-content">
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           {role === 'assistant' ? (
-            // For assistant messages, render as plain text paragraph without markdown formatting
             <p className="assistant-prose-paragraph">{processedContent}</p>
           ) : (
             // For user messages, continue using markdown rendering

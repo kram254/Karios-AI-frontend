@@ -15,22 +15,11 @@ import {
   Stop,
   Visibility,
   VisibilityOff,
-  Screenshot,
-  ExpandMore,
-  ExpandLess
+  Screenshot
 } from '@mui/icons-material';
-import { WorkflowVisualization } from './WorkflowVisualization';
 
 const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
 
-interface E2BSandboxInfo {
-  success: boolean;
-  sandbox_id?: string;
-  url?: string;
-  status?: string;
-  template_id?: string;
-  message?: string;
-}
 
 interface WebAutomationAction {
   id: string;
@@ -41,6 +30,14 @@ interface WebAutomationAction {
   status: 'pending' | 'executing' | 'completed' | 'failed';
   timestamp: string;
   screenshot?: string;
+}
+
+interface WorkflowStep {
+  id: number | string;
+  description: string;
+  action: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  details?: any;
 }
 
 interface WebAutomationSession {
@@ -87,17 +84,13 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const [lastError, setLastError] = useState<any>(null);
   const [currentScreenshot, setCurrentScreenshot] = useState<string>('');
   const [actionOverlay, setActionOverlay] = useState<{x?: number, y?: number, type: string, message?: string, stepType?: string} | null>(null);
-  const [workflowSteps, setWorkflowSteps] = useState<any[]>([]);
-  const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
-  const [taskDescription, setTaskDescription] = useState<string>('');
-  const [showWorkflowViz, setShowWorkflowViz] = useState<boolean>(false);
-  const [sandboxInfo, setSandboxInfo] = useState<E2BSandboxInfo | null>(null);
-  const [e2bMode, setE2bMode] = useState<boolean>(false);
-  
-  const browserFrameRef = useRef<HTMLDivElement>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const [realTimeSteps, setRealTimeSteps] = useState<any[]>([]);
+  const [currentExecutingStep, setCurrentExecutingStep] = useState(-1);
+
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const sandboxIframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     initializeWebSocket();
@@ -200,32 +193,20 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     }
   }, [sessionId]);
 
-  const fetchSandboxInfo = async () => {
-    try {
-      const sid = sessionId || session.sessionId;
-      const response = await fetch(`${BACKEND_URL}/api/web-automation/sandbox-info/${sid}`);
-      const data: E2BSandboxInfo = await response.json();
-      
-      if (data.success && data.sandbox_id) {
-        setSandboxInfo(data);
-        setE2bMode(true);
-        console.log('E2B sandbox detected:', data);
-      } else {
-        setE2bMode(false);
-        console.log('No E2B sandbox found, using local browser');
-      }
-    } catch (error) {
-      console.error('Failed to fetch sandbox info:', error);
-      setE2bMode(false);
-    }
-  };
 
   const handleWebSocketMessage = (data: any) => {
     switch (data.type) {
       case 'plan_created':
         if (data.plan && data.plan.steps) {
+          const steps = data.plan.steps.map((step: any, index: number) => ({
+            id: step.id || (index + 1),
+            description: step.description || step.title || `Step ${index + 1}`,
+            action: step.action || step.action_type || 'unknown',
+            status: step.status || 'pending',
+            details: step.details || {}
+          }));
+          setRealTimeSteps(steps);
           setWorkflowSteps(data.plan.steps);
-          setTaskDescription(data.plan.task_description || data.task_description || '');
           setCurrentStepIndex(-1);
           setExecutionProgress(5);
         }
@@ -234,13 +215,13 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       case 'workflow_step_started':
         if (data.step_number !== undefined) {
           setCurrentStepIndex(data.step_number - 1);
-          const progress = data.total_steps > 0 ? ((data.step_number - 1) / data.total_steps) * 100 : 0;
-          setExecutionProgress(Math.min(progress, 95));
-          setActionOverlay({
-            type: 'executing',
-            message: `Step ${data.step_number}: ${data.step_type}`,
-            stepType: data.step_type
-          });
+          setCurrentExecutingStep(data.step_number - 1);
+          setExecutionProgress(Math.min(((data.step_number - 1) / Math.max(workflowSteps.length, 1)) * 100, 95));
+          setRealTimeSteps(prev => prev.map((step, index) => 
+            index === data.step_number - 1 
+              ? { ...step, status: 'running' }
+              : step
+          ));
         }
         break;
         
@@ -249,32 +230,30 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           setCurrentStepIndex(data.step_number);
           const progress = data.total_steps > 0 ? (data.step_number / data.total_steps) * 100 : 0;
           setExecutionProgress(Math.min(progress, 95));
+          setRealTimeSteps(prev => prev.map((step, index) => 
+            index === data.step_number - 1 
+              ? { ...step, status: 'completed' }
+              : step
+          ));
           if (data.screenshot) {
             setCurrentScreenshot(data.screenshot);
           }
         }
-        setActionOverlay({
-          type: 'success',
-          message: data.message || `Step ${data.step_number} completed`,
-          stepType: data.step_type
-        });
-        setTimeout(() => setActionOverlay(null), 2000);
         break;
       case 'workflow_step_failed':
         console.warn('⚠️ WORKFLOW_STEP_FAILED:', data);
         if (data.step_number !== undefined) {
           setCurrentStepIndex(data.step_number);
+          setRealTimeSteps(prev => prev.map((step, index) => 
+            index === data.step_number - 1 
+              ? { ...step, status: 'failed' }
+              : step
+          ));
         }
         setActionOverlay({
           type: 'error',
           message: data.message || `Step ${data.step_number} failed`,
           stepType: data.step_type
-        });
-        setErrorMessage(data.error || data.message || `Step ${data.step_index + 1} failed`);
-        setSession(prev => {
-          const next = { ...prev, status: 'error' as const };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
         });
         break;
         
@@ -560,21 +539,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     }
   };
 
-  const pauseAutomation = async () => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/web-automation/pause`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.sessionId })
-      });
-      
-      if (response.ok) {
-        setSession(prev => ({ ...prev, status: 'paused' }));
-      }
-    } catch (error) {
-      console.error('Failed to pause automation:', error);
-    }
-  };
 
   const stopAutomation = async () => {
     try {
@@ -643,7 +607,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   };
 
   const handlePause = () => {
-    pauseAutomation();
+    setSession(prev => ({ ...prev, status: 'paused' }));
   };
 
   const handleStop = () => {
@@ -912,43 +876,99 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         </Paper>
 
         <Box sx={{ width: 300, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {workflowSteps.length > 0 && (
-            <Paper className="neon-card">
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  p: 1,
-                  cursor: 'pointer'
-                }}
-                onClick={() => setShowWorkflowViz(!showWorkflowViz)}
-              >
-                <Typography variant="h6" sx={{ color: 'white' }}>
-                  Workflow Progress
+          {realTimeSteps.length > 0 && (
+            <Paper className="neon-card" sx={{ p: 2 }}>
+              <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                🎯 Automation Progress
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ color: '#00f3ff' }}>
+                  {realTimeSteps.filter(s => s.status === 'completed').length} / {realTimeSteps.length} completed
                 </Typography>
-                <IconButton size="small" sx={{ color: 'white' }}>
-                  {showWorkflowViz ? <ExpandLess /> : <ExpandMore />}
-                </IconButton>
               </Box>
-              {showWorkflowViz && (
-                <Box sx={{ p: 1, pt: 0 }}>
-                  <WorkflowVisualization
-                    steps={workflowSteps}
-                    currentStep={currentStepIndex}
-                    taskDescription={taskDescription}
-                  />
-                </Box>
-              )}
+              <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                {realTimeSteps.map((step, index) => (
+                  <Box
+                    key={step.id}
+                    sx={{
+                      mb: 1,
+                      p: 1.5,
+                      border: currentExecutingStep === index ? '2px solid #00f3ff' : '1px solid #444',
+                      borderRadius: 1,
+                      bgcolor: step.status === 'completed' ? '#0d4f0d' : 
+                               step.status === 'running' ? '#4d4d1a' : '#333',
+                      transition: 'all 0.3s ease',
+                      position: 'relative'
+                    }}
+                  >
+                    {step.status === 'running' && (
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 2,
+                        bgcolor: '#00f3ff',
+                        animation: 'pulse 1.5s infinite'
+                      }} />
+                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Box sx={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: step.status === 'completed' ? '#4caf50' : 
+                                 step.status === 'running' ? '#ff9800' : '#666',
+                        color: 'white',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {step.status === 'completed' ? '✓' : 
+                         step.status === 'running' ? '⚡' : 
+                         index + 1}
+                      </Box>
+                      <Chip
+                        label={step.status.toUpperCase()}
+                        size="small"
+                        color={
+                          step.status === 'completed' ? 'success' :
+                          step.status === 'running' ? 'warning' : 'default'
+                        }
+                        sx={{ fontSize: '0.7rem', height: 20 }}
+                      />
+                    </Box>
+                    <Typography variant="body2" sx={{ color: 'white', mb: 0.5 }}>
+                      {step.description}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#aaa' }}>
+                      Action: {step.action}
+                    </Typography>
+                    {step.details && Object.keys(step.details).length > 0 && (
+                      <Box sx={{ mt: 1 }}>
+                        {Object.entries(step.details).map(([key, value]) => (
+                          <Chip
+                            key={key}
+                            label={`${key}: ${String(value)}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ mr: 0.5, mt: 0.5, fontSize: '0.6rem', height: 18 }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
             </Paper>
           )}
           
-          <Paper className="neon-card" sx={{ flex: 1, p: 1, overflow: 'hidden' }}>
+          <Paper className="neon-card">
             <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
-              Actions Queue ({session.actions.length})
+              Actions
             </Typography>
-          
-          <Box sx={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
             {session.actions.length === 0 ? (
               <Box sx={{ 
                 display: 'flex', 
@@ -1055,8 +1075,7 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
                 </Paper>
               ))
             )}
-          </Box>
-        </Paper>
+          </Paper>
         </Box>
       </Box>
 

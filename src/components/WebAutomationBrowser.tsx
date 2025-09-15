@@ -102,31 +102,44 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   }, []);
 
   const initializeWebSocket = () => {
+    console.log('🔌 WS_INIT - Starting WebSocket initialization');
+    console.log('🔌 WS_INIT - Current sessionId:', sessionId);
+    console.log('🔌 WS_INIT - Session object sessionId:', session.sessionId);
+    
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log('🔌 WS_INIT - WebSocket already open, skipping initialization');
       return;
     }
     if (wsRef.current) {
+      console.log('🔌 WS_INIT - Closing existing WebSocket connection');
       try { wsRef.current.close(); } catch {}
       wsRef.current = null;
     }
     const sid = sessionId || session.sessionId;
+    console.log('🔌 WS_INIT - Using session ID:', sid);
     let wsUrl: string;
     try {
       const base = new URL(BACKEND_URL);
       const wsProto = base.protocol === 'https:' ? 'wss:' : 'ws:';
       wsUrl = `${wsProto}//${base.host}/api/web-automation/ws/automation/${sid}`;
+      console.log('🔌 WS_INIT - Generated WebSocket URL from BACKEND_URL:', wsUrl);
     } catch {
       const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       wsUrl = `${wsProto}//${window.location.host}/api/web-automation/ws/automation/${sid}`;
+      console.log('🔌 WS_INIT - Generated WebSocket URL from window.location:', wsUrl);
     }
     const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-      console.log('WebSocket connected for automation session');
+      console.log('🔌 WS_OPEN - WebSocket connected successfully for session:', sid);
+      console.log('🔌 WS_OPEN - WebSocket readyState:', ws.readyState);
       setTimeout(() => {
         try {
+          console.log('🔌 WS_OPEN - Sending get_status request');
           ws.send(JSON.stringify({ type: 'get_status' }));
-        } catch {}
+        } catch (e) {
+          console.error('🔌 WS_OPEN - Failed to send get_status:', e);
+        }
       }, 100);
       
       // Start heartbeat to maintain connection
@@ -150,14 +163,20 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('🔌 WS_MESSAGE - Received message type:', data.type);
+        console.log('🔌 WS_MESSAGE - Full message data:', data);
         handleWebSocketMessage(data);
       } catch (e) {
-        console.error('WebSocket message parse error:', e);
+        console.error('🔌 WS_MESSAGE - Parse error:', e);
+        console.error('🔌 WS_MESSAGE - Raw event data:', event.data);
       }
     };
     
     ws.onclose = (event) => {
-      console.log('WebSocket disconnected:', event.code, event.reason);
+      console.log('🔌 WS_CLOSE - WebSocket disconnected');
+      console.log('🔌 WS_CLOSE - Code:', event.code);
+      console.log('🔌 WS_CLOSE - Reason:', event.reason);
+      console.log('🔌 WS_CLOSE - Was clean:', event.wasClean);
       
       // Clear heartbeat interval
       if ((ws as any).heartbeatInterval) {
@@ -195,9 +214,13 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
 
   const handleWebSocketMessage = (data: any) => {
+    console.log('📨 WS_HANDLER - Processing message type:', data.type);
     switch (data.type) {
       case 'plan_created':
+        console.log('📨 PLAN_CREATED - Received plan creation message');
+        console.log('📨 PLAN_CREATED - Plan data:', data.plan);
         if (data.plan && data.plan.steps) {
+          console.log('📨 PLAN_CREATED - Processing', data.plan.steps.length, 'steps');
           const steps = data.plan.steps.map((step: any, index: number) => ({
             id: step.id || (index + 1),
             description: step.description || step.title || `Step ${index + 1}`,
@@ -205,10 +228,14 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             status: step.status || 'pending',
             details: step.details || {}
           }));
+          console.log('📨 PLAN_CREATED - Mapped steps:', steps);
           setRealTimeSteps(steps);
           setWorkflowSteps(data.plan.steps);
           setCurrentStepIndex(-1);
           setExecutionProgress(5);
+          console.log('📨 PLAN_CREATED - State updated with plan data');
+        } else {
+          console.warn('📨 PLAN_CREATED - No plan or steps in message');
         }
         break;
         
@@ -508,27 +535,42 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   };
 
   const startAutomation = async () => {
+    console.log('🚀 START_AUTOMATION - Beginning automation start process');
+    console.log('🚀 START_AUTOMATION - Session ID:', session.sessionId);
+    console.log('🚀 START_AUTOMATION - Current URL:', currentUrl);
+    console.log('🚀 START_AUTOMATION - Visible mode:', isVisible);
+
+    setIsStarting(true);
+    setErrorMessage('');
+
     try {
-      setIsStarting(true);
-      setErrorMessage('');
-      setSession(prev => ({ ...prev, status: 'running' }));
-      setExecutionProgress(0);
-      
+      const requestPayload = {
+        sessionId: session.sessionId,
+        url: currentUrl || 'about:blank',
+        visible: isVisible,
+        task_description: 'Manual automation session'
+      };
+      console.log('🚀 START_AUTOMATION - Request payload:', requestPayload);
+
       const response = await fetch(`${BACKEND_URL}/api/web-automation/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.sessionId,
-          url: currentUrl,
-          visible: isVisible
-        })
+        body: JSON.stringify(requestPayload)
       });
-      
+
+      console.log('🚀 START_AUTOMATION - Response status:', response.status);
+      console.log('🚀 START_AUTOMATION - Response ok:', response.ok);
+
       if (response.ok) {
         const result = await response.json();
-        console.log('Automation started:', result);
+        console.log('🚀 START_AUTOMATION - Response data:', result);
+        console.log('🚀 START_AUTOMATION - Automation started successfully');
+        console.log('🚀 START_AUTOMATION - New session status:', result.status);
+        setSession(prev => ({ ...prev, status: result.status || 'running' }));
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('🚀 START_AUTOMATION - HTTP Error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
       }
     } catch (error) {
       console.error('Failed to start automation:', error);

@@ -70,16 +70,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     };
     const onStart = () => {
       console.log('🎬 WebAutomationIntegration - automation:start event received');
-      console.log('🎬 Current state:', { isAutomationActive, automationStatus, currentSession });
       setIsOpen(true);
-      if (!isAutomationActive) {
-        console.log('🎬 Starting automation - not currently active');
-        setIsAutomationActive(true);
-        setAutomationStatus('running');
-        startAutomation();
-      } else {
-        console.log('🎬 Automation already active, skipping start');
-      }
+      setIsAutomationActive(prev => {
+        console.log('🎬 Current isAutomationActive state:', prev);
+        if (!prev) {
+          console.log('🎬 Starting automation - not currently active');
+          setAutomationStatus('running');
+          setTimeout(() => startAutomation(), 100);
+          return true;
+        } else {
+          console.log('🎬 Automation already active, skipping start');
+          return prev;
+        }
+      });
     };
     console.log('🎬 WebAutomationIntegration - registering event listeners');
     window.addEventListener('automation:show', onShow as any);

@@ -127,27 +127,44 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
 
   // Auto-trigger automation window when automation plans are detected
   useEffect(() => {
+    console.log('🔍 AUTOMATION DETECTION - Checking messages for automation plans');
+    console.log('🔍 Current chat messages count:', currentChat?.messages?.length || 0);
+    
     const automationPlanMessages = currentChat?.messages?.filter(msg => 
       msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]')
     ) || [];
+    
+    console.log('🔍 Found automation plan messages:', automationPlanMessages.length);
     
     if (automationPlanMessages.length > 0) {
       const latestPlanMessage = automationPlanMessages[automationPlanMessages.length - 1];
       const planTriggeredKey = `automation_triggered_${latestPlanMessage.id}`;
       
+      console.log('🔍 Latest plan message ID:', latestPlanMessage.id);
+      console.log('🔍 Checking trigger key:', planTriggeredKey);
+      console.log('🔍 Already triggered?', !!sessionStorage.getItem(planTriggeredKey));
+      
       if (!sessionStorage.getItem(planTriggeredKey)) {
         sessionStorage.setItem(planTriggeredKey, 'true');
-        console.log('Automation plan detected - auto-opening automation window');
+        console.log('🎬 AUTOMATION PLAN DETECTED - Auto-opening automation window');
+        console.log('🎬 Plan content preview:', latestPlanMessage.content.substring(0, 100));
         
         setTimeout(() => {
           try {
+            console.log('🎬 DISPATCHING automation:show event');
             window.dispatchEvent(new Event('automation:show'));
+            console.log('🎬 DISPATCHING automation:start event');
             window.dispatchEvent(new Event('automation:start'));
+            console.log('🎬 Events dispatched successfully');
           } catch (e) {
-            console.error('Failed to auto-dispatch automation events:', e);
+            console.error('🎬 Failed to auto-dispatch automation events:', e);
           }
         }, 1000);
+      } else {
+        console.log('🔍 Automation plan already triggered for this message, skipping');
       }
+    } else {
+      console.log('🔍 No automation plan messages found');
     }
   }, [currentChat?.messages]);
 

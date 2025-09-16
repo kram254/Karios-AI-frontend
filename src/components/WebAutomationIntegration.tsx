@@ -403,6 +403,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 [memberNum]: 'completed'
               }));
             }
+          } else if (data.type === 'automation_session_started') {
+            console.log('📡 AUTOMATION_SESSION_STARTED event received:', { sessionId: data.sessionId, visible: data.visible, headless: data.headless });
+            setIsOpen(true);
+            setIsAutomationActive(true);
+            setAutomationStatus('running');
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'session_started',
+                sessionId: data.sessionId,
+                visible: data.visible,
+                headless: data.headless
+              });
+            }
           } else if (data.type === 'display_limitation') {
             console.warn('📡 DISPLAY_LIMITATION event received:', data.message);
             if (onAutomationResult) {

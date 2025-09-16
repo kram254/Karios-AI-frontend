@@ -403,6 +403,16 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 [memberNum]: 'completed'
               }));
             }
+          } else if (data.type === 'display_limitation') {
+            console.warn('📡 DISPLAY_LIMITATION event received:', data.message);
+            if (onAutomationResult) {
+              onAutomationResult({
+                type: 'display_limitation',
+                sessionId: currentSession,
+                message: data.message,
+                visible: data.visible
+              });
+            }
           } else if (data.type === 'workflow_completed') {
             console.log('📡 WORKFLOW_COMPLETED event received:', { results: (data.results ?? data.result), score: data.score });
             setCurrentCrewMember(3);

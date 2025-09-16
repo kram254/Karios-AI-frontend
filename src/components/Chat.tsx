@@ -1430,6 +1430,26 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
                     } catch (e) {
                       console.error('🎯 Error adding execution started message:', e);
                     }
+                  } else if (result.type === 'display_limitation') {
+                    console.log('🎯 Processing display_limitation result:', result.message);
+                    try {
+                      await addMessage({
+                        content: `⚠️ ${result.message}`,
+                        role: 'system',
+                        chatId: automationChatId || undefined
+                      });
+                      toast(result.message, { 
+                        icon: '⚠️',
+                        duration: 5000,
+                        style: {
+                          background: '#FFA500',
+                          color: '#fff',
+                        }
+                      });
+                      console.log('🎯 Display limitation message added to chat');
+                    } catch (e) {
+                      console.error('🎯 Error adding display limitation message:', e);
+                    }
                   } else if (result.type === 'action_executed') {
                     console.log('🎯 Processing action_executed result:', result.action);
                     try {

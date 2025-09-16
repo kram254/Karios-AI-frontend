@@ -64,25 +64,38 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   }, [isVisible]);
 
   useEffect(() => {
-    const onShow = () => {
-      console.log('🎬 WebAutomationIntegration - automation:show event received');
+    const onShow = (event?: any) => {
+      console.log('🎬 WebAutomationIntegration - automation:show event received', event?.detail);
       setIsOpen(true);
+      setIsMinimized(false);
     };
-    const onStart = () => {
-      console.log('🎬 WebAutomationIntegration - automation:start event received');
+    const onStart = (event?: any) => {
+      console.log('🎬 WebAutomationIntegration - automation:start event received', event?.detail);
       setIsOpen(true);
-      setIsAutomationActive(prev => {
-        console.log('🎬 Current isAutomationActive state:', prev);
-        if (!prev) {
-          console.log('🎬 Starting automation - not currently active');
-          setAutomationStatus('running');
-          setTimeout(() => startAutomation(), 100);
-          return true;
-        } else {
-          console.log('🎬 Automation already active, skipping start');
-          return prev;
+      setIsMinimized(false);
+      const forceStart = event?.detail?.force || event?.detail?.immediate;
+      
+      if (forceStart || !isAutomationActive) {
+        console.log('🎬 Force starting automation - override current state');
+        setIsAutomationActive(true);
+        setAutomationStatus('running');
+        if (!currentSession) {
+          startAutomation();
         }
-      });
+      } else {
+        setIsAutomationActive(prev => {
+          console.log('🎬 Current isAutomationActive state:', prev);
+          if (!prev) {
+            console.log('🎬 Starting automation - not currently active');
+            setAutomationStatus('running');
+            startAutomation();
+            return true;
+          } else {
+            console.log('🎬 Automation already active, keeping current state');
+            return prev;
+          }
+        });
+      }
     };
     console.log('🎬 WebAutomationIntegration - registering event listeners');
     window.addEventListener('automation:show', onShow as any);
@@ -92,7 +105,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       window.removeEventListener('automation:show', onShow as any);
       window.removeEventListener('automation:start', onStart as any);
     };
-  }, []);
+  }, [isAutomationActive, currentSession]);
 
   useEffect(() => {
     if (!currentSession) {

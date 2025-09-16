@@ -152,14 +152,14 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
         setTimeout(() => {
           try {
             console.log('🎬 DISPATCHING automation:show event');
-            window.dispatchEvent(new Event('automation:show'));
+            window.dispatchEvent(new CustomEvent('automation:show', { detail: { force: true } }));
             console.log('🎬 DISPATCHING automation:start event');
-            window.dispatchEvent(new Event('automation:start'));
+            window.dispatchEvent(new CustomEvent('automation:start', { detail: { force: true } }));
             console.log('🎬 Events dispatched successfully');
           } catch (e) {
             console.error('🎬 Failed to auto-dispatch automation events:', e);
           }
-        }, 1000);
+        }, 500);
       } else {
         console.log('🔍 Automation plan already triggered for this message, skipping');
       }
@@ -295,24 +295,21 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
               
               setTimeout(() => {
                 try { 
-                  window.dispatchEvent(new Event('automation:show')); 
+                  window.dispatchEvent(new CustomEvent('automation:show', { detail: { immediate: true } })); 
                   console.log('🤖 DISPATCHED automation:show');
                 } catch (e) {
                   console.error('🤖 ERROR dispatching automation:show:', e);
                 }
                 
-                if (!automationSessionId) {
-                  console.log('🤖 NO AUTOMATION SESSION - starting new session');
-                  try { 
-                    window.dispatchEvent(new Event('automation:start')); 
-                    console.log('🤖 DISPATCHED automation:start');
-                  } catch (e) {
-                    console.error('🤖 ERROR dispatching automation:start:', e);
-                  }
-                  setPendingAutomationTask(messageContent);
-                  console.log('🤖 SET PENDING AUTOMATION TASK:', messageContent);
+                try { 
+                  window.dispatchEvent(new CustomEvent('automation:start', { detail: { immediate: true } })); 
+                  console.log('🤖 DISPATCHED automation:start');
+                } catch (e) {
+                  console.error('🤖 ERROR dispatching automation:start:', e);
                 }
-              }, 1000);
+                setPendingAutomationTask(messageContent);
+                console.log('🤖 SET PENDING AUTOMATION TASK:', messageContent);
+              }, 100);
               
             } catch (e) {
               console.error('🤖 ERROR PARSING PLAN:', e);

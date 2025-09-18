@@ -818,11 +818,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
         <AgentInfoBanner agentId={currentChat.agent_id} />
       )}
 
-      {/* Task Panel - Show only for regular chats, not web automation */}
-      <TaskPanel 
-        chatId={currentChat.id} 
-        isWebAutomation={currentChat.chat_type === 'web_automation'} 
-      />
 
       {/* Messages Display Area */}
       <div className={`flex-1 overflow-y-auto ${compact ? 'px-2 py-2' : 'px-4 py-4'} space-y-4`}>

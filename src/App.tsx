@@ -4,6 +4,8 @@ import WebAutomationIntegration from './components/WebAutomationIntegration';
 import AutomationWorkspace from './components/AutomationWorkspace';
 import { Sidebar } from './components/Sidebar';
 import { Settings } from './components/Settings';
+import { TaskPanel } from './components/tasks/TaskPanel';
+import { useChat } from './context/ChatContext';
 import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AgentManagement } from './pages/AgentManagement';
@@ -82,6 +84,7 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
+  const { currentChat } = useChat();
   const location = useLocation();
 
   // Determine which dashboard to show based on user role
@@ -155,6 +158,14 @@ function App() {
             onCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             onSettingsClick={() => setIsSettingsOpen(true)}
           />
+          {location.pathname === '/chat' && currentChat && (
+            <div className="w-64 border-r border-[#2A2A2A] bg-[#0A0A0A] flex-shrink-0">
+              <TaskPanel 
+                chatId={currentChat.id} 
+                isWebAutomation={currentChat.chat_type === 'web_automation'} 
+              />
+            </div>
+          )}
           <main className="flex-1 overflow-hidden">
             <ErrorBoundary>
               <Routes>

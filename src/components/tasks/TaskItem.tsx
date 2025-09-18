@@ -18,14 +18,14 @@ export const TaskItem: React.FC<TaskProps> = ({ title, status, progress }) => {
   };
 
   return (
-    <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-3 mb-2">
-      <div className="flex items-center gap-2">
+    <div className="bg-gray-700/30 rounded p-2 mb-2 border border-gray-600/30">
+      <div className="flex items-center gap-2 mb-1">
         {getIcon()}
-        <span className="text-white text-sm">{title}</span>
+        <span className="text-white text-xs font-medium truncate">{title}</span>
       </div>
       {status === 'in_progress' && (
-        <div className="w-full bg-gray-600 rounded-full h-1 mt-2">
-          <div className="bg-blue-400 h-1 rounded-full" style={{ width: `${progress}%` }} />
+        <div className="w-full bg-gray-600 rounded-full h-1">
+          <div className="bg-blue-400 h-1 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       )}
     </div>

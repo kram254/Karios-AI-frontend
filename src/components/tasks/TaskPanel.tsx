@@ -83,49 +83,50 @@ Loading tools...`,
   if (isWebAutomation) return null;
 
   return (
-    <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 mb-4">
-      <div className="flex items-center justify-between p-3">
+    <div className="h-full flex flex-col bg-[#0A0A0A]">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
           <span className="text-white font-medium">Tasks</span>
         </div>
         <button
           onClick={() => setShowNewTask(!showNewTask)}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-blue-400 hover:text-blue-300"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-blue-400 hover:text-blue-300 rounded"
         >
           <Plus className="w-3 h-3" />
           New Task
         </button>
       </div>
-      {showNewTask && (
-        <div className="p-3 border-t border-gray-700">
-          <input 
-            value={taskInput}
-            onChange={(e) => setTaskInput(e.target.value)}
-            placeholder="Enter task description..."
-            className="w-full bg-gray-700 text-white p-2 rounded text-sm mb-2"
-            onKeyPress={(e) => e.key === 'Enter' && createTask()}
-          />
-          <button 
-            onClick={createTask}
-            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-          >
-            Create Task
-          </button>
+      <div className="flex-1 overflow-y-auto">
+        {showNewTask && (
+          <div className="p-4 border-b border-[#2A2A2A]">
+            <input 
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.target.value)}
+              placeholder="Enter task description..."
+              className="w-full bg-gray-700 text-white p-3 rounded text-sm mb-3"
+              onKeyPress={(e) => e.key === 'Enter' && createTask()}
+            />
+            <button 
+              onClick={createTask}
+              className="w-full bg-blue-600 text-white text-sm rounded py-2 hover:bg-blue-700"
+            >
+              Create Task
+            </button>
+          </div>
+        )}
+        <div className="p-4">
+          {tasks.length > 0 ? (
+            tasks.map(task => (
+              <TaskItem key={task.id} {...task} />
+            ))
+          ) : !showNewTask && (
+            <div className="text-center text-gray-400 text-sm py-8">
+              No tasks yet. Create your first task to get started.
+            </div>
+          )}
         </div>
-      )}
-      {tasks.length > 0 && (
-        <div className="p-2 border-t border-gray-700">
-          {tasks.map(task => (
-            <TaskItem key={task.id} {...task} />
-          ))}
-        </div>
-      )}
-      {tasks.length === 0 && !showNewTask && (
-        <div className="p-4 text-center text-gray-400 text-sm">
-          No tasks yet. Create your first task to get started.
-        </div>
-      )}
+      </div>
     </div>
   );
 };

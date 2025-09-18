@@ -214,6 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Divider */}
         <div className="py-2 border-b border-neon-purple/20" />
 
+
         {/* User Management - Only for SUPER_ADMIN and RESELLER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER].includes(user.role) && (
           <button

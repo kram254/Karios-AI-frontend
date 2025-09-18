@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Zap, Square } from 'lucide-react';
 import { TaskItem } from './TaskItem';
 import { useChat } from '../../context/ChatContext';
 
@@ -19,14 +19,28 @@ interface TaskPanelProps {
 export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = false }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showNewTask, setShowNewTask] = useState(false);
+  const [showStartTask, setShowStartTask] = useState(false);
+  const [showChatInput, setShowChatInput] = useState(false);
   const [taskInput, setTaskInput] = useState('');
   const { addMessage } = useChat();
 
+  const generateTaskTitle = (prompt: string): string => {
+    const cleanPrompt = prompt.trim();
+    if (cleanPrompt.length <= 30) return cleanPrompt;
+    
+    const words = cleanPrompt.split(' ');
+    if (words.length <= 4) return cleanPrompt.substring(0, 30);
+    
+    const keyWords = words.slice(0, 4).join(' ');
+    return keyWords.length > 30 ? keyWords.substring(0, 27) + '...' : keyWords;
+  };
+
   const createTask = async () => {
     if (taskInput.trim()) {
+      const taskTitle = generateTaskTitle(taskInput);
       const newTask = {
         id: `task_${Date.now()}`,
-        title: taskInput.substring(0, 50) + (taskInput.length > 50 ? '...' : ''),
+        title: taskTitle,
         description: taskInput,
         status: 'in_progress',
         progress: 10
@@ -35,6 +49,8 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
       setTasks(prev => [...prev, newTask]);
       setTaskInput('');
       setShowNewTask(false);
+      setShowStartTask(false);
+      setShowChatInput(false);
       
       await addMessage({
         role: 'user',
@@ -90,7 +106,16 @@ Loading tools...`,
           <span className="text-white font-medium">Tasks</span>
         </div>
         <button
-          onClick={() => setShowNewTask(!showNewTask)}
+          onClick={() => {
+            setShowNewTask(!showNewTask);
+            if (!showNewTask) {
+              setShowStartTask(true);
+              setShowChatInput(false);
+            } else {
+              setShowStartTask(false);
+              setShowChatInput(false);
+            }
+          }}
           className="flex items-center gap-1 px-2 py-1 text-xs text-blue-400 hover:text-blue-300 rounded"
         >
           <Plus className="w-3 h-3" />
@@ -98,29 +123,54 @@ Loading tools...`,
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {showNewTask && (
+        {showNewTask && showStartTask && !showChatInput && (
+          <div className="p-4 border-b border-[#2A2A2A]">
+            <button 
+              onClick={() => {
+                setShowChatInput(true);
+                setShowStartTask(false);
+              }}
+              className="w-full flex items-center gap-2 bg-orange-100 text-orange-800 p-3 rounded hover:bg-orange-200 transition-colors"
+            >
+              <Zap className="w-4 h-4" />
+              Start task
+            </button>
+            <button className="w-full flex items-center gap-2 text-gray-400 p-3 mt-2 rounded hover:bg-gray-700/30 transition-colors">
+              <Square className="w-4 h-4" />
+              Example case
+            </button>
+          </div>
+        )}
+        {showNewTask && showChatInput && (
           <div className="p-4 border-b border-[#2A2A2A]">
             <input 
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              placeholder="Enter task description..."
+              placeholder="Enter message"
               className="w-full bg-gray-700 text-white p-3 rounded text-sm mb-3"
               onKeyPress={(e) => e.key === 'Enter' && createTask()}
+              autoFocus
             />
-            <button 
-              onClick={createTask}
-              className="w-full bg-blue-600 text-white text-sm rounded py-2 hover:bg-blue-700"
-            >
-              Create Task
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={createTask}
+                className="flex-1 bg-blue-600 text-white text-sm rounded py-2 hover:bg-blue-700"
+              >
+                Send
+              </button>
+            </div>
           </div>
         )}
         <div className="p-4">
-          {tasks.length > 0 ? (
-            tasks.map(task => (
-              <TaskItem key={task.id} {...task} />
-            ))
-          ) : !showNewTask && (
+          {tasks.length > 0 && (
+            <div className="mb-3">
+              <h3 className="text-gray-400 text-xs font-medium mb-3">Today</h3>
+              {tasks.map(task => (
+                <TaskItem key={task.id} {...task} />
+              ))}
+            </div>
+          )}
+          {tasks.length === 0 && !showNewTask && (
             <div className="text-center text-gray-400 text-sm py-8">
               No tasks yet. Create your first task to get started.
             </div>

@@ -15,6 +15,7 @@ import { KnowledgeManagement } from './pages/KnowledgeManagement';
 import { UserManagement } from './pages/UserManagement';
 import { UserProfile } from './pages/UserProfile';
 import { Login } from './pages/Login';
+import AutonomousTasksPage from './pages/AutonomousTasksPage';
 import { PrivateRoute } from './components/auth/PrivateRoute';
 import { useAuth } from './context/AuthContext';
 import { UserRole } from './types/user';
@@ -190,6 +191,9 @@ function App() {
                   
                   {/* Agent Config Dashboard - For all roles with dashboard access */}
                   <Route path="/agent-config" element={<AgentConfigDashboardComponent />} />
+                  
+                  {/* Autonomous Tasks */}
+                  <Route path="/autonomous-tasks" element={<AutonomousTasksPage />} />
                   
                   {/* User Profile */}
                   <Route path="/profile" element={<UserProfile />} />

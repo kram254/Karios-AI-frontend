@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2, Zap } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -187,15 +187,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {!isCollapsed && <span className="ml-3">Main Dashboard</span>}
             </button>
             {!isCollapsed && (
-              <button
-                onClick={() => navigate('/agent-config')}
-                className={`w-full flex items-center p-3 pl-8 transition-colors ${
-                  isActive('/agent-config') ? 'neon-tab-active' : 'neon-btn-secondary'
-                }`}
-              >
-                <Bot className="w-4 h-4 text-neon-cyan neon-icon" />
-                <span className="ml-3 text-sm">Agent Config</span>
-              </button>
+              <>
+                <button
+                  onClick={() => navigate('/agent-config')}
+                  className={`w-full flex items-center px-4 py-2 ml-2 transition-colors ${
+                    isActive('/agent-config') ? 'neon-tab-active' : 'neon-btn-secondary'
+                  }`}
+                >
+                  <Bot className="w-4 h-4 text-neon-cyan neon-icon" />
+                  <span className="ml-3 text-sm">Agent Config</span>
+                </button>
+                <button
+                  onClick={() => navigate('/autonomous-tasks')}
+                  className={`w-full flex items-center px-4 py-2 ml-2 transition-colors ${
+                    isActive('/autonomous-tasks') ? 'neon-tab-active' : 'neon-btn-secondary'
+                  }`}
+                >
+                  <Zap className="w-4 h-4 text-neon-cyan neon-icon" />
+                  <span className="ml-3 text-sm">Task Builder</span>
+                </button>
+              </>
             )}
           </div>
         )}

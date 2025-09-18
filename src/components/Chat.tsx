@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ChangeEvent } from "react";
-import { MessageSquare, Send, Plus, X, Globe } from "lucide-react";
+import { MessageSquare, Send, Plus, X, Globe, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
 import SearchLockTooltip from "./SearchLockTooltip";
@@ -14,6 +14,7 @@ import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
+import AutonomousTaskManager from "./tasks/AutonomousTaskManager";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -172,6 +173,44 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
     e.preventDefault();
     console.log('🚀 HANDLESUBMIT STARTED - message:', message.trim());
     console.log('🚀 HANDLESUBMIT - automationActive:', automationActive);
+    
+    // Check for autonomous task creation requests
+    const taskKeywords = ['create task', 'autonomous task', 'build agent', 'automate', 'execute task'];
+    const isTaskRequest = taskKeywords.some(keyword => message.toLowerCase().includes(keyword));
+    
+    if (isTaskRequest && currentChat?.id) {
+      console.log('🤖 AUTONOMOUS TASK REQUEST detected:', message);
+      try {
+        const { autonomousTasksService } = await import('../services/api/autonomous-tasks.service');
+        const result = await autonomousTasksService.createTask({
+          chat_id: currentChat.id,
+          user_id: 1, // Default user ID
+          description: message,
+          agent_id: currentChat.agent_id ? parseInt(currentChat.agent_id) : undefined
+        });
+        
+        if (result.success && result.task) {
+          addMessage(currentChat.id, 'user', message);
+          addMessage(currentChat.id, 'assistant', 
+            `[AUTONOMOUS_TASK_CREATED]\n` +
+            JSON.stringify({
+              title: result.task.title,
+              task_id: result.task.id,
+              task_type: result.task.task_type,
+              status: result.task.status,
+              estimated_duration: result.task.estimated_duration,
+              message: `✅ **Autonomous Task Created Successfully**\n\n**${result.task.title}**\n\nTask ID: ${result.task.id}\nType: ${result.task.task_type}\nStatus: ${result.task.status}\nEstimated Duration: ${result.task.estimated_duration}s\n\nThe task will be executed automatically. Monitor progress in the Task Builder panel.`
+            })
+          );
+          setMessage('');
+          return;
+        } else {
+          console.error('Task creation failed:', result.error);
+        }
+      } catch (error) {
+        console.error('Autonomous task creation error:', error);
+      }
+    }
     console.log('🚀 HANDLESUBMIT - automationSessionId:', automationSessionId);
     console.log('🚀 HANDLESUBMIT - automationChatId:', automationChatId);
     console.log('🚀 HANDLESUBMIT - isProcessing:', isProcessing);
@@ -978,6 +1017,37 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
                               } catch {} 
                               
                               return <PlanContainer plan={plan} isVisible={true} />; 
+                            })()}
+                          </div>
+                        ) : msg.role === 'assistant' && msg.content.startsWith('[AUTONOMOUS_TASK_CREATED]') ? (
+                          <div className="autonomous-task-message">
+                            {(() => { 
+                              let taskData: any = {}; 
+                              try { 
+                                const j = msg.content.split('\n').slice(1).join('\n'); 
+                                if (j) taskData = JSON.parse(j); 
+                              } catch {} 
+                              
+                              return (
+                                <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-4 mb-4">
+                                  <div className="flex items-center mb-3">
+                                    <Zap className="w-5 h-5 text-green-400 mr-2" />
+                                    <span className="text-green-400 font-semibold">Autonomous Task Created</span>
+                                  </div>
+                                  <div className="text-white">
+                                    <div className="mb-2"><strong>{taskData.title}</strong></div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-300 mb-3">
+                                      <div>Task ID: <span className="text-cyan-400">{taskData.task_id}</span></div>
+                                      <div>Type: <span className="text-purple-400">{taskData.task_type}</span></div>
+                                      <div>Status: <span className="text-yellow-400">{taskData.status}</span></div>
+                                      <div>Duration: <span className="text-blue-400">{taskData.estimated_duration}s</span></div>
+                                    </div>
+                                    <div className="text-sm text-gray-400 bg-black/20 rounded p-2">
+                                      {taskData.message}
+                                    </div>
+                                  </div>
+                                </div>
+                              ); 
                             })()}
                           </div>
                         ) : msg.role === 'system' && msg.content.startsWith('[AUTOMATION_CONTROL]') ? (

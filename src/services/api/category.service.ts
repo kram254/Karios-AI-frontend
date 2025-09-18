@@ -82,12 +82,23 @@ export const categoryService = {
     },
 
     // URL Management
-    addUrl: (categoryId: number, url: string, description?: string, updateFrequency: string = 'never') => 
+    addUrl: (
+        categoryId: number, 
+        url: string, 
+        description?: string, 
+        updateFrequency: string = 'never',
+        maxDepth: number = 2,
+        extractCodeExamples: boolean = true,
+        knowledgeType: string = 'technical'
+    ) => 
         api.post(`/api/v1/knowledge/categories/${categoryId}/url`, { 
             url, 
             description, 
             content_type: 'url',
-            update_frequency: updateFrequency
+            update_frequency: updateFrequency,
+            max_depth: maxDepth,
+            extract_code_examples: extractCodeExamples,
+            knowledge_type: knowledgeType
         }),
 
     // Text Content

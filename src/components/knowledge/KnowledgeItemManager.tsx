@@ -67,7 +67,10 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const [urlContent, setUrlContent] = useState({ 
         url: '', 
         description: '', 
-        updateFrequency: UpdateFrequency.NEVER 
+        updateFrequency: UpdateFrequency.NEVER,
+        maxDepth: 2,
+        extractCodeExamples: true,
+        knowledgeType: 'technical'
     });
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [fileDescription, setFileDescription] = useState('');
@@ -137,7 +140,14 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
 
     const resetForms = () => {
         setTextContent({ title: '', content: '', updateFrequency: UpdateFrequency.NEVER });
-        setUrlContent({ url: '', description: '', updateFrequency: UpdateFrequency.NEVER });
+        setUrlContent({ 
+            url: '', 
+            description: '', 
+            updateFrequency: UpdateFrequency.NEVER,
+            maxDepth: 2,
+            extractCodeExamples: true,
+            knowledgeType: 'technical'
+        });
         setSelectedFiles([]);
         setFileDescription('');
     };
@@ -199,15 +209,23 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         statusMessage: string;
         currentPage: string | null;
         pagesProcessed: number;
+        totalPages: number;
+        chunksStored: number;
+        codeExamplesCount: number;
+        crawlStrategy: string;
         error: string | null;
-    }>({ 
-        isProcessing: false, 
-        itemId: null, 
-        progress: 0, 
-        status: '', 
+    }>({
+        isProcessing: false,
+        itemId: null,
+        progress: 0,
+        status: '',
         statusMessage: '',
         currentPage: null,
         pagesProcessed: 0,
+        totalPages: 0,
+        chunksStored: 0,
+        codeExamplesCount: 0,
+        crawlStrategy: 'single_page',
         error: null
     });
 
@@ -315,7 +333,10 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 parseInt(categoryId), 
                 urlContent.url,
                 urlContent.description,
-                urlContent.updateFrequency
+                urlContent.updateFrequency,
+                urlContent.maxDepth,
+                urlContent.extractCodeExamples,
+                urlContent.knowledgeType
             );
             
             // Start tracking the processing status
@@ -779,18 +800,18 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                             <TextField
                                 fullWidth
                                 label="Description (Optional)"
-                                margin="normal"
                                 value={urlContent.description}
                                 onChange={(e) => setUrlContent({ ...urlContent, description: e.target.value })}
+                                multiline
+                                rows={2}
+                                margin="normal"
                                 InputLabelProps={{
                                     sx: { color: 'rgba(255, 255, 255, 0.7)' }
                                 }}
                                 sx={{
-                                    mb: 3,
                                     '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
                                         '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
+                                            borderColor: 'rgba(255, 255, 255, 0.3)'
                                         },
                                         '&:hover fieldset': {
                                             borderColor: 'rgba(0, 243, 255, 0.5)'
@@ -801,6 +822,27 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                     }
                                 }}
                             />
+                            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                                <TextField
+                                    label="Max Depth"
+                                    type="number"
+                                    value={urlContent.maxDepth}
+                                    onChange={(e) => setUrlContent({ ...urlContent, maxDepth: parseInt(e.target.value) || 2 })}
+                                    InputProps={{ inputProps: { min: 1, max: 5 } }}
+                                    sx={{ flex: 1 }}
+                                />
+                                <TextField
+                                    select
+                                    label="Knowledge Type"
+                                    value={urlContent.knowledgeType}
+                                    onChange={(e) => setUrlContent({ ...urlContent, knowledgeType: e.target.value })}
+                                    sx={{ flex: 1 }}
+                                >
+                                    <MenuItem value="technical">Technical</MenuItem>
+                                    <MenuItem value="general">General</MenuItem>
+                                    <MenuItem value="documentation">Documentation</MenuItem>
+                                </TextField>
+                            </Box>
                             <TextField
                                 fullWidth
                                 label="Update Frequency"
@@ -836,29 +878,15 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 <Box sx={{ width: '100%', mt: 2, mb: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                         <CircularProgress size={20} sx={{ color: '#00F3FF', mr: 1 }} />
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                            Processing URL{urlProcessingStatus.status === 'processing' ? '...' : ''}
+                                        <Typography variant="body2" sx={{ color: '#00F3FF' }}>
+                                            {urlProcessingStatus.crawlStrategy.toUpperCase()} Crawl: {urlProcessingStatus.statusMessage || 'Starting...'}
                                         </Typography>
                                     </Box>
-                                    
-                                    {urlProcessingStatus.statusMessage && (
-                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 1 }}>
-                                            {urlProcessingStatus.statusMessage}
-                                        </Typography>
-                                    )}
-                                    
-                                    {urlProcessingStatus.currentPage && (
-                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 1, display: 'block' }}>
-                                            Currently processing: {urlProcessingStatus.currentPage}
-                                        </Typography>
-                                    )}
-                                    
                                     <LinearProgress 
                                         variant="determinate" 
-                                        value={urlProcessingStatus.progress}
+                                        value={urlProcessingStatus.progress} 
                                         sx={{
-                                            height: 10,
-                                            borderRadius: 5,
+                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
                                             backgroundColor: 'rgba(255, 255, 255, 0.2)',
                                             '& .MuiLinearProgress-bar': {
                                                 backgroundColor: '#00F3FF',
@@ -869,14 +897,17 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                     
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
                                         <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                            {urlProcessingStatus.progress}% complete
+                                            {urlProcessingStatus.progress}% - {urlProcessingStatus.pagesProcessed}/{urlProcessingStatus.totalPages} pages
                                         </Typography>
-                                        {urlProcessingStatus.pagesProcessed > 0 && (
-                                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                                {urlProcessingStatus.pagesProcessed} page(s) processed
-                                            </Typography>
-                                        )}
+                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                                            {urlProcessingStatus.chunksStored} chunks • {urlProcessingStatus.codeExamplesCount} code examples
+                                        </Typography>
                                     </Box>
+                                    {urlProcessingStatus.currentPage && (
+                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.7rem' }}>
+                                            Current: {urlProcessingStatus.currentPage}
+                                        </Typography>
+                                    )}
                                 </Box>
                             ) : (
                                 <Button

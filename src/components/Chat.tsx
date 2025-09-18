@@ -15,6 +15,7 @@ import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import AutonomousTaskManager from "./tasks/AutonomousTaskManager";
+import { TaskPanel } from "./tasks/TaskPanel";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -190,18 +191,24 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
         });
         
         if (result.success && result.task) {
-          addMessage(currentChat.id, 'user', message);
-          addMessage(currentChat.id, 'assistant', 
-            `[AUTONOMOUS_TASK_CREATED]\n` +
-            JSON.stringify({
-              title: result.task.title,
-              task_id: result.task.id,
-              task_type: result.task.task_type,
-              status: result.task.status,
-              estimated_duration: result.task.estimated_duration,
-              message: `✅ **Autonomous Task Created Successfully**\n\n**${result.task.title}**\n\nTask ID: ${result.task.id}\nType: ${result.task.task_type}\nStatus: ${result.task.status}\nEstimated Duration: ${result.task.estimated_duration}s\n\nThe task will be executed automatically. Monitor progress in the Task Builder panel.`
-            })
-          );
+          await addMessage({ 
+            role: 'user', 
+            content: message, 
+            chatId: currentChat.id 
+          });
+          await addMessage({ 
+            role: 'assistant', 
+            content: `[AUTONOMOUS_TASK_CREATED]\n` +
+              JSON.stringify({
+                title: result.task.title,
+                task_id: result.task.id,
+                task_type: result.task.task_type,
+                status: result.task.status,
+                estimated_duration: result.task.estimated_duration,
+                message: `✅ **Autonomous Task Created Successfully**\n\n**${result.task.title}**\n\nTask ID: ${result.task.id}\nType: ${result.task.task_type}\nStatus: ${result.task.status}\nEstimated Duration: ${result.task.estimated_duration}s\n\nThe task will be executed automatically. Monitor progress in the Task Builder panel.`
+              }),
+            chatId: currentChat.id 
+          });
           setMessage('');
           return;
         } else {
@@ -810,6 +817,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
       {currentChat.agent_id && (
         <AgentInfoBanner agentId={currentChat.agent_id} />
       )}
+
+      {/* Task Panel - Show only for regular chats, not web automation */}
+      <TaskPanel 
+        chatId={currentChat.id} 
+        isWebAutomation={currentChat.chat_type === 'web_automation'} 
+      />
 
       {/* Messages Display Area */}
       <div className={`flex-1 overflow-y-auto ${compact ? 'px-2 py-2' : 'px-4 py-4'} space-y-4`}>

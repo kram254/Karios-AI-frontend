@@ -83,6 +83,7 @@ const darkTheme = createTheme({
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTaskMode, setIsTaskMode] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { currentChat } = useChat();
   const location = useLocation();
@@ -162,7 +163,11 @@ function App() {
             <div className="w-64 border-r border-[#2A2A2A] bg-[#0A0A0A] flex-shrink-0">
               <TaskPanel 
                 chatId={currentChat.id} 
-                isWebAutomation={currentChat.chat_type === 'web_automation'} 
+                isWebAutomation={currentChat.chat_type === 'web_automation'}
+                onTaskModeChange={setIsTaskMode}
+                onCreateTask={(taskInput) => {
+                  (window as any).createTaskFromChat?.(taskInput);
+                }}
               />
             </div>
           )}
@@ -178,7 +183,7 @@ function App() {
                   <Route path="/" element={<Navigate to="/chat" replace />} />
                   
                   {/* Chat */}
-                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/chat" element={<Chat isTaskMode={isTaskMode} />} />
                   
                   {/* Automation Workspace - Lindy-like Canvas UI */}
                   <Route path="/automation-workspace" element={<AutomationWorkspace />} />

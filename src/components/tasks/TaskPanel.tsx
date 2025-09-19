@@ -14,14 +14,15 @@ interface Task {
 interface TaskPanelProps {
   chatId: string;
   isWebAutomation?: boolean;
+  onTaskModeChange?: (isTaskMode: boolean) => void;
+  onCreateTask?: (taskInput: string) => void;
 }
 
-export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = false }) => {
+export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = false, onTaskModeChange, onCreateTask }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showStartTask, setShowStartTask] = useState(false);
-  const [showChatInput, setShowChatInput] = useState(false);
-  const [taskInput, setTaskInput] = useState('');
+  const [isTaskMode, setIsTaskMode] = useState(false);
   const { addMessage } = useChat();
 
   const generateTaskTitle = (prompt: string): string => {
@@ -35,7 +36,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
     return keyWords.length > 30 ? keyWords.substring(0, 27) + '...' : keyWords;
   };
 
-  const createTask = async () => {
+  const createTask = async (taskInput: string) => {
     if (taskInput.trim()) {
       const taskTitle = generateTaskTitle(taskInput);
       const newTask = {
@@ -47,10 +48,9 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
       };
       
       setTasks(prev => [...prev, newTask]);
-      setTaskInput('');
       setShowNewTask(false);
       setShowStartTask(false);
-      setShowChatInput(false);
+      setIsTaskMode(false);
       
       await addMessage({
         role: 'user',
@@ -96,6 +96,27 @@ Loading tools...`,
     }
   };
 
+  const handleStartTask = () => {
+    setIsTaskMode(true);
+    setShowStartTask(false);
+    onTaskModeChange?.(true);
+    const chatInput = document.querySelector('input[placeholder*="Ask"]') as HTMLInputElement;
+    if (chatInput) {
+      chatInput.focus();
+    }
+  };
+
+  React.useEffect(() => {
+    if (onCreateTask) {
+      (window as any).createTaskFromChat = (taskInput: string) => {
+        createTask(taskInput);
+      };
+    }
+    return () => {
+      delete (window as any).createTaskFromChat;
+    };
+  }, [onCreateTask]);
+
   if (isWebAutomation) return null;
 
   return (
@@ -110,10 +131,8 @@ Loading tools...`,
             setShowNewTask(!showNewTask);
             if (!showNewTask) {
               setShowStartTask(true);
-              setShowChatInput(false);
             } else {
               setShowStartTask(false);
-              setShowChatInput(false);
             }
           }}
           className="flex items-center gap-1 px-2 py-1 text-xs text-blue-400 hover:text-blue-300 rounded"
@@ -123,13 +142,10 @@ Loading tools...`,
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {showNewTask && showStartTask && !showChatInput && (
+        {showNewTask && showStartTask && (
           <div className="p-4 border-b border-[#2A2A2A]">
             <button 
-              onClick={() => {
-                setShowChatInput(true);
-                setShowStartTask(false);
-              }}
+              onClick={handleStartTask}
               className="w-full flex items-center gap-2 bg-orange-100 text-orange-800 p-3 rounded hover:bg-orange-200 transition-colors"
             >
               <Zap className="w-4 h-4" />
@@ -139,26 +155,6 @@ Loading tools...`,
               <Square className="w-4 h-4" />
               Example case
             </button>
-          </div>
-        )}
-        {showNewTask && showChatInput && (
-          <div className="p-4 border-b border-[#2A2A2A]">
-            <input 
-              value={taskInput}
-              onChange={(e) => setTaskInput(e.target.value)}
-              placeholder="Enter message"
-              className="w-full bg-gray-700 text-white p-3 rounded text-sm mb-3"
-              onKeyPress={(e) => e.key === 'Enter' && createTask()}
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button 
-                onClick={createTask}
-                className="flex-1 bg-blue-600 text-white text-sm rounded py-2 hover:bg-blue-700"
-              >
-                Send
-              </button>
-            </div>
           </div>
         )}
         <div className="p-4">

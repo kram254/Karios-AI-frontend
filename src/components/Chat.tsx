@@ -48,9 +48,10 @@ interface ChatProps {
   chatId?: string;
   onMessage?: (message: string) => void;
   compact?: boolean;
+  isTaskMode?: boolean;
 }
 
-const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
+const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskMode = false }) => {
   const { 
     currentChat, 
     addMessage, 
@@ -174,6 +175,14 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false }) => {
     e.preventDefault();
     console.log('🚀 HANDLESUBMIT STARTED - message:', message.trim());
     console.log('🚀 HANDLESUBMIT - automationActive:', automationActive);
+    
+    // Handle task mode creation
+    if (isTaskMode && message.trim()) {
+      console.log('🎯 TASK MODE - Creating task from chat input:', message);
+      (window as any).createTaskFromChat?.(message.trim());
+      setMessage('');
+      return;
+    }
     
     // Check for autonomous task creation requests
     const taskKeywords = ['create task', 'autonomous task', 'build agent', 'automate', 'execute task'];

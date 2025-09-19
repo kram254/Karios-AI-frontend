@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Zap, Square } from 'lucide-react';
 import { TaskItem } from './TaskItem';
 import { useChat } from '../../context/ChatContext';
+import ClarificationModal from './ClarificationModal';
 
 interface Task {
   id: string;
@@ -22,7 +23,9 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showNewTask, setShowNewTask] = useState(false);
   const [showStartTask, setShowStartTask] = useState(false);
-  const [isTaskMode, setIsTaskMode] = useState(false);
+  const [showClarificationModal, setShowClarificationModal] = useState(false);
+  const [clarificationRequest, setClarificationRequest] = useState('');
+  const [pendingTaskId, setPendingTaskId] = useState('');
   const { addMessage } = useChat();
 
   const generateTaskTitle = (prompt: string): string => {
@@ -36,68 +39,127 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
     return keyWords.length > 30 ? keyWords.substring(0, 27) + '...' : keyWords;
   };
 
-  const createTask = async (taskInput: string) => {
+  const createMultiAgentTask = async (taskInput: string) => {
     if (taskInput.trim()) {
-      const taskTitle = generateTaskTitle(taskInput);
-      const newTask = {
-        id: `task_${Date.now()}`,
-        title: taskTitle,
-        description: taskInput,
-        status: 'in_progress',
-        progress: 10
-      };
-      
-      setTasks(prev => [...prev, newTask]);
-      setShowNewTask(false);
-      setShowStartTask(false);
-      setIsTaskMode(false);
-      
-      await addMessage({
-        role: 'user',
-        content: taskInput,
-        chatId: chatId
-      });
-      
-      await addMessage({
-        role: 'assistant', 
-        content: `I'll help you with this task. Let me use the available tools to complete it.
-
-**Task**: ${taskInput}
-
-I have access to some tools, but they may not be sufficient for your specific request. To fully assist you, I'll need to use various tools which allows me to complete tasks comprehensively.
-
-🔍 **Search Perplexity**
-
-Loading tools...`,
-        chatId: chatId
-      });
-      
-      setTimeout(async () => {
-        setTasks(prev => prev.map(t => 
-          t.id === newTask.id ? { ...t, progress: 50 } : t
-        ));
-        await addMessage({
-          role: 'assistant',
-          content: `🌐 **Google Search**\n\nComputer started\n\n✓ Navigate to search\n✓ Processing results\n\n🔍 **Search Perplexity**`,
-          chatId: chatId
+      try {
+        const response = await fetch('/api/multi-agent/create-task', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            user_id: 1,
+            original_request: taskInput
+          }),
         });
-      }, 2000);
+
+        const result = await response.json();
+
+        if (result.success) {
+          const taskTitle = generateTaskTitle(taskInput);
+          const newTask = {
+            id: result.task_id,
+            title: taskTitle,
+            description: taskInput,
+            status: 'processing',
+            progress: 10
+          };
+          
+          setTasks(prev => [...prev, newTask]);
+          setShowNewTask(false);
+          setShowStartTask(false);
+          
+          await addMessage({
+            role: 'user',
+            content: taskInput,
+            chatId: chatId
+          });
+          
+          await addMessage({
+            role: 'assistant',
+            content: result.message || `✨ **Multi-Agent Task Created**\n\nTask ID: ${result.task_id}\n\nThe multi-agent system is processing your request...`,
+            chatId: chatId
+          });
+
+          pollTaskStatus(result.task_id);
+        } else {
+          console.error('Failed to create multi-agent task:', result.error);
+        }
+      } catch (error) {
+        console.error('Error creating multi-agent task:', error);
+      }
+    }
+  };
+
+  const pollTaskStatus = async (taskId: string) => {
+    try {
+      const response = await fetch(`/api/multi-agent/task/${taskId}/status`);
+      const result = await response.json();
+
+      if (result.success) {
+        if (result.requires_clarification) {
+          setPendingTaskId(taskId);
+          setClarificationRequest(result.clarification_request || '');
+          setShowClarificationModal(true);
+        } else {
+          setTasks(prev => prev.map(t => 
+            t.id === taskId ? { 
+              ...t, 
+              status: result.workflow_stage,
+              progress: getProgressFromStage(result.workflow_stage)
+            } : t
+          ));
+
+          if (result.workflow_stage !== 'completed' && result.workflow_stage !== 'failed') {
+            setTimeout(() => pollTaskStatus(taskId), 3000);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error polling task status:', error);
+    }
+  };
+
+  const getProgressFromStage = (stage: string): number => {
+    const stageProgress: Record<string, number> = {
+      'created': 10,
+      'refining': 20,
+      'clarifying': 25,
+      'planning': 40,
+      'executing': 60,
+      'reviewing': 80,
+      'formatting': 90,
+      'completed': 100,
+      'failed': 0
+    };
+    return stageProgress[stage] || 10;
+  };
+
+  const handleClarificationSubmit = async (taskId: string, response: string) => {
+    try {
+      await fetch('/api/multi-agent/task/clarification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          task_id: taskId,
+          clarification_response: response
+        }),
+      });
+
+      setShowClarificationModal(false);
+      setClarificationRequest('');
+      setPendingTaskId('');
       
-      setTimeout(async () => {
-        setTasks(prev => prev.map(t => 
-          t.id === newTask.id ? { ...t, status: 'completed', progress: 100 } : t
-        ));
-        await addMessage({
-          role: 'assistant',
-          content: `✅ **Task Completed**\n\nSuccessfully completed: "${taskInput}"\n\n**Tools used:**\n- Perplexity Search\n- Google Search\n- Data Analysis\n\nTask execution finished.`,
-          chatId: chatId
-        });
-      }, 4000);
+      setTimeout(() => pollTaskStatus(taskId), 1000);
+    } catch (error) {
+      console.error('Error submitting clarification:', error);
     }
   };
 
   const handleStartTask = () => {
-    setIsTaskMode(true);
     setShowStartTask(false);
     onTaskModeChange?.(true);
     const chatInput = document.querySelector('input[placeholder*="Ask"]') as HTMLInputElement;
@@ -106,16 +168,16 @@ Loading tools...`,
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (onCreateTask) {
       (window as any).createTaskFromChat = (taskInput: string) => {
-        createTask(taskInput);
+        createMultiAgentTask(taskInput);
       };
     }
     return () => {
       delete (window as any).createTaskFromChat;
     };
-  }, [onCreateTask]);
+  }, [onCreateTask, chatId]);
 
   if (isWebAutomation) return null;
 
@@ -173,6 +235,14 @@ Loading tools...`,
           )}
         </div>
       </div>
+      
+      <ClarificationModal
+        open={showClarificationModal}
+        taskId={pendingTaskId}
+        clarificationRequest={clarificationRequest}
+        onSubmit={handleClarificationSubmit}
+        onClose={() => setShowClarificationModal(false)}
+      />
     </div>
   );
 };

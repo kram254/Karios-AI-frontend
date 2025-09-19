@@ -816,11 +816,13 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0A0A]">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
-        <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
-      </div>
+    <div className="flex h-full bg-[#0A0A0A]">
+      {/* Main chat area */}
+      <div className="flex flex-col flex-1">
+        {/* Chat Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
+          <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
+        </div>
 
       {/* Agent Info Banner - Show only if chat has an agent_id */}
       {currentChat.agent_id && (
@@ -1635,6 +1637,23 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater
           isVisible={true} /* Always pass true and let the component handle visibility logic */
+        />
+      </div>
+      </div>
+      
+      {/* Right sidebar with TaskPanel */}
+      <div className="w-80 border-l border-[#2A2A2A]">
+        <TaskPanel 
+          chatId={currentChat.id} 
+          isWebAutomation={false} 
+          onTaskModeChange={(isTaskMode) => {
+            // Handle task mode change if needed
+            console.log('Task mode changed:', isTaskMode);
+          }}
+          onCreateTask={(taskInput) => {
+            // Handle task creation
+            console.log('Create task:', taskInput);
+          }}
         />
       </div>
     </div>

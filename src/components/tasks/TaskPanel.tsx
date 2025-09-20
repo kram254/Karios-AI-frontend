@@ -10,6 +10,14 @@ interface Task {
   description: string;
   status: string;
   progress: number;
+  details?: {
+    stage: string;
+    qualityScore?: number;
+    executionResults?: any;
+    reviewData?: any;
+    prpData?: any;
+    executionPlan?: any;
+  };
 }
 
 interface TaskPanelProps {
@@ -96,7 +104,15 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
             t.id === taskId ? { 
               ...t, 
               status: result.workflow_stage,
-              progress: getProgressFromStage(result.workflow_stage)
+              progress: getProgressFromStage(result.workflow_stage),
+              details: {
+                stage: getStageDisplayName(result.workflow_stage),
+                qualityScore: result.quality_score,
+                executionResults: result.execution_results,
+                reviewData: result.review_report,
+                prpData: result.prp_data,
+                executionPlan: result.execution_plan
+              }
             } : t
           ));
 
@@ -106,16 +122,22 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
               content: `✅ **Multi-Agent Task Completed**\n\n${result.formatted_output}\n\n*Quality Score: ${result.quality_score}%*`,
               chatId: chatId
             });
+          } else if (result.workflow_stage === 'failed') {
+            await addMessage({
+              role: 'assistant',
+              content: `❌ **Multi-Agent Task Failed**\n\nThe task could not be completed successfully. Please try again or provide more specific requirements.`,
+              chatId: chatId
+            });
           }
 
           if (result.workflow_stage !== 'completed' && result.workflow_stage !== 'failed') {
-            setTimeout(() => pollTaskStatus(taskId), 2000);
+            setTimeout(() => pollTaskStatus(taskId), 1000);
           }
         }
       }
     } catch (error) {
       console.error('Error polling task status:', error);
-      setTimeout(() => pollTaskStatus(taskId), 5000);
+      setTimeout(() => pollTaskStatus(taskId), 3000);
     }
   };
 
@@ -255,7 +277,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
             <div className="mb-3">
               <h3 className="text-gray-400 text-xs font-medium mb-3">Today</h3>
               {tasks.map(task => (
-                <TaskItem key={task.id} {...task} />
+                <TaskItem key={task.id} {...task} details={task.details} />
               ))}
             </div>
           )}

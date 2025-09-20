@@ -6,9 +6,17 @@ interface TaskProps {
   title: string;
   status: string;
   progress: number;
+  details?: {
+    stage: string;
+    qualityScore?: number;
+    executionResults?: any;
+    reviewData?: any;
+    prpData?: any;
+    executionPlan?: any;
+  };
 }
 
-export const TaskItem: React.FC<TaskProps> = ({ title, status, progress }) => {
+export const TaskItem: React.FC<TaskProps> = ({ title, status, progress, details }) => {
   const getStageDisplayName = (stage: string): string => {
     const stageNames: Record<string, string> = {
       'created': 'Initializing',
@@ -41,7 +49,10 @@ export const TaskItem: React.FC<TaskProps> = ({ title, status, progress }) => {
         {getIcon()}
         <span className="text-white text-xs font-medium truncate">{title}</span>
       </div>
-      <div className="text-xs text-gray-400 mb-1">{getStageDisplayName(status)}</div>
+      <div className="text-xs text-gray-400 mb-1">{details?.stage || getStageDisplayName(status)}</div>
+      {details?.qualityScore && status === 'completed' && (
+        <div className="text-xs text-green-400 mb-1">Quality: {details.qualityScore}%</div>
+      )}
       {status !== 'completed' && status !== 'failed' && (
         <div className="w-full bg-gray-600 rounded-full h-1">
           <div 

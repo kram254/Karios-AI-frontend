@@ -14,8 +14,6 @@ import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
-import AutonomousTaskManager from "./tasks/AutonomousTaskManager";
-import { TaskPanel } from "./tasks/TaskPanel";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -1639,22 +1637,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           isVisible={true} /* Always pass true and let the component handle visibility logic */
         />
       </div>
-      </div>
-      
-      {/* Right sidebar with TaskPanel */}
-      <div className="w-80 border-l border-[#2A2A2A]">
-        <TaskPanel 
-          chatId={currentChat.id} 
-          isWebAutomation={false} 
-          onTaskModeChange={(isTaskMode) => {
-            // Handle task mode change if needed
-            console.log('Task mode changed:', isTaskMode);
-          }}
-          onCreateTask={(taskInput) => {
-            // Handle task creation
-            console.log('Create task:', taskInput);
-          }}
-        />
       </div>
     </div>
   );

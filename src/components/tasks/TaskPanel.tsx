@@ -26,7 +26,8 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
   const [showClarificationModal, setShowClarificationModal] = useState(false);
   const [clarificationRequest, setClarificationRequest] = useState('');
   const [pendingTaskId, setPendingTaskId] = useState('');
-  const { addMessage } = useChat();
+  const [lastMessageCount, setLastMessageCount] = useState(0);
+  const { addMessage, currentChat } = useChat();
 
   const generateTaskTitle = (prompt: string): string => {
     const cleanPrompt = prompt.trim();
@@ -69,18 +70,6 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
           setTasks(prev => [...prev, newTask]);
           setShowNewTask(false);
           setShowStartTask(false);
-          
-          await addMessage({
-            role: 'user',
-            content: taskInput,
-            chatId: chatId
-          });
-          
-          await addMessage({
-            role: 'assistant',
-            content: result.message || `✨ **Multi-Agent Task Created**\n\nTask ID: ${result.task_id}\n\nThe multi-agent system is processing your request...`,
-            chatId: chatId
-          });
 
           pollTaskStatus(result.task_id);
         } else {
@@ -111,29 +100,55 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
             } : t
           ));
 
+          if (result.workflow_stage === 'completed' && result.formatted_output) {
+            await addMessage({
+              role: 'assistant',
+              content: `✅ **Multi-Agent Task Completed**\n\n${result.formatted_output}\n\n*Quality Score: ${result.quality_score}%*`,
+              chatId: chatId
+            });
+          }
+
           if (result.workflow_stage !== 'completed' && result.workflow_stage !== 'failed') {
-            setTimeout(() => pollTaskStatus(taskId), 3000);
+            setTimeout(() => pollTaskStatus(taskId), 2000);
           }
         }
       }
     } catch (error) {
       console.error('Error polling task status:', error);
+      setTimeout(() => pollTaskStatus(taskId), 5000);
     }
   };
 
   const getProgressFromStage = (stage: string): number => {
     const stageProgress: Record<string, number> = {
-      'created': 10,
-      'refining': 20,
-      'clarifying': 25,
-      'planning': 40,
-      'executing': 60,
-      'reviewing': 80,
-      'formatting': 90,
+      'created': 5,
+      'refining': 15,
+      'clarifying': 20,
+      'planning': 35,
+      'executing': 65,
+      'reviewing': 85,
+      'formatting': 95,
       'completed': 100,
-      'failed': 0
+      'failed': 0,
+      'retrying': 70
     };
     return stageProgress[stage] || 10;
+  };
+
+  const getStageDisplayName = (stage: string): string => {
+    const stageNames: Record<string, string> = {
+      'created': 'Initializing',
+      'refining': 'Refining Requirements',
+      'clarifying': 'Awaiting Clarification',
+      'planning': 'Creating Execution Plan',
+      'executing': 'Executing Tasks',
+      'reviewing': 'Quality Review',
+      'formatting': 'Formatting Output',
+      'completed': 'Completed',
+      'failed': 'Failed',
+      'retrying': 'Retrying Execution'
+    };
+    return stageNames[stage] || stage;
   };
 
   const handleClarificationSubmit = async (taskId: string, response: string) => {
@@ -167,6 +182,22 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
       chatInput.focus();
     }
   };
+
+  useEffect(() => {
+    if (currentChat && currentChat.id === chatId) {
+      const userMessages = currentChat.messages.filter(msg => msg.role === 'user');
+      
+      if (userMessages.length > lastMessageCount && userMessages.length === 1) {
+        const latestUserMessage = userMessages[userMessages.length - 1];
+        if (latestUserMessage && latestUserMessage.content.trim()) {
+          console.log('Auto-creating task for first user message:', latestUserMessage.content);
+          createMultiAgentTask(latestUserMessage.content);
+        }
+      }
+      
+      setLastMessageCount(userMessages.length);
+    }
+  }, [currentChat, chatId, lastMessageCount]);
 
   useEffect(() => {
     if (onCreateTask) {

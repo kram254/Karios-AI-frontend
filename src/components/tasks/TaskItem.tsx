@@ -9,11 +9,29 @@ interface TaskProps {
 }
 
 export const TaskItem: React.FC<TaskProps> = ({ title, status, progress }) => {
+  const getStageDisplayName = (stage: string): string => {
+    const stageNames: Record<string, string> = {
+      'created': 'Initializing',
+      'refining': 'Refining Requirements',
+      'clarifying': 'Awaiting Clarification',
+      'planning': 'Creating Execution Plan',
+      'executing': 'Executing Tasks',
+      'reviewing': 'Quality Review',
+      'formatting': 'Formatting Output',
+      'completed': 'Completed',
+      'failed': 'Failed',
+      'retrying': 'Retrying Execution',
+      'processing': 'Processing'
+    };
+    return stageNames[stage] || stage;
+  };
+
   const getIcon = () => {
     switch (status) {
       case 'completed': return <CheckCircle className="w-4 h-4 text-green-400" />;
-      case 'in_progress': return <Clock className="w-4 h-4 text-blue-400" />;
-      default: return <AlertCircle className="w-4 h-4 text-gray-400" />;
+      case 'failed': return <AlertCircle className="w-4 h-4 text-red-400" />;
+      case 'clarifying': return <AlertCircle className="w-4 h-4 text-yellow-400" />;
+      default: return <Clock className="w-4 h-4 text-blue-400" />;
     }
   };
 
@@ -23,10 +41,17 @@ export const TaskItem: React.FC<TaskProps> = ({ title, status, progress }) => {
         {getIcon()}
         <span className="text-white text-xs font-medium truncate">{title}</span>
       </div>
-      {status === 'in_progress' && (
+      <div className="text-xs text-gray-400 mb-1">{getStageDisplayName(status)}</div>
+      {status !== 'completed' && status !== 'failed' && (
         <div className="w-full bg-gray-600 rounded-full h-1">
-          <div className="bg-blue-400 h-1 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+          <div 
+            className="bg-blue-400 h-1 rounded-full transition-all duration-300" 
+            style={{ width: `${progress}%` }} 
+          />
         </div>
+      )}
+      {status !== 'completed' && status !== 'failed' && (
+        <div className="text-xs text-gray-500 mt-1">{progress}%</div>
       )}
     </div>
   );

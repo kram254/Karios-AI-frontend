@@ -268,14 +268,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       await addMessage({ role: 'user', content: messageContent, chatId: currentChat?.id || '' });
       console.log('🔥 User message added to chat');
       
-      const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
-        id: `task_${Date.now()}`,
-        message: messageContent
-      })}`;
-      
-      await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat?.id || '' });
-      console.log('🔥 Task execution message added to chat');
-      
       try {
         console.log('🔥 Creating multi-agent task via backend API');
         const response = await fetch('/api/multi-agent/create-task', {
@@ -290,8 +282,30 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         
         const taskData = await response.json();
         console.log('🔥 Backend task created:', taskData);
+        
+        if (taskData.success && (taskData.task_id || taskData.id)) {
+          const taskId = taskData.task_id || taskData.id || `task_${Date.now()}`;
+          const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
+            id: taskId,
+            message: messageContent
+          })}`;
+          
+          await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat?.id || '' });
+          console.log('🔥 Task execution message added with real task ID:', taskId);
+        } else {
+          const fallbackTaskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
+            id: `task_${Date.now()}`,
+            message: messageContent
+          })}`;
+          await addMessage({ role: 'assistant', content: fallbackTaskMessage, chatId: currentChat?.id || '' });
+        }
       } catch (error) {
-        console.error('🔥 Backend task creation error (non-blocking):', error);
+        console.error('🔥 Backend task creation error:', error);
+        const fallbackTaskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
+          id: `task_${Date.now()}`,
+          message: messageContent
+        })}`;
+        await addMessage({ role: 'assistant', content: fallbackTaskMessage, chatId: currentChat?.id || '' });
       }
       
       setIsProcessing(false);

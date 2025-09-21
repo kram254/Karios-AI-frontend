@@ -48,60 +48,63 @@ const TaskMessage: React.FC<TaskMessageProps> = ({ taskId, initialMessage, onCom
   useEffect(() => {
     console.log('🔥 TaskMessage mounted for task:', taskId);
     
-    const demoSteps = [
-      { id: 'search_1', type: 'search_perplexity', name: 'Search Perplexity', status: 'pending' as const },
-      { id: 'google_1', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'google_2', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'google_3', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'google_4', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'google_5', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'extract_1', type: 'extract_webpage_text', name: 'Extract Webpage Text', status: 'pending' as const },
-      { id: 'google_6', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'google_7', type: 'google_search', name: 'Google Search', status: 'pending' as const },
-      { id: 'extract_2', type: 'extract_webpage_text', name: 'Extract Webpage Text', status: 'pending' as const }
-    ];
+    let isPolling = true;
+    let pollCount = 0;
     
-    setSteps(demoSteps);
-    
-    let currentStepIndex = 0;
-    const simulateProgress = () => {
-      if (currentStepIndex < demoSteps.length) {
-        setSteps(prev => prev.map((step, index) => {
-          if (index < currentStepIndex) {
-            return { ...step, status: 'completed' as const };
-          } else if (index === currentStepIndex) {
-            return { ...step, status: 'running' as const };
+    const pollTaskStatus = async () => {
+      if (!isPolling) return;
+      
+      try {
+        const response = await fetch(`/api/multi-agent/task/${taskId}/status`);
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.workflow_stage) {
+            setCurrentStage(data.workflow_stage);
           }
-          return step;
-        }));
-        currentStepIndex++;
-      } else {
-        clearInterval(progressInterval);
-        setTaskResult(`# Updated Research: Open Source Web Automation Projects in 2025
-
-## 🚀 AI-Powered Automation Leaders
-
-### 1. Browser-use - 70,200+ GitHub Stars
-- Revolutionary AI-powered browser automation using natural language commands
-- Supports multiple LLMs (OpenAI, Claude, Gemini)
-- Active development with strong community adoption
-
-### 2. Firecrawl - 58,700+ GitHub Stars  
-- Web data API specifically designed for AI applications
-- Converts websites into LLM-ready markdown and structured data
-- Strong enterprise adoption with Y Combinator backing
-
-[Full detailed report continues...]`);
+          
+          if (data.execution_results?.step_results) {
+            const taskSteps = data.execution_results.step_results.map((result: any, index: number) => ({
+              id: `step_${index}`,
+              type: result.tool_name || result.action || 'task',
+              name: result.description || result.action || `Step ${index + 1}`,
+              status: result.success ? 'completed' : result.error ? 'failed' : 'running',
+              result: result.output
+            }));
+            setSteps(taskSteps);
+          }
+          
+          if (data.formatted_output) {
+            setTaskResult(data.formatted_output);
+            if (onComplete) {
+              onComplete(data.formatted_output);
+            }
+            isPolling = false;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll task:', error);
+      }
+      
+      pollCount++;
+      if (pollCount >= 60) {
+        isPolling = false;
       }
     };
     
-    const progressInterval = setInterval(simulateProgress, 2000);
-    simulateProgress();
+    const initialSteps = [
+      { id: 'init_1', type: 'task', name: 'Initializing task', status: 'running' as const }
+    ];
+    setSteps(initialSteps);
+    
+    const pollInterval = setInterval(pollTaskStatus, 2000);
+    pollTaskStatus();
     
     return () => {
-      clearInterval(progressInterval);
+      isPolling = false;
+      clearInterval(pollInterval);
     };
-  }, [taskId]);
+  }, [taskId, onComplete]);
 
   return (
     <div className="task-message">
@@ -155,8 +158,14 @@ const TaskMessage: React.FC<TaskMessageProps> = ({ taskId, initialMessage, onCom
       {taskResult && (
         <div className="task-result mt-4 p-4 bg-gray-800 rounded-lg">
           <div className="prose prose-invert max-w-none">
-            {taskResult}
+            <div dangerouslySetInnerHTML={{ __html: taskResult.replace(/\n/g, '<br />') }} />
           </div>
+        </div>
+      )}
+      
+      {currentStage && (
+        <div className="text-xs text-gray-500 mt-2">
+          Stage: {currentStage}
         </div>
       )}
     </div>

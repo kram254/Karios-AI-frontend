@@ -268,43 +268,30 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       await addMessage({ role: 'user', content: messageContent, chatId: currentChat?.id || '' });
       console.log('🔥 User message added to chat');
       
+      const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
+        id: `task_${Date.now()}`,
+        message: messageContent
+      })}`;
+      
+      await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat?.id || '' });
+      console.log('🔥 Task execution message added to chat');
+      
       try {
-        console.log('🔥 Creating multi-agent task via API');
-        const response = await fetch('/api/multi-agent-tasks/create', {
+        console.log('🔥 Creating multi-agent task via backend API');
+        const response = await fetch('/api/multi-agent/create-task', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: currentChat?.id || '',
-            original_request: messageContent
+            original_request: messageContent,
+            user_id: null
           })
         });
         
         const taskData = await response.json();
-        console.log('🔥 Task created:', taskData);
-        
-        if (taskData.success && taskData.task_id) {
-          const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
-            id: taskData.task_id,
-            message: messageContent
-          })}`;
-          
-          await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat?.id || '' });
-          console.log('🔥 Task execution message added to chat with ID:', taskData.task_id);
-        } else {
-          console.error('🔥 Task creation failed:', taskData);
-          await addMessage({ 
-            role: 'assistant', 
-            content: 'I understand your request. Let me help you with that.',
-            chatId: currentChat?.id || '' 
-          });
-        }
+        console.log('🔥 Backend task created:', taskData);
       } catch (error) {
-        console.error('🔥 Error creating task:', error);
-        await addMessage({ 
-          role: 'assistant', 
-          content: 'I understand your request. Let me help you with that.',
-          chatId: currentChat?.id || '' 
-        });
+        console.error('🔥 Backend task creation error (non-blocking):', error);
       }
       
       setIsProcessing(false);

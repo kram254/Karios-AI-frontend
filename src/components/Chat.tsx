@@ -14,7 +14,7 @@ import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
-import TaskExecutionPanel from "./tasks/TaskExecutionPanel";
+import TaskMessage from "./tasks/TaskMessage";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -72,8 +72,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [activeTask, setActiveTask] = useState<{id: string, title: string} | null>(null);
-  const [showTaskExecution, setShowTaskExecution] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [automationActive, setAutomationActive] = useState(false);
   const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
@@ -270,12 +268,44 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       await addMessage({ role: 'user', content: messageContent, chatId: currentChat?.id || '' });
       console.log('🔥 User message added to chat');
       
-      setActiveTask({
-        id: `task_${Date.now()}`,
-        title: messageContent.length > 50 ? messageContent.substring(0, 50) + '...' : messageContent
-      });
-      setShowTaskExecution(true);
-      console.log('🔥 Task execution panel activated');
+      try {
+        console.log('🔥 Creating multi-agent task via API');
+        const response = await fetch('/api/multi-agent-tasks/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: currentChat?.id || '',
+            original_request: messageContent
+          })
+        });
+        
+        const taskData = await response.json();
+        console.log('🔥 Task created:', taskData);
+        
+        if (taskData.success && taskData.task_id) {
+          const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
+            id: taskData.task_id,
+            message: messageContent
+          })}`;
+          
+          await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat?.id || '' });
+          console.log('🔥 Task execution message added to chat with ID:', taskData.task_id);
+        } else {
+          console.error('🔥 Task creation failed:', taskData);
+          await addMessage({ 
+            role: 'assistant', 
+            content: 'I understand your request. Let me help you with that.',
+            chatId: currentChat?.id || '' 
+          });
+        }
+      } catch (error) {
+        console.error('🔥 Error creating task:', error);
+        await addMessage({ 
+          role: 'assistant', 
+          content: 'I understand your request. Let me help you with that.',
+          chatId: currentChat?.id || '' 
+        });
+      }
       
       setIsProcessing(false);
       setAvatarState('idle');
@@ -1190,6 +1220,23 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                              );
                            })()}
                          </div>
+                       ) : msg.content.startsWith('[TASK_EXECUTION]') ? (
+                         (() => {
+                           try {
+                             const taskData = JSON.parse(msg.content.substring('[TASK_EXECUTION]'.length + 1));
+                             return (
+                               <TaskMessage 
+                                 taskId={taskData.id}
+                                 initialMessage={taskData.message}
+                                 onComplete={(result) => {
+                                   console.log('🔥 Task completed with result:', result);
+                                 }}
+                               />
+                             );
+                           } catch (e) {
+                             return <MessageFormatter content={msg.content} role={msg.role} />;
+                           }
+                         })()
                        ) : (
                          <MessageFormatter content={msg.content} role={msg.role} />
                        )}
@@ -1658,24 +1705,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         )}
         <div className="chat-ai-notice neon-text">Karios AI | Verify important Info.</div>
         
-        {showTaskExecution && activeTask && (
-          <div className="task-execution-overlay">
-            <TaskExecutionPanel
-              taskId={activeTask.id}
-              taskTitle={activeTask.title}
-              onComplete={(results) => {
-                console.log('🔥 TASK COMPLETED:', results);
-                addMessage({
-                  role: 'assistant',
-                  content: results,
-                  chatId: currentChat?.id || ''
-                });
-                setShowTaskExecution(false);
-                setActiveTask(null);
-              }}
-            />
-          </div>
-        )}
         
         {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater

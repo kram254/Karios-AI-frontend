@@ -55,7 +55,9 @@ const TaskMessage: React.FC<TaskMessageProps> = ({ taskId, initialMessage, onCom
       if (!isPolling) return;
       
       try {
-        const response = await fetch(`/api/multi-agent/task/${taskId}/status`);
+        const response = await fetch(`/api/multi-agent/task/${taskId}/status`, {
+          headers: { 'Accept': 'application/json' }
+        });
         if (response.ok) {
           const data = await response.json();
           
@@ -63,7 +65,7 @@ const TaskMessage: React.FC<TaskMessageProps> = ({ taskId, initialMessage, onCom
             setCurrentStage(data.workflow_stage);
           }
           
-          if (data.execution_results?.step_results) {
+          if (data.execution_results?.step_results && data.execution_results.step_results.length > 0) {
             const taskSteps = data.execution_results.step_results.map((result: any, index: number) => ({
               id: `step_${index}`,
               type: result.tool_name || result.action || 'task',
@@ -72,6 +74,15 @@ const TaskMessage: React.FC<TaskMessageProps> = ({ taskId, initialMessage, onCom
               result: result.output
             }));
             setSteps(taskSteps);
+          } else if (data.workflow_stage && data.workflow_stage !== 'CREATED') {
+            setSteps([
+              {
+                id: 'stage_1',
+                type: 'workflow',
+                name: `Processing: ${data.workflow_stage}`,
+                status: 'running' as const
+              }
+            ]);
           }
           
           if (data.formatted_output) {

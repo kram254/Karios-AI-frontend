@@ -14,6 +14,7 @@ import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
+import TaskExecutionPanel from "./tasks/TaskExecutionPanel";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -71,6 +72,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [activeTask, setActiveTask] = useState<{id: string, title: string} | null>(null);
+  const [showTaskExecution, setShowTaskExecution] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [automationActive, setAutomationActive] = useState(false);
   const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
@@ -256,6 +259,29 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     setMessage("");
     console.log('🔄 INPUT FIELD CLEARED');
     
+    console.log('🔥 MULTI-AGENT TASK DETECTION - Starting analysis...');
+    const isFirstMessage = !currentChat?.messages || currentChat.messages.filter(m => m.role === 'user').length === 0;
+    console.log('🔥 IS FIRST MESSAGE:', isFirstMessage);
+    
+    if (isFirstMessage) {
+      console.log('🔥 FIRST MESSAGE DETECTED - Auto-creating multi-agent task');
+      console.log('🔥 Task content:', messageContent);
+      
+      await addMessage({ role: 'user', content: messageContent, chatId: currentChat?.id || '' });
+      console.log('🔥 User message added to chat');
+      
+      setActiveTask({
+        id: `task_${Date.now()}`,
+        title: messageContent.length > 50 ? messageContent.substring(0, 50) + '...' : messageContent
+      });
+      setShowTaskExecution(true);
+      console.log('🔥 Task execution panel activated');
+      
+      setIsProcessing(false);
+      setAvatarState('idle');
+      return;
+    }
+
     const automationKeywords = /(browse|visit|navigate to|go to|open website|web automation|click on|fill form|search on|scrape|extract from|http:\/\/|https:\/\/|\.com|\.org|\.net|\.co\.)/i;
     const keywordMatch = automationKeywords.test(messageContent);
     console.log('🔄 AUTOMATION KEYWORD TEST:', keywordMatch);
@@ -1631,6 +1657,25 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           </div>
         )}
         <div className="chat-ai-notice neon-text">Karios AI | Verify important Info.</div>
+        
+        {showTaskExecution && activeTask && (
+          <div className="task-execution-overlay">
+            <TaskExecutionPanel
+              taskId={activeTask.id}
+              taskTitle={activeTask.title}
+              onComplete={(results) => {
+                console.log('🔥 TASK COMPLETED:', results);
+                addMessage({
+                  role: 'assistant',
+                  content: results,
+                  chatId: currentChat?.id || ''
+                });
+                setShowTaskExecution(false);
+                setActiveTask(null);
+              }}
+            />
+          </div>
+        )}
         
         {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater

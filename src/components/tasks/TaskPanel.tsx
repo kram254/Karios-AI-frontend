@@ -78,6 +78,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
           setTasks(prev => [...prev, newTask]);
           setShowNewTask(false);
           setShowStartTask(false);
+          onTaskModeChange?.(false);
 
           pollTaskStatus(result.task_id);
         } else {
@@ -197,11 +198,16 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
   };
 
   const handleStartTask = () => {
+    console.log('🎯 START TASK clicked - enabling task mode');
     setShowStartTask(false);
+    setShowNewTask(false);
     onTaskModeChange?.(true);
     const chatInput = document.querySelector('input[placeholder*="Ask"]') as HTMLInputElement;
     if (chatInput) {
       chatInput.focus();
+      console.log('🎯 START TASK - Chat input focused');
+    } else {
+      console.error('🎯 START TASK - Chat input not found');
     }
   };
 
@@ -221,16 +227,14 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
     }
   }, [currentChat, chatId, lastMessageCount]);
 
-  useEffect(() => {
-    if (onCreateTask) {
-      (window as any).createTaskFromChat = (taskInput: string) => {
-        createMultiAgentTask(taskInput);
-      };
-    }
+  React.useEffect(() => {
+    (window as any).createTaskFromChat = (taskInput: string) => {
+      createMultiAgentTask(taskInput);
+    };
     return () => {
       delete (window as any).createTaskFromChat;
     };
-  }, [onCreateTask, chatId]);
+  }, [createMultiAgentTask]);
 
   if (isWebAutomation) return null;
 

@@ -178,9 +178,14 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     // Handle task mode creation
     if (isTaskMode && message.trim()) {
       console.log('🎯 TASK MODE - Creating task from chat input:', message);
-      (window as any).createTaskFromChat?.(message.trim());
-      setMessage('');
-      return;
+      console.log('🎯 TASK MODE - createTaskFromChat function available:', typeof (window as any).createTaskFromChat);
+      if ((window as any).createTaskFromChat) {
+        (window as any).createTaskFromChat(message.trim());
+        setMessage('');
+        return;
+      } else {
+        console.error('🎯 TASK MODE - createTaskFromChat function not available');
+      }
     }
     
     // Check for autonomous task creation requests

@@ -211,15 +211,63 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
     }
   };
 
+  const loadExistingTasks = async () => {
+    try {
+      console.log('🔍 Loading existing tasks for chat:', chatId);
+      const response = await fetch(`/api/multi-agent/chat/${chatId}/tasks`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔍 Tasks response:', result);
+        if (result.success && result.tasks) {
+          const existingTasks = result.tasks.map((task: any) => ({
+            id: task.task_id || task.id,
+            title: generateTaskTitle(task.original_request || task.description || 'Task'),
+            description: task.original_request || task.description || '',
+            status: task.workflow_stage || task.status || 'processing',
+            progress: getProgressFromStage(task.workflow_stage || task.status || 'processing'),
+            details: {
+              stage: getStageDisplayName(task.workflow_stage || task.status || 'processing'),
+              qualityScore: task.quality_score,
+              executionResults: task.execution_results,
+              reviewData: task.review_report,
+              prpData: task.prp_data,
+              executionPlan: task.execution_plan
+            }
+          }));
+          console.log('🔍 Processed tasks:', existingTasks);
+          setTasks(existingTasks);
+          
+          existingTasks.forEach((task: any) => {
+            if (task.status !== 'COMPLETED' && task.status !== 'FAILED') {
+              pollTaskStatus(task.id);
+            }
+          });
+        }
+      } else {
+        console.error('🔍 Failed to load tasks, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error loading existing tasks:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadExistingTasks();
+    const interval = setInterval(() => {
+      loadExistingTasks();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [chatId]);
+
   useEffect(() => {
     if (currentChat && currentChat.id === chatId) {
       const userMessages = currentChat.messages.filter(msg => msg.role === 'user');
       
-      if (userMessages.length > lastMessageCount && userMessages.length === 1) {
+      if (userMessages.length > lastMessageCount && userMessages.length === 1 && tasks.length === 0) {
         const latestUserMessage = userMessages[userMessages.length - 1];
         if (latestUserMessage && latestUserMessage.content.trim()) {
           console.log('Auto-creating task for first user message:', latestUserMessage.content);
-          createMultiAgentTask(latestUserMessage.content);
+          setTimeout(() => loadExistingTasks(), 2000);
         }
       }
       

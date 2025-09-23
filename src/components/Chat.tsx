@@ -250,12 +250,21 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     return msg.role === 'assistant' && (
       msg.content.includes('Multi-Agent Task Created') ||
       msg.content.includes('Multi-Agent Workflow') ||
-      msg.content.includes('Clarification Needed')
+      msg.content.includes('Clarification Needed') ||
+      msg.content.startsWith('[TASK_EXECUTION]')
     );
   };
 
   // Extract task ID from multi-agent messages
   const extractTaskId = (msg: Message) => {
+    if (msg.content.startsWith('[TASK_EXECUTION]')) {
+      try {
+        const jsonData = JSON.parse(msg.content.substring('[TASK_EXECUTION]'.length + 1));
+        return jsonData.id || msg.id;
+      } catch (e) {
+        return msg.id;
+      }
+    }
     const taskIdMatch = msg.content.match(/Task ID: `([^`]+)`/);
     return taskIdMatch ? taskIdMatch[1] : msg.id;
   };

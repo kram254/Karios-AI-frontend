@@ -15,6 +15,8 @@ import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
+import MultiAgentWorkflowCard from "./MultiAgentWorkflowCard";
+import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -78,6 +80,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [automationChatId, setAutomationChatId] = useState<string | null>(null);
   const [automationPlans, setAutomationPlans] = useState<Record<string, any>>({});
   const [pendingAutomationTask, setPendingAutomationTask] = useState<string | null>(null);
+  const [multiAgentWorkflows, setMultiAgentWorkflows] = useState<Record<string, any>>({});
+  const [agentUpdates, setAgentUpdates] = useState<Record<string, MultiAgentWSMessage[]>>({});
+  const [clarificationRequests, setClarificationRequests] = useState<Record<string, MultiAgentWSMessage>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,6 +93,172 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   useEffect(() => {
     scrollToBottom();
   }, [currentChat?.messages]);
+
+  // Multi-agent WebSocket connection effect
+  useEffect(() => {
+    if (currentChat?.id) {
+      console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
+      
+      const callbacks = {
+        onAgentStatus: (data: MultiAgentWSMessage) => {
+          console.log('📡 CHAT - Agent status received:', data);
+          const taskId = data.task_id || 'default';
+          
+          setAgentUpdates(prev => ({
+            ...prev,
+            [taskId]: [...(prev[taskId] || []), data]
+          }));
+          
+          // Update workflow data
+          setMultiAgentWorkflows(prev => ({
+            ...prev,
+            [taskId]: {
+              ...prev[taskId],
+              workflowStage: data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`,
+              lastUpdate: data.timestamp || new Date().toISOString()
+            }
+          }));
+        },
+        
+        onClarificationRequest: (data: MultiAgentWSMessage) => {
+          console.log('📡 CHAT - Clarification request received:', data);
+          const taskId = data.task_id || 'default';
+          
+          setClarificationRequests(prev => ({
+            ...prev,
+            [taskId]: data
+          }));
+          
+          // Update workflow data
+          setMultiAgentWorkflows(prev => ({
+            ...prev,
+            [taskId]: {
+              ...prev[taskId],
+              workflowStage: 'Awaiting Clarification',
+              taskId: taskId,
+              lastUpdate: data.timestamp || new Date().toISOString()
+            }
+          }));
+        },
+        
+        onClarificationResolved: (data: MultiAgentWSMessage) => {
+          console.log('📡 CHAT - Clarification resolved:', data);
+          const taskId = data.task_id || 'default';
+          
+          setClarificationRequests(prev => {
+            const newState = { ...prev };
+            delete newState[taskId];
+            return newState;
+          });
+          
+          // Update workflow data
+          setMultiAgentWorkflows(prev => ({
+            ...prev,
+            [taskId]: {
+              ...prev[taskId],
+              workflowStage: 'Continuing Workflow',
+              lastUpdate: data.timestamp || new Date().toISOString()
+            }
+          }));
+        },
+        
+        onWorkflowUpdate: (data: MultiAgentWSMessage) => {
+          console.log('📡 CHAT - Workflow update received:', data);
+          // Handle general workflow updates
+        },
+        
+        onConnectionEstablished: (data: MultiAgentWSMessage) => {
+          console.log('📡 CHAT - Multi-agent WebSocket connected for chat:', data.chatId);
+        },
+        
+        onError: (error: Event) => {
+          console.error('📡 CHAT - Multi-agent WebSocket error:', error);
+        },
+        
+        onClose: (event: CloseEvent) => {
+          console.log('📡 CHAT - Multi-agent WebSocket closed:', event.code, event.reason);
+        }
+      };
+      
+      multiAgentWebSocketService.connect(currentChat.id, callbacks);
+      
+      return () => {
+        console.log('📡 CHAT - Disconnecting multi-agent WebSocket');
+        multiAgentWebSocketService.disconnect();
+      };
+    }
+  }, [currentChat?.id]);
+
+  // Handle multi-agent task creation events from ChatContext
+  useEffect(() => {
+    const handleMultiAgentTaskCreated = (event: CustomEvent) => {
+      const { chatId, taskId, requiresClarification, clarificationRequest, workflowStage } = event.detail;
+      
+      console.log('🔥 CHAT - Multi-agent task created event received:', event.detail);
+      
+      if (currentChat?.id === chatId) {
+        // Initialize workflow state
+        setMultiAgentWorkflows(prev => ({
+          ...prev,
+          [taskId]: {
+            taskId,
+            workflowStage: workflowStage || 'Initializing',
+            lastUpdate: new Date().toISOString()
+          }
+        }));
+        
+        // Handle clarification if needed
+        if (requiresClarification && clarificationRequest) {
+          setClarificationRequests(prev => ({
+            ...prev,
+            [taskId]: {
+              type: 'clarification_request',
+              task_id: taskId,
+              clarification_request: clarificationRequest,
+              message: 'Please provide additional information to continue',
+              timestamp: new Date().toISOString()
+            }
+          }));
+        }
+        
+        console.log('🔥 CHAT - Workflow state initialized for task:', taskId);
+      }
+    };
+
+    window.addEventListener('multi-agent-task-created', handleMultiAgentTaskCreated as EventListener);
+
+    return () => {
+      window.removeEventListener('multi-agent-task-created', handleMultiAgentTaskCreated as EventListener);
+    };
+  }, [currentChat?.id]);
+
+  // Handle clarification responses
+  const handleClarificationResponse = (taskId: string, response: string) => {
+    console.log('📡 CHAT - Sending clarification response:', { taskId, response });
+    multiAgentWebSocketService.sendClarificationResponse(taskId, response);
+    
+    // Remove the clarification request locally
+    setClarificationRequests(prev => {
+      const newState = { ...prev };
+      delete newState[taskId];
+      return newState;
+    });
+  };
+
+  // Detect multi-agent task messages
+  const isMultiAgentMessage = (msg: Message) => {
+    return msg.role === 'assistant' && (
+      msg.content.includes('Multi-Agent Task Created') ||
+      msg.content.includes('Multi-Agent Workflow') ||
+      msg.content.includes('Clarification Needed')
+    );
+  };
+
+  // Extract task ID from multi-agent messages
+  const extractTaskId = (msg: Message) => {
+    const taskIdMatch = msg.content.match(/Task ID: `([^`]+)`/);
+    return taskIdMatch ? taskIdMatch[1] : msg.id;
+  };
 
   useEffect(() => {
     const handleAutomationEnable = () => {
@@ -1082,8 +1253,40 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 >
                   <div className="message-text">
                     <>
-                       {/* Enhanced rendering for search result messages */}
-                        {msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]') ? (
+                       {/* Enhanced rendering for multi-agent workflow messages */}
+                        {isMultiAgentMessage(msg) ? (
+                          (() => {
+                            const taskId = extractTaskId(msg);
+                            const workflowData = multiAgentWorkflows[taskId];
+                            const taskAgentUpdates = agentUpdates[taskId] || [];
+                            const clarificationRequest = clarificationRequests[taskId];
+                            
+                            console.log('🔧 CHAT - Rendering multi-agent workflow:', {
+                              taskId,
+                              workflowData,
+                              agentUpdatesCount: taskAgentUpdates.length,
+                              hasClarification: !!clarificationRequest
+                            });
+                            
+                            return (
+                              <div className="multi-agent-workflow-message">
+                                <MultiAgentWorkflowCard
+                                  taskId={taskId}
+                                  workflowStage={workflowData?.workflowStage || 'Initializing'}
+                                  agentUpdates={taskAgentUpdates}
+                                  clarificationRequest={clarificationRequest}
+                                  onClarificationResponse={handleClarificationResponse}
+                                  isExpanded={true}
+                                />
+                                
+                                {/* Also show the original message content */}
+                                <div className="mt-4 p-3 bg-[#1A1A2E]/50 rounded-lg border border-[#00F3FF]/20">
+                                  <MessageFormatter content={msg.content} />
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : msg.role === 'assistant' && msg.content.startsWith('[AUTOMATION_PLAN]') ? (
                           <div className="automation-plan-message">
                             {(() => { 
                               let plan = automationPlans[msg.id]; 

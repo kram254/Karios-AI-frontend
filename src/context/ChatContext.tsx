@@ -408,6 +408,29 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const fullyUpdatedChat: Chat = updatedChatResponse.data;
         console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
         console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
+        
+        // Check for multi-agent task metadata in the response
+        if (fullyUpdatedChat.is_multi_agent_task) {
+          console.log('🔥 CHATCONTEXT - Multi-agent task detected:', {
+            taskId: fullyUpdatedChat.task_id,
+            requiresClarification: fullyUpdatedChat.requires_clarification,
+            clarificationRequest: fullyUpdatedChat.clarification_request,
+            workflowStage: fullyUpdatedChat.workflow_stage
+          });
+          
+          // Dispatch custom event with multi-agent task data
+          const multiAgentEvent = new CustomEvent('multi-agent-task-created', {
+            detail: {
+              chatId: activeChatId,
+              taskId: fullyUpdatedChat.task_id,
+              requiresClarification: fullyUpdatedChat.requires_clarification,
+              clarificationRequest: fullyUpdatedChat.clarification_request,
+              workflowStage: fullyUpdatedChat.workflow_stage
+            }
+          });
+          window.dispatchEvent(multiAgentEvent);
+        }
+        
         if (currentChat?.id === activeChatId) {
           setCurrentChat(fullyUpdatedChat);
         }

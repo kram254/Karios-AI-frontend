@@ -33,6 +33,11 @@ export interface Chat {
   agent_id?: string;
   chat_type?: string;
   language?: string;
+  task_id?: string;
+  is_multi_agent_task?: boolean;
+  requires_clarification?: boolean;
+  clarification_request?: string;
+  workflow_stage?: string;
 }
 
 export interface ChatCreate {

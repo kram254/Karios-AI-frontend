@@ -109,11 +109,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             [taskId]: [...(prev[taskId] || []), data]
           }));
           
-          // Update workflow data
           setMultiAgentWorkflows(prev => ({
             ...prev,
             [taskId]: {
               ...prev[taskId],
+              taskId,
               workflowStage: data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`,
               lastUpdate: data.timestamp || new Date().toISOString()
             }
@@ -129,13 +129,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             [taskId]: data
           }));
           
-          // Update workflow data
           setMultiAgentWorkflows(prev => ({
             ...prev,
             [taskId]: {
               ...prev[taskId],
+              taskId,
               workflowStage: 'Awaiting Clarification',
-              taskId: taskId,
               lastUpdate: data.timestamp || new Date().toISOString()
             }
           }));
@@ -164,7 +163,47 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         
         onWorkflowUpdate: (data: MultiAgentWSMessage) => {
           console.log('📡 CHAT - Workflow update received:', data);
-          // Handle general workflow updates
+          const taskId = data.task_id || 'default';
+          if (data.type === 'clarification_request') {
+            setClarificationRequests(prev => ({
+              ...prev,
+              [taskId]: data
+            }));
+            setMultiAgentWorkflows(prev => ({
+              ...prev,
+              [taskId]: {
+                ...prev[taskId],
+                taskId,
+                workflowStage: 'Awaiting Clarification',
+                lastUpdate: data.timestamp || new Date().toISOString()
+              }
+            }));
+          } else if (data.type === 'clarification_resolved') {
+            setClarificationRequests(prev => {
+              const newState = { ...prev };
+              delete newState[taskId];
+              return newState;
+            });
+            setMultiAgentWorkflows(prev => ({
+              ...prev,
+              [taskId]: {
+                ...prev[taskId],
+                taskId,
+                workflowStage: 'Continuing Workflow',
+                lastUpdate: data.timestamp || new Date().toISOString()
+              }
+            }));
+          } else {
+            setMultiAgentWorkflows(prev => ({
+              ...prev,
+              [taskId]: {
+                ...prev[taskId],
+                taskId,
+                workflowStage: data.message || prev[taskId]?.workflowStage || 'Processing',
+                lastUpdate: data.timestamp || new Date().toISOString()
+              }
+            }));
+          }
         },
         
         onConnectionEstablished: (data: MultiAgentWSMessage) => {
@@ -1282,20 +1321,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                               }));
                             }
                             
-                            if (msg.content.includes('Clarification Needed') && !clarificationRequest) {
-                              const mockClarificationRequest = {
-                                type: 'clarification_request',
-                                task_id: taskId,
-                                clarification_request: 'Please provide additional details for your request.',
-                                message: 'Clarification needed to proceed',
-                                timestamp: new Date().toISOString()
-                              };
-                              setClarificationRequests(prev => ({
-                                ...prev,
-                                [taskId]: mockClarificationRequest
-                              }));
-                            }
-                            
                             console.log('🔧 CHAT - Rendering multi-agent workflow:', {
                               taskId,
                               workflowData,
@@ -1424,6 +1449,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                   <div className="results-score">Score: {resultsData.score || 0}% {(resultsData.score || 0) >= 95 ? '✅' : '⚠️'}</div>
                                   <div className="results-success">Status: {resultsData.success ? 'Success' : 'Partial'}</div>
                                   <div className="results-explanation">{resultsData.explanation || 'No explanation available'}</div>
+                                  {resultsData.task_completion && (
+                                    <div className="results-task-completion">
+                                      <div className="task-completion-header">Task Completion</div>
+                                      <div className="task-completion-score">Final Review Score: {resultsData.task_completion.review_score ?? 'N/A'}</div>
+                                    </div>
+                                  )}
                                   {resultsData.extracted_data && resultsData.extracted_data.length > 0 && (
                                     <div className="results-data">
                                       <div className="data-header">Extracted Data:</div>

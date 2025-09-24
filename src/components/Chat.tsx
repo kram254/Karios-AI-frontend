@@ -1266,9 +1266,35 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                         {isMultiAgentMessage(msg) ? (
                           (() => {
                             const taskId = extractTaskId(msg);
-                            const workflowData = multiAgentWorkflows[taskId];
+                            let workflowData = multiAgentWorkflows[taskId];
                             const taskAgentUpdates = agentUpdates[taskId] || [];
                             const clarificationRequest = clarificationRequests[taskId];
+                            
+                            if (!workflowData) {
+                              workflowData = {
+                                taskId,
+                                workflowStage: msg.content.includes('Multi-Agent Task Created') ? 'Processing' : 'Initializing',
+                                lastUpdate: new Date().toISOString()
+                              };
+                              setMultiAgentWorkflows(prev => ({
+                                ...prev,
+                                [taskId]: workflowData
+                              }));
+                            }
+                            
+                            if (msg.content.includes('Clarification Needed') && !clarificationRequest) {
+                              const mockClarificationRequest = {
+                                type: 'clarification_request',
+                                task_id: taskId,
+                                clarification_request: 'Please provide additional details for your request.',
+                                message: 'Clarification needed to proceed',
+                                timestamp: new Date().toISOString()
+                              };
+                              setClarificationRequests(prev => ({
+                                ...prev,
+                                [taskId]: mockClarificationRequest
+                              }));
+                            }
                             
                             console.log('🔧 CHAT - Rendering multi-agent workflow:', {
                               taskId,

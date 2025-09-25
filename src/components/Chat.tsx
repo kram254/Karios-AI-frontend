@@ -426,6 +426,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     return taskIdMatch ? taskIdMatch[1] : msg.id;
   };
 
+  const handleClarificationResponse = (taskId: string, response: string) => {
+    console.log('📡 CHAT - Sending clarification response:', { taskId, response });
+    multiAgentWebSocketService.sendClarificationResponse(taskId, response);
+    setClarificationRequests(prev => {
+      const newState = { ...prev };
+      delete newState[taskId];
+      return newState;
+    });
+  };
+
   useEffect(() => {
     const handleAutomationEnable = () => {
       console.log('🎯 AUTOMATION_ENABLE event received');

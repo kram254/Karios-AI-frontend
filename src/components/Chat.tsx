@@ -85,6 +85,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [clarificationRequests, setClarificationRequests] = useState<Record<string, MultiAgentWSMessage>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastTaskIdRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -102,107 +103,219 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
           console.log('📡 CHAT - Agent status received:', data);
-          const taskId = data.task_id || 'default';
+          const incomingTaskId = data.task_id || null;
+          if (incomingTaskId) {
+            lastTaskIdRef.current = incomingTaskId;
+          }
+          const resolvedTaskId = lastTaskIdRef.current || 'default';
           
-          setAgentUpdates(prev => ({
-            ...prev,
-            [taskId]: [...(prev[taskId] || []), data]
-          }));
-          
-          setMultiAgentWorkflows(prev => ({
-            ...prev,
-            [taskId]: {
-              ...prev[taskId],
-              taskId,
-              workflowStage: data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`,
-              lastUpdate: data.timestamp || new Date().toISOString()
+          setAgentUpdates(prev => {
+            let normalized = { ...prev };
+            if (incomingTaskId && prev.default && Array.isArray(prev.default) && prev.default.length) {
+              const { default: defaultEntries, ...withoutDefault } = normalized;
+              const migrated = defaultEntries ? [...defaultEntries] : [];
+              const combined = [...(withoutDefault[incomingTaskId] || []), ...migrated];
+              normalized = { ...withoutDefault, [incomingTaskId]: combined };
             }
-          }));
+            const updatedList = [...(normalized[resolvedTaskId] || []), data];
+            return { ...normalized, [resolvedTaskId]: updatedList };
+          });
+          
+          setMultiAgentWorkflows(prev => {
+            let normalized = { ...prev };
+            if (incomingTaskId && prev.default) {
+              const { default: defaultWorkflow, ...withoutDefault } = normalized;
+              const mergedWorkflow = {
+                ...(withoutDefault[incomingTaskId] || {}),
+                ...(defaultWorkflow || {}),
+                taskId: incomingTaskId
+              };
+              normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
+            }
+            const currentWorkflow = normalized[resolvedTaskId] || {};
+            return {
+              ...normalized,
+              [resolvedTaskId]: {
+                ...currentWorkflow,
+                taskId: resolvedTaskId,
+                workflowStage: data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`,
+                lastUpdate: data.timestamp || new Date().toISOString()
+              }
+            };
+          });
         },
         
         onClarificationRequest: (data: MultiAgentWSMessage) => {
           console.log('📡 CHAT - Clarification request received:', data);
-          const taskId = data.task_id || 'default';
+          const incomingTaskId = data.task_id || null;
+          if (incomingTaskId) {
+            lastTaskIdRef.current = incomingTaskId;
+          }
+          const resolvedTaskId = lastTaskIdRef.current || 'default';
           
-          setClarificationRequests(prev => ({
-            ...prev,
-            [taskId]: data
-          }));
-          
-          setMultiAgentWorkflows(prev => ({
-            ...prev,
-            [taskId]: {
-              ...prev[taskId],
-              taskId,
-              workflowStage: 'Awaiting Clarification',
-              lastUpdate: data.timestamp || new Date().toISOString()
+          setClarificationRequests(prev => {
+            let normalized = { ...prev };
+            if (incomingTaskId && prev.default) {
+              const { default: defaultRequest, ...withoutDefault } = normalized;
+              normalized = { ...withoutDefault };
+              if (defaultRequest) {
+                normalized[incomingTaskId] = defaultRequest;
+              }
             }
-          }));
+            return {
+              ...normalized,
+              [resolvedTaskId]: data
+            };
+          });
+          
+          setMultiAgentWorkflows(prev => {
+            let normalized = { ...prev };
+            if (incomingTaskId && prev.default) {
+              const { default: defaultWorkflow, ...withoutDefault } = normalized;
+              const mergedWorkflow = {
+                ...(withoutDefault[incomingTaskId] || {}),
+                ...(defaultWorkflow || {}),
+                taskId: incomingTaskId
+              };
+              normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
+            }
+            const currentWorkflow = normalized[resolvedTaskId] || {};
+            return {
+              ...normalized,
+              [resolvedTaskId]: {
+                ...currentWorkflow,
+                taskId: resolvedTaskId,
+                workflowStage: 'Awaiting Clarification',
+                lastUpdate: data.timestamp || new Date().toISOString()
+              }
+            };
+          });
         },
         
         onClarificationResolved: (data: MultiAgentWSMessage) => {
           console.log('📡 CHAT - Clarification resolved:', data);
-          const taskId = data.task_id || 'default';
+          const incomingTaskId = data.task_id || null;
+          if (incomingTaskId) {
+            lastTaskIdRef.current = incomingTaskId;
+          }
+          const resolvedTaskId = lastTaskIdRef.current || 'default';
           
           setClarificationRequests(prev => {
-            const newState = { ...prev };
-            delete newState[taskId];
-            return newState;
+            const updated = { ...prev };
+            if (incomingTaskId && updated.default) {
+              delete updated.default;
+            }
+            delete updated[resolvedTaskId];
+            return updated;
           });
           
-          // Update workflow data
-          setMultiAgentWorkflows(prev => ({
-            ...prev,
-            [taskId]: {
-              ...prev[taskId],
-              workflowStage: 'Continuing Workflow',
-              lastUpdate: data.timestamp || new Date().toISOString()
+          setMultiAgentWorkflows(prev => {
+            let normalized = { ...prev };
+            if (incomingTaskId && prev.default) {
+              const { default: defaultWorkflow, ...withoutDefault } = normalized;
+              const mergedWorkflow = {
+                ...(withoutDefault[incomingTaskId] || {}),
+                ...(defaultWorkflow || {}),
+                taskId: incomingTaskId
+              };
+              normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
             }
-          }));
+            const workflow = normalized[resolvedTaskId] || {};
+            return {
+              ...normalized,
+              [resolvedTaskId]: {
+                ...workflow,
+                workflowStage: 'Continuing Workflow',
+                lastUpdate: data.timestamp || new Date().toISOString()
+              }
+            };
+          });
         },
         
         onWorkflowUpdate: (data: MultiAgentWSMessage) => {
           console.log('📡 CHAT - Workflow update received:', data);
-          const taskId = data.task_id || 'default';
-          if (data.type === 'clarification_request') {
-            setClarificationRequests(prev => ({
-              ...prev,
-              [taskId]: data
-            }));
-            setMultiAgentWorkflows(prev => ({
-              ...prev,
-              [taskId]: {
-                ...prev[taskId],
-                taskId,
-                workflowStage: 'Awaiting Clarification',
-                lastUpdate: data.timestamp || new Date().toISOString()
+          const incomingTaskId = data.task_id || null;
+          if (incomingTaskId) {
+            lastTaskIdRef.current = incomingTaskId;
+          }
+          const resolvedTaskId = lastTaskIdRef.current || 'default';
+          
+          const migrateWorkflowState = (updater: (normalized: Record<string, any>) => Record<string, any>) => {
+            setMultiAgentWorkflows(prev => {
+              let normalized = { ...prev };
+              if (incomingTaskId && prev.default) {
+                const { default: defaultWorkflow, ...withoutDefault } = normalized;
+                const mergedWorkflow = {
+                  ...(withoutDefault[incomingTaskId] || {}),
+                  ...(defaultWorkflow || {}),
+                  taskId: incomingTaskId
+                };
+                normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
               }
-            }));
+              return updater(normalized);
+            });
+          };
+
+          if (data.type === 'clarification_request') {
+            setClarificationRequests(prev => {
+              let normalized = { ...prev };
+              if (incomingTaskId && prev.default) {
+                const { default: defaultRequest, ...withoutDefault } = normalized;
+                normalized = { ...withoutDefault };
+                if (defaultRequest) {
+                  normalized[incomingTaskId] = defaultRequest;
+                }
+              }
+              return {
+                ...normalized,
+                [resolvedTaskId]: data
+              };
+            });
+            migrateWorkflowState(normalized => {
+              const currentWorkflow = normalized[resolvedTaskId] || {};
+              return {
+                ...normalized,
+                [resolvedTaskId]: {
+                  ...currentWorkflow,
+                  taskId: resolvedTaskId,
+                  workflowStage: 'Awaiting Clarification',
+                  lastUpdate: data.timestamp || new Date().toISOString()
+                }
+              };
+            });
           } else if (data.type === 'clarification_resolved') {
             setClarificationRequests(prev => {
-              const newState = { ...prev };
-              delete newState[taskId];
-              return newState;
+              const updated = { ...prev };
+              if (incomingTaskId && updated.default) {
+                delete updated.default;
+              }
+              delete updated[resolvedTaskId];
+              return updated;
             });
-            setMultiAgentWorkflows(prev => ({
-              ...prev,
-              [taskId]: {
-                ...prev[taskId],
-                taskId,
-                workflowStage: 'Continuing Workflow',
-                lastUpdate: data.timestamp || new Date().toISOString()
-              }
-            }));
+            migrateWorkflowState(normalized => {
+              const workflow = normalized[resolvedTaskId] || {};
+              return {
+                ...normalized,
+                [resolvedTaskId]: {
+                  ...workflow,
+                  workflowStage: 'Continuing Workflow',
+                  lastUpdate: data.timestamp || new Date().toISOString()
+                }
+              };
+            });
           } else {
-            setMultiAgentWorkflows(prev => ({
-              ...prev,
-              [taskId]: {
-                ...prev[taskId],
-                taskId,
-                workflowStage: data.message || prev[taskId]?.workflowStage || 'Processing',
-                lastUpdate: data.timestamp || new Date().toISOString()
-              }
-            }));
+            migrateWorkflowState(normalized => {
+              const workflow = normalized[resolvedTaskId] || {};
+              return {
+                ...normalized,
+                [resolvedTaskId]: {
+                  ...workflow,
+                  taskId: resolvedTaskId,
+                  workflowStage: data.message || workflow.workflowStage || 'Processing',
+                  lastUpdate: data.timestamp || new Date().toISOString()
+                }
+              };
+            });
           }
         },
         
@@ -233,67 +346,63 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     const handleMultiAgentTaskCreated = (event: CustomEvent) => {
       const { chatId, taskId, requiresClarification, clarificationRequest, workflowStage } = event.detail;
       
-      console.log('🔥 CHAT - Multi-agent task created event received:', event.detail);
-      
+      console.log('📡 CHAT - Multi-agent task created event received:', event.detail);
       if (currentChat?.id === chatId) {
+        lastTaskIdRef.current = taskId;
         // Initialize workflow state
-        setMultiAgentWorkflows(prev => ({
-          ...prev,
-          [taskId]: {
-            taskId,
-            workflowStage: workflowStage || 'Initializing',
-            lastUpdate: new Date().toISOString()
+        setMultiAgentWorkflows(prev => {
+          let normalized = { ...prev };
+          if (prev.default) {
+            const { default: defaultWorkflow, ...withoutDefault } = normalized;
+            const mergedWorkflow = {
+              ...(withoutDefault[taskId] || {}),
+              ...(defaultWorkflow || {}),
+              taskId
+            };
+            normalized = { ...withoutDefault, [taskId]: mergedWorkflow };
           }
-        }));
-        
-        // Handle clarification if needed
-        if (requiresClarification && clarificationRequest) {
-          setClarificationRequests(prev => ({
-            ...prev,
+          const currentWorkflow = normalized[taskId] || {};
+          return {
+            ...normalized,
             [taskId]: {
-              type: 'clarification_request',
-              task_id: taskId,
-              clarification_request: clarificationRequest,
-              message: 'Please provide additional information to continue',
-              timestamp: new Date().toISOString()
+              ...currentWorkflow,
+              taskId,
+              workflowStage: workflowStage || 'Initializing',
+              lastUpdate: new Date().toISOString()
             }
-          }));
-        }
+          };
+        });
         
-        console.log('🔥 CHAT - Workflow state initialized for task:', taskId);
+        if (requiresClarification && clarificationRequest) {
+          setClarificationRequests(prev => {
+            let normalized = { ...prev };
+            if (prev.default) {
+              const { default: defaultRequest, ...withoutDefault } = normalized;
+              normalized = { ...withoutDefault };
+              if (defaultRequest) {
+                normalized[taskId] = defaultRequest;
+              }
+            }
+            return {
+              ...normalized,
+              [taskId]: {
+                type: 'clarification_request',
+                task_id: taskId,
+                clarification_request: clarificationRequest,
+                message: 'Please provide additional information to continue',
+                timestamp: new Date().toISOString()
+              }
+            };
+          });
+        }
       }
     };
-
     window.addEventListener('multi-agent-task-created', handleMultiAgentTaskCreated as EventListener);
 
     return () => {
       window.removeEventListener('multi-agent-task-created', handleMultiAgentTaskCreated as EventListener);
     };
   }, [currentChat?.id]);
-
-  // Handle clarification responses
-  const handleClarificationResponse = (taskId: string, response: string) => {
-    console.log('📡 CHAT - Sending clarification response:', { taskId, response });
-    multiAgentWebSocketService.sendClarificationResponse(taskId, response);
-    
-    // Remove the clarification request locally
-    setClarificationRequests(prev => {
-      const newState = { ...prev };
-      delete newState[taskId];
-      return newState;
-    });
-  };
-
-  // Detect multi-agent task messages
-  const isMultiAgentMessage = (msg: Message) => {
-    return msg.role === 'assistant' && (
-      msg.content.includes('Multi-Agent Task Created') ||
-      msg.content.includes('Multi-Agent Workflow') ||
-      msg.content.includes('Clarification Needed') ||
-      msg.content.startsWith('[TASK_EXECUTION]')
-    );
-  };
-
   // Extract task ID from multi-agent messages
   const extractTaskId = (msg: Message) => {
     if (msg.content.startsWith('[TASK_EXECUTION]')) {

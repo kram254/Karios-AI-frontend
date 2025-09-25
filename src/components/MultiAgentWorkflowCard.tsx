@@ -33,6 +33,12 @@ interface ClarificationData {
   timestamp?: string;
 }
 
+interface ExecutionItem {
+  title: string;
+  status?: string;
+  detail?: string;
+}
+
 interface MultiAgentWorkflowCardProps {
   taskId: string;
   workflowStage: string;
@@ -52,6 +58,57 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(isExpanded);
   const [clarificationResponse, setClarificationResponse] = useState('');
+
+  const updatesDesc = [...agentUpdates].reverse();
+  const plannerUpdate = updatesDesc.find(update => update.agent_type === 'PLANNER' && update.status === 'completed');
+  const plannerData = (() => {
+    const payload = plannerUpdate?.data || {};
+    if (payload.execution_plan && payload.execution_plan.execution_steps) {
+      return payload.execution_plan;
+    }
+    if (payload.plan_data && payload.plan_data.execution_steps) {
+      return payload.plan_data;
+    }
+    if (payload.execution_steps) {
+      return payload;
+    }
+    return null;
+  })();
+  const planSteps = Array.isArray(plannerData?.execution_steps) ? plannerData.execution_steps : [];
+
+  const executorUpdate = updatesDesc.find(update => update.agent_type === 'TASK_EXECUTOR' && update.status === 'completed');
+  const normalizeExecutionItems = (source: unknown): ExecutionItem[] => {
+    if (!source) {
+      return [] as ExecutionItem[];
+    }
+    const sourceRecord = source as { steps?: unknown; execution_steps?: unknown };
+    const listCandidate: any[] = Array.isArray(source)
+      ? source
+      : Array.isArray(sourceRecord.steps)
+        ? sourceRecord.steps
+        : Array.isArray(sourceRecord.execution_steps)
+          ? sourceRecord.execution_steps
+          : [];
+    return listCandidate.map((item: any, index: number): ExecutionItem => ({
+      title: item.action || item.title || item.step || `Step ${item.step_number || index + 1}`,
+      status: item.status || item.outcome,
+      detail: item.output || item.result || item.details || item.summary
+    }));
+  };
+  const executionItems = normalizeExecutionItems(executorUpdate?.data?.execution_results || executorUpdate?.data);
+
+  const reviewerUpdate = updatesDesc.find(update => update.agent_type === 'REVIEWER' && update.status === 'completed');
+  const reviewData = reviewerUpdate ? reviewerUpdate.data?.review_data || reviewerUpdate.data : null;
+  const reviewScore = typeof reviewData?.overall_score === 'number'
+    ? reviewData.overall_score
+    : typeof reviewData?.quality_score === 'number'
+      ? reviewData.quality_score
+      : typeof reviewData?.score === 'number'
+        ? reviewData.score
+        : null;
+  const reviewSummary = reviewData?.summary || reviewData?.analysis || reviewData?.feedback;
+  const reviewStrengths = Array.isArray(reviewData?.strengths) ? reviewData.strengths.slice(0, 5) : [];
+  const reviewImprovements = Array.isArray(reviewData?.improvement_suggestions) ? reviewData.improvement_suggestions.slice(0, 5) : [];
 
   const getAgentIcon = (agentType: string) => {
     switch (agentType) {
@@ -164,6 +221,80 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {planSteps.length > 0 && (
+        <div className="mb-4 p-4 bg-[#0E1730] border border-[#00F3FF]/20 rounded-lg">
+          <div className="text-[#00F3FF] font-semibold mb-3">Execution Plan</div>
+          <ol className="space-y-3 list-decimal list-inside text-sm text-gray-300">
+            {planSteps.map((step: any, index: number) => (
+              <li key={`plan-step-${step.step_number || index}`}
+                  className="bg-[#111c3a] border border-[#00F3FF]/10 rounded-lg p-3">
+                <div className="text-white font-medium text-sm mb-1">{step.action || step.description || `Step ${step.step_number || index + 1}`}</div>
+                <div className="text-xs text-gray-400">Tool: {step.tool_name || 'Unassigned'}</div>
+                {step.expected_output && (
+                  <div className="text-xs text-gray-400 mt-1">Expected: {step.expected_output}</div>
+                )}
+                {Array.isArray(step.parameters) ? step.parameters.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">Parameters: {step.parameters.join(', ')}</div>
+                ) : step.parameters && (
+                  <div className="text-xs text-gray-500 mt-1">Parameters: {JSON.stringify(step.parameters)}</div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {executionItems.length > 0 && (
+        <div className="mb-4 p-4 bg-[#0E1730] border border-blue-500/20 rounded-lg">
+          <div className="text-blue-300 font-semibold mb-3">Execution Progress</div>
+          <ul className="space-y-3 text-sm text-gray-300">
+            {executionItems.map((item, index) => (
+              <li key={`execution-item-${index}`} className="bg-[#111c3a] border border-blue-500/10 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-white font-medium text-sm">{item.title}</span>
+                  {item.status && (
+                    <span className="text-xs text-blue-300 uppercase tracking-wide">{item.status}</span>
+                  )}
+                </div>
+                {item.detail && (
+                  <div className="text-xs text-gray-400 mt-1">{item.detail}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {reviewData && (
+        <div className="mb-4 p-4 bg-[#0E1730] border border-green-500/20 rounded-lg">
+          <div className="text-green-300 font-semibold mb-3">Quality Review</div>
+          <div className="text-sm text-white mb-2">Score: {reviewScore !== null ? `${Math.round(reviewScore)}%` : 'Pending'}</div>
+          {reviewSummary && (
+            <div className="text-sm text-gray-300 mb-3">{reviewSummary}</div>
+          )}
+          {reviewStrengths.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs text-green-300 uppercase tracking-wide mb-2">Strengths</div>
+              <ul className="space-y-1 text-xs text-gray-300">
+                {reviewStrengths.map((item: string, index: number) => (
+                  <li key={`review-strength-${index}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {reviewImprovements.length > 0 && (
+            <div>
+              <div className="text-xs text-yellow-300 uppercase tracking-wide mb-2">Improvements</div>
+              <ul className="space-y-1 text-xs text-gray-300">
+                {reviewImprovements.map((item: string, index: number) => (
+                  <li key={`review-improvement-${index}`}>• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Agent Updates */}
       <AnimatePresence>

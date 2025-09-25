@@ -83,6 +83,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [multiAgentWorkflows, setMultiAgentWorkflows] = useState<Record<string, any>>({});
   const [agentUpdates, setAgentUpdates] = useState<Record<string, MultiAgentWSMessage[]>>({});
   const [clarificationRequests, setClarificationRequests] = useState<Record<string, MultiAgentWSMessage>>({});
+  const [taskIdAliases, setTaskIdAliases] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
@@ -349,6 +350,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       console.log('📡 CHAT - Multi-agent task created event received:', event.detail);
       if (currentChat?.id === chatId) {
         lastTaskIdRef.current = taskId;
+        const latestTaskExecutionMessage = [...(currentChat?.messages || [])].reverse().find(message => message.content.startsWith('[TASK_EXECUTION]'));
+        if (latestTaskExecutionMessage) {
+          try {
+            const parsed = JSON.parse(latestTaskExecutionMessage.content.substring('[TASK_EXECUTION]'.length + 1));
+            const fallbackTaskId = parsed?.id;
+            if (fallbackTaskId && fallbackTaskId !== taskId) {
+              setTaskIdAliases(prev => prev[fallbackTaskId] === taskId ? prev : { ...prev, [fallbackTaskId]: taskId });
+            }
+          } catch {}
+        }
         // Initialize workflow state
         setMultiAgentWorkflows(prev => {
           let normalized = { ...prev };
@@ -417,14 +428,53 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     if (msg.content.startsWith('[TASK_EXECUTION]')) {
       try {
         const jsonData = JSON.parse(msg.content.substring('[TASK_EXECUTION]'.length + 1));
-        return jsonData.id || msg.id;
+        const resolved = jsonData.id || msg.id;
+        return taskIdAliases[resolved] || resolved;
       } catch (e) {
-        return msg.id;
+        return taskIdAliases[msg.id] || msg.id;
       }
     }
     const taskIdMatch = msg.content.match(/Task ID: `([^`]+)`/);
-    return taskIdMatch ? taskIdMatch[1] : msg.id;
+    const resolved = taskIdMatch ? taskIdMatch[1] : msg.id;
+    return taskIdAliases[resolved] || resolved;
   };
+
+  useEffect(() => {
+    Object.entries(taskIdAliases).forEach(([temporaryId, actualId]) => {
+      if (temporaryId === actualId) {
+        return;
+      }
+      setAgentUpdates(prev => {
+        if (!prev[temporaryId]) {
+          return prev;
+        }
+        const { [temporaryId]: temporaryUpdates, ...rest } = prev;
+        const merged = [...(rest[actualId] || []), ...temporaryUpdates];
+        return { ...rest, [actualId]: merged };
+      });
+      setMultiAgentWorkflows(prev => {
+        if (!prev[temporaryId]) {
+          return prev;
+        }
+        const { [temporaryId]: temporaryWorkflow, ...rest } = prev;
+        const mergedWorkflow = { ...(rest[actualId] || {}), ...temporaryWorkflow, taskId: actualId };
+        return { ...rest, [actualId]: mergedWorkflow };
+      });
+      setClarificationRequests(prev => {
+        if (!prev[temporaryId]) {
+          return prev;
+        }
+        const { [temporaryId]: temporaryClarification, ...rest } = prev;
+        if (!temporaryClarification) {
+          return rest;
+        }
+        if (rest[actualId]) {
+          return { ...rest, [actualId]: rest[actualId] };
+        }
+        return { ...rest, [actualId]: temporaryClarification };
+      });
+    });
+  }, [taskIdAliases]);
 
   const handleClarificationResponse = (taskId: string, response: string) => {
     console.log('📡 CHAT - Sending clarification response:', { taskId, response });
@@ -1436,6 +1486,29 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                             let workflowData = multiAgentWorkflows[taskId];
                             const taskAgentUpdates = agentUpdates[taskId] || [];
                             const clarificationRequest = clarificationRequests[taskId];
+                            const normalizedAgentUpdates = taskAgentUpdates.map(update => {
+                              const allowedStatuses: Array<'started' | 'completed' | 'failed' | 'processing'> = ['started', 'completed', 'failed', 'processing'];
+                              const status = allowedStatuses.includes((update.status || '').toLowerCase() as any)
+                                ? (update.status as 'started' | 'completed' | 'failed' | 'processing')
+                                : 'processing';
+                              return {
+                                type: update.type || 'agent_status',
+                                agent_type: update.agent_type || 'UNKNOWN',
+                                status,
+                                message: update.message || '',
+                                data: update.data,
+                                timestamp: update.timestamp
+                              };
+                            });
+                            const normalizedClarificationRequest = clarificationRequest
+                              ? {
+                                  type: clarificationRequest.type || 'clarification_request',
+                                  task_id: clarificationRequest.task_id || taskId,
+                                  clarification_request: clarificationRequest.clarification_request || '',
+                                  message: clarificationRequest.message || '',
+                                  timestamp: clarificationRequest.timestamp
+                                }
+                              : undefined;
                             
                             if (!workflowData) {
                               workflowData = {
@@ -1461,15 +1534,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                 <MultiAgentWorkflowCard
                                   taskId={taskId}
                                   workflowStage={workflowData?.workflowStage || 'Initializing'}
-                                  agentUpdates={taskAgentUpdates}
-                                  clarificationRequest={clarificationRequest}
+                                  agentUpdates={normalizedAgentUpdates}
+                                  clarificationRequest={normalizedClarificationRequest}
                                   onClarificationResponse={handleClarificationResponse}
                                   isExpanded={true}
                                 />
                                 
                                 {/* Also show the original message content */}
                                 <div className="mt-4 p-3 bg-[#1A1A2E]/50 rounded-lg border border-[#00F3FF]/20">
-                                  <MessageFormatter content={msg.content} />
+                                  <MessageFormatter content={msg.content} role={msg.role} />
                                 </div>
                               </div>
                             );

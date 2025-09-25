@@ -403,6 +403,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       window.removeEventListener('multi-agent-task-created', handleMultiAgentTaskCreated as EventListener);
     };
   }, [currentChat?.id]);
+
+  const isMultiAgentMessage = (msg: Message) => {
+    return msg.role === 'assistant' && (
+      msg.content.includes('Multi-Agent Task Created') ||
+      msg.content.includes('Multi-Agent Workflow') ||
+      msg.content.includes('Clarification Needed') ||
+      msg.content.startsWith('[TASK_EXECUTION]')
+    );
+  };
   // Extract task ID from multi-agent messages
   const extractTaskId = (msg: Message) => {
     if (msg.content.startsWith('[TASK_EXECUTION]')) {

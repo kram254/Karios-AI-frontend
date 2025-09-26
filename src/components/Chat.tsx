@@ -103,12 +103,22 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
-          console.log('📡 CHAT - Agent status received:', data);
+          console.log('🔍 DEBUG - Agent status received:', {
+            data,
+            agent_type: data.agent_type,
+            status: data.status,
+            message: data.message,
+            task_id: data.task_id,
+            timestamp: data.timestamp,
+            step_id: data.data?.step_id || 'no-step-id'
+          });
           const incomingTaskId = data.task_id || null;
           if (incomingTaskId) {
             lastTaskIdRef.current = incomingTaskId;
+            console.log('🔍 DEBUG - Updated lastTaskIdRef to:', incomingTaskId);
           }
           const resolvedTaskId = lastTaskIdRef.current || 'default';
+          console.log('🔍 DEBUG - Using resolvedTaskId:', resolvedTaskId);
           
           setAgentUpdates(prev => {
             let normalized = { ...prev };
@@ -119,6 +129,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               normalized = { ...withoutDefault, [incomingTaskId]: combined };
             }
             const updatedList = [...(normalized[resolvedTaskId] || []), data];
+            console.log('🔍 DEBUG - Updated agentUpdates for task:', resolvedTaskId, {
+              previousCount: normalized[resolvedTaskId]?.length || 0,
+              newCount: updatedList.length,
+              latestUpdate: data
+            });
             return { ...normalized, [resolvedTaskId]: updatedList };
           });
           
@@ -134,13 +149,23 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
             }
             const currentWorkflow = normalized[resolvedTaskId] || {};
+            const newWorkflowStage = data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`;
+            console.log('🔍 DEBUG - Updated workflow stage for task:', resolvedTaskId, {
+              previousStage: currentWorkflow.workflowStage,
+              newStage: newWorkflowStage,
+              agent_type: data.agent_type,
+              status: data.status,
+              step_id: data.data?.step_id
+            });
             return {
               ...normalized,
               [resolvedTaskId]: {
                 ...currentWorkflow,
                 taskId: resolvedTaskId,
-                workflowStage: data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`,
-                lastUpdate: data.timestamp || new Date().toISOString()
+                workflowStage: newWorkflowStage,
+                lastUpdate: data.timestamp || new Date().toISOString(),
+                currentStep: data.data?.step_id || currentWorkflow.currentStep,
+                stepProgress: data.data?.progress || currentWorkflow.stepProgress
               }
             };
           });
@@ -1526,7 +1551,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                               taskId,
                               workflowData,
                               agentUpdatesCount: taskAgentUpdates.length,
-                              hasClarification: !!clarificationRequest
+                              hasClarification: !!clarificationRequest,
+                              currentStep: workflowData?.currentStep,
+                              stepProgress: workflowData?.stepProgress,
+                              workflowStage: workflowData?.workflowStage,
+                              agentUpdateDetails: taskAgentUpdates.map(u => ({
+                                agent_type: u.agent_type,
+                                status: u.status,
+                                step_id: u.data?.step_id,
+                                timestamp: u.timestamp
+                              }))
                             });
                             
                             return (
@@ -1539,6 +1573,20 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                   onClarificationResponse={handleClarificationResponse}
                                   isExpanded={true}
                                 />
+                                
+                                <div className="mt-4 p-3 bg-[#0A0A0A]/50 rounded-lg border border-gray-600/20">
+                                  <div className="text-xs text-gray-400 mb-2">🔍 DEBUG INFO:</div>
+                                  <div className="text-xs text-gray-500 space-y-1">
+                                    <div>Task ID: {taskId}</div>
+                                    <div>Workflow Stage: {workflowData?.workflowStage || 'None'}</div>
+                                    <div>Current Step: {workflowData?.currentStep || 'None'}</div>
+                                    <div>Agent Updates: {normalizedAgentUpdates.length}</div>
+                                    <div>Has Clarification: {normalizedClarificationRequest ? 'Yes' : 'No'}</div>
+                                    <div className="max-h-20 overflow-y-auto">
+                                      Agent Status: {normalizedAgentUpdates.map(u => `${u.agent_type}:${u.status}${u.data?.step_id ? `(${u.data.step_id})` : ''}`).join(', ') || 'None'}
+                                    </div>
+                                  </div>
+                                </div>
                                 
                                 {/* Also show the original message content */}
                                 <div className="mt-4 p-3 bg-[#1A1A2E]/50 rounded-lg border border-[#00F3FF]/20">

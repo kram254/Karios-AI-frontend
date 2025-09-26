@@ -23,6 +23,7 @@ interface AgentStatusData {
   message: string;
   data?: any;
   timestamp?: string;
+  step_id?: string;
 }
 
 interface ClarificationData {
@@ -59,8 +60,26 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
   const [expanded, setExpanded] = useState(isExpanded);
   const [clarificationResponse, setClarificationResponse] = useState('');
 
+  console.log('🔍 DEBUG - MultiAgentWorkflowCard rendering:', {
+    taskId,
+    workflowStage,
+    agentUpdatesCount: agentUpdates.length,
+    agentUpdatesSummary: agentUpdates.map(u => ({
+      agent_type: u.agent_type,
+      status: u.status,
+      step_id: u.step_id,
+      hasData: !!u.data
+    })),
+    hasClarificationRequest: !!clarificationRequest
+  });
+
   const updatesDesc = [...agentUpdates].reverse();
   const plannerUpdate = updatesDesc.find(update => update.agent_type === 'PLANNER' && update.status === 'completed');
+  console.log('🔍 DEBUG - Planner update found:', {
+    found: !!plannerUpdate,
+    step_id: plannerUpdate?.step_id,
+    hasData: !!plannerUpdate?.data
+  });
   const plannerData = (() => {
     const payload = plannerUpdate?.data || {};
     if (payload.execution_plan && payload.execution_plan.execution_steps) {
@@ -75,8 +94,22 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
     return null;
   })();
   const planSteps = Array.isArray(plannerData?.execution_steps) ? plannerData.execution_steps : [];
+  console.log('🔍 DEBUG - Plan steps extracted:', {
+    stepsCount: planSteps.length,
+    steps: planSteps.map((step: any, i: number) => ({
+      index: i,
+      action: step.action || step.description,
+      tool_name: step.tool_name,
+      step_number: step.step_number
+    }))
+  });
 
   const executorUpdate = updatesDesc.find(update => update.agent_type === 'TASK_EXECUTOR' && update.status === 'completed');
+  console.log('🔍 DEBUG - Executor update found:', {
+    found: !!executorUpdate,
+    step_id: executorUpdate?.step_id,
+    hasData: !!executorUpdate?.data
+  });
   const normalizeExecutionItems = (source: unknown): ExecutionItem[] => {
     if (!source) {
       return [] as ExecutionItem[];
@@ -96,8 +129,22 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
     }));
   };
   const executionItems = normalizeExecutionItems(executorUpdate?.data?.execution_results || executorUpdate?.data);
+  console.log('🔍 DEBUG - Execution items extracted:', {
+    itemsCount: executionItems.length,
+    items: executionItems.map((item, i) => ({
+      index: i,
+      title: item.title,
+      status: item.status,
+      hasDetail: !!item.detail
+    }))
+  });
 
   const reviewerUpdate = updatesDesc.find(update => update.agent_type === 'REVIEWER' && update.status === 'completed');
+  console.log('🔍 DEBUG - Reviewer update found:', {
+    found: !!reviewerUpdate,
+    step_id: reviewerUpdate?.step_id,
+    hasData: !!reviewerUpdate?.data
+  });
   const reviewData = reviewerUpdate ? reviewerUpdate.data?.review_data || reviewerUpdate.data : null;
   const reviewScore = typeof reviewData?.overall_score === 'number'
     ? reviewData.overall_score
@@ -321,6 +368,11 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-white font-medium text-sm">
                         {update.agent_type.replace('_', ' ')}
+                        {update.step_id && (
+                          <span className="text-xs text-gray-400 ml-2">
+                            (Step: {update.step_id})
+                          </span>
+                        )}
                       </span>
                       {getStatusIcon(update.status)}
                     </div>

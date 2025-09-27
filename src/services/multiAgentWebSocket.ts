@@ -36,6 +36,12 @@ class MultiAgentWebSocketService {
   connect(chatId: string, callbacks: MultiAgentWSCallbacks = {}) {
     this.chatId = chatId;
     this.callbacks = callbacks;
+    console.log('🔥 DEBUG WS CONNECT - Storing callbacks:', {
+      onAgentStatus: typeof callbacks.onAgentStatus,
+      onClarificationRequest: typeof callbacks.onClarificationRequest,
+      onWorkflowUpdate: typeof callbacks.onWorkflowUpdate,
+      onClarificationResolved: typeof callbacks.onClarificationResolved
+    });
     
     try {
       const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -54,10 +60,12 @@ class MultiAgentWebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const data: MultiAgentWSMessage = JSON.parse(event.data);
-          console.log('📡 MULTI-AGENT WS - Received:', data);
+          console.log('🔥 DEBUG WS RECEIVE - Raw message received:', event.data);
+          console.log('🔥 DEBUG WS RECEIVE - Parsed data:', data);
+          console.log('🔥 DEBUG WS RECEIVE - Message type:', data.type);
           this.handleMessage(data);
         } catch (error) {
-          console.error('📡 MULTI-AGENT WS - Parse error:', error);
+          console.error('🔥 DEBUG WS RECEIVE - Parse error:', error, 'Raw data:', event.data);
         }
       };
       
@@ -88,6 +96,8 @@ class MultiAgentWebSocketService {
   }
 
   private handleMessage(data: MultiAgentWSMessage) {
+    console.log('🔥 DEBUG WS HANDLE - handleMessage called with type:', data.type);
+    console.log('🔥 DEBUG WS HANDLE - Full data object:', data);
     switch (data.type) {
       case 'connection_established':
         console.log('📡 MULTI-AGENT WS - Connection established for chat:', data.chatId);
@@ -146,7 +156,7 @@ class MultiAgentWebSocketService {
         break;
         
       default:
-        console.log('📡 MULTI-AGENT WS - Unknown message type:', data.type);
+        console.error('🔥 DEBUG WS HANDLE - Unknown message type:', data.type, 'Full message:', data);
     }
   }
 

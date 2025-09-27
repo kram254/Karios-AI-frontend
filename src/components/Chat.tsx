@@ -372,6 +372,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         }
       };
       
+      console.log('🔥 DEBUG CHAT - Registering callbacks:', {
+        onAgentStatus: typeof callbacks.onAgentStatus,
+        onClarificationRequest: typeof callbacks.onClarificationRequest,
+        onWorkflowUpdate: typeof callbacks.onWorkflowUpdate,
+        onClarificationResolved: typeof callbacks.onClarificationResolved
+      });
       multiAgentWebSocketService.connect(currentChat.id, callbacks);
       
       return () => {

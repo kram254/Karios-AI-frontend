@@ -60,7 +60,7 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
   const [expanded, setExpanded] = useState(isExpanded);
   const [clarificationResponse, setClarificationResponse] = useState('');
 
-  console.log('🔍 DEBUG - MultiAgentWorkflowCard rendering:', {
+  console.log('🔥 DEBUG CARD - MultiAgentWorkflowCard rendering:', {
     taskId,
     workflowStage,
     agentUpdatesCount: agentUpdates.length,
@@ -70,7 +70,14 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
       step_id: u.step_id,
       hasData: !!u.data
     })),
-    hasClarificationRequest: !!clarificationRequest
+    hasClarificationRequest: !!clarificationRequest,
+    clarificationRequestDetails: clarificationRequest ? {
+      type: clarificationRequest.type,
+      task_id: clarificationRequest.task_id,
+      clarification_request: clarificationRequest.clarification_request,
+      message: clarificationRequest.message,
+      timestamp: clarificationRequest.timestamp
+    } : null
   });
 
   const updatesDesc = [...agentUpdates].reverse();
@@ -230,7 +237,14 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
 
       {/* Clarification Request */}
       <AnimatePresence>
-        {clarificationRequest && (
+        {(() => {
+          console.log('🔥 DEBUG CARD RENDER - Clarification request conditional check:', {
+            hasClarificationRequest: !!clarificationRequest,
+            clarificationRequestFull: clarificationRequest,
+            willRender: !!clarificationRequest
+          });
+          return clarificationRequest;
+        })() && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -241,7 +255,7 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
               <AlertCircle className="w-5 h-5 text-orange-400 mt-0.5" />
               <div className="flex-1">
                 <h4 className="text-orange-400 font-semibold mb-2">Clarification Needed</h4>
-                <p className="text-white text-sm mb-3">{clarificationRequest.clarification_request}</p>
+                <p className="text-white text-sm mb-3">{clarificationRequest?.clarification_request}</p>
                 
                 <div className="space-y-3">
                   <textarea

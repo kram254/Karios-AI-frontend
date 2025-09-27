@@ -172,14 +172,23 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         },
         
         onClarificationRequest: (data: MultiAgentWSMessage) => {
-          console.log('📡 CHAT - Clarification request received:', data);
+          console.log('🔥 DEBUG CLARIFICATION - Received clarification request:', {
+            fullData: data,
+            task_id: data.task_id,
+            message: data.message,
+            clarification_request: data.clarification_request,
+            timestamp: data.timestamp
+          });
           const incomingTaskId = data.task_id || null;
           if (incomingTaskId) {
             lastTaskIdRef.current = incomingTaskId;
+            console.log('🔥 DEBUG CLARIFICATION - Updated lastTaskIdRef to:', incomingTaskId);
           }
           const resolvedTaskId = lastTaskIdRef.current || 'default';
+          console.log('🔥 DEBUG CLARIFICATION - Using resolvedTaskId:', resolvedTaskId);
           
           setClarificationRequests(prev => {
+            console.log('🔥 DEBUG CLARIFICATION - Previous clarificationRequests state:', prev);
             let normalized = { ...prev };
             if (incomingTaskId && prev.default) {
               const { default: defaultRequest, ...withoutDefault } = normalized;
@@ -188,13 +197,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 normalized[incomingTaskId] = defaultRequest;
               }
             }
-            return {
+            const newState = {
               ...normalized,
               [resolvedTaskId]: data
             };
+            console.log('🔥 DEBUG CLARIFICATION - New clarificationRequests state:', newState);
+            return newState;
           });
           
           setMultiAgentWorkflows(prev => {
+            console.log('🔥 DEBUG CLARIFICATION - Previous workflows state:', prev);
             let normalized = { ...prev };
             if (incomingTaskId && prev.default) {
               const { default: defaultWorkflow, ...withoutDefault } = normalized;
@@ -206,7 +218,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
             }
             const currentWorkflow = normalized[resolvedTaskId] || {};
-            return {
+            const newWorkflowState = {
               ...normalized,
               [resolvedTaskId]: {
                 ...currentWorkflow,
@@ -215,6 +227,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 lastUpdate: data.timestamp || new Date().toISOString()
               }
             };
+            console.log('🔥 DEBUG CLARIFICATION - New workflows state:', newWorkflowState);
+            return newWorkflowState;
           });
         },
         
@@ -502,8 +516,13 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, [taskIdAliases]);
 
   const handleClarificationResponse = (taskId: string, response: string) => {
-    console.log('📡 CHAT - Sending clarification response:', { taskId, response });
+    console.log('🔥 DEBUG CLARIFICATION RESPONSE - Sending clarification response:', { 
+      taskId, 
+      response, 
+      wsConnected: multiAgentWebSocketService.isConnected()
+    });
     multiAgentWebSocketService.sendClarificationResponse(taskId, response);
+    console.log('🔥 DEBUG CLARIFICATION RESPONSE - Sent via WebSocket, updating state');
     setClarificationRequests(prev => {
       const newState = { ...prev };
       delete newState[taskId];
@@ -1547,14 +1566,17 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                               }));
                             }
                             
-                            console.log('🔧 CHAT - Rendering multi-agent workflow:', {
+                            console.log('🔥 DEBUG RENDER - Multi-agent workflow render data:', {
                               taskId,
                               workflowData,
                               agentUpdatesCount: taskAgentUpdates.length,
                               hasClarification: !!clarificationRequest,
+                              clarificationRequestRaw: clarificationRequest,
+                              normalizedClarificationRequest,
                               currentStep: workflowData?.currentStep,
                               stepProgress: workflowData?.stepProgress,
                               workflowStage: workflowData?.workflowStage,
+                              fullClarificationRequestsState: clarificationRequests,
                               agentUpdateDetails: taskAgentUpdates.map(u => ({
                                 agent_type: u.agent_type,
                                 status: u.status,

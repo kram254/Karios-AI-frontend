@@ -116,9 +116,21 @@ class MultiAgentWebSocketService {
         break;
         
       case 'clarification_request':
-        console.log('📡 MULTI-AGENT WS - Clarification request:', data.clarification_request);
+        console.log('🔥 DEBUG WS SERVICE - Clarification request received:', {
+          type: data.type,
+          task_id: data.task_id,
+          clarification_request: data.clarification_request,
+          message: data.message,
+          timestamp: data.timestamp,
+          fullData: data
+        });
+        console.log('🔥 DEBUG WS SERVICE - onClarificationRequest callback exists:', !!this.callbacks.onClarificationRequest);
         if (this.callbacks.onClarificationRequest) {
+          console.log('🔥 DEBUG WS SERVICE - Calling onClarificationRequest callback');
           this.callbacks.onClarificationRequest(data);
+          console.log('🔥 DEBUG WS SERVICE - onClarificationRequest callback completed');
+        } else {
+          console.error('🔥 DEBUG WS SERVICE - No onClarificationRequest callback registered!');
         }
         break;
         

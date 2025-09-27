@@ -154,6 +154,10 @@ class MultiAgentWebSocketService {
       case 'pong':
         console.log('📡 MULTI-AGENT WS - Pong received');
         break;
+      
+      case 'test_message':
+        console.log('🔥 DEBUG WS TEST - Test message received:', data.message);
+        break;
         
       default:
         console.error('🔥 DEBUG WS HANDLE - Unknown message type:', data.type, 'Full message:', data);

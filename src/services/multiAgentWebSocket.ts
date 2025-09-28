@@ -28,14 +28,22 @@ class MultiAgentWebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private pingInterval: NodeJS.Timeout | null = null;
+  private manualDisconnect = false;
 
   constructor() {
     console.log('📡 MULTI-AGENT WS - Service initialized');
   }
 
   connect(chatId: string, callbacks: MultiAgentWSCallbacks = {}) {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      if (this.chatId === chatId) {
+        return;
+      }
+      this.disconnect();
+    }
     this.chatId = chatId;
     this.callbacks = callbacks;
+    this.manualDisconnect = false;
     console.log('🔥 DEBUG WS CONNECT - Storing callbacks:', {
       onAgentStatus: typeof callbacks.onAgentStatus,
       onClarificationRequest: typeof callbacks.onClarificationRequest,
@@ -51,9 +59,10 @@ class MultiAgentWebSocketService {
       
       this.ws = new WebSocket(wsUrl);
       
-      this.ws.onopen = (event) => {
+      this.ws.onopen = () => {
         console.log('📡 MULTI-AGENT WS - Connected successfully');
         this.reconnectAttempts = 0;
+        this.manualDisconnect = false;
         this.startPingInterval();
       };
       
@@ -72,13 +81,13 @@ class MultiAgentWebSocketService {
       this.ws.onclose = (event) => {
         console.log('📡 MULTI-AGENT WS - Connection closed:', event.code, event.reason);
         this.stopPingInterval();
+        this.ws = null;
         
         if (this.callbacks.onClose) {
           this.callbacks.onClose(event);
         }
         
-        // Attempt to reconnect if not a normal closure
-        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (!this.manualDisconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
         }
       };
@@ -199,6 +208,9 @@ class MultiAgentWebSocketService {
   }
 
   private scheduleReconnect() {
+    if (this.manualDisconnect) {
+      return;
+    }
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
     this.reconnectAttempts++;
     
@@ -214,6 +226,7 @@ class MultiAgentWebSocketService {
 
   disconnect() {
     console.log('📡 MULTI-AGENT WS - Disconnecting...');
+    this.manualDisconnect = true;
     this.stopPingInterval();
     
     if (this.ws) {

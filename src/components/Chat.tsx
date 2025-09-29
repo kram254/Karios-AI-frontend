@@ -9,18 +9,18 @@ import AgentInfoBanner from "./agent/AgentInfoBanner";
 import MessageFormatter from "./MessageFormatter";
 import { chatService, Attachment } from "../services/api/chat.service";
 import { generateTitleFromMessage } from "../utils/titleGenerator";
-import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
 import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
-import MultiAgentWorkflowCard from "./MultiAgentWorkflowCard";
-import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
+import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
+import { multiAgentWebSocketService, MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
 interface Message {
+{{ ... }}
   id: string;
   content: string;
   role: "user" | "assistant" | "system";
@@ -124,7 +124,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             let normalized = { ...prev };
             if (incomingTaskId && prev.default && Array.isArray(prev.default) && prev.default.length) {
               const { default: defaultEntries, ...withoutDefault } = normalized;
-              const migrated = defaultEntries ? [...defaultEntries] : [];
               const combined = [...(withoutDefault[incomingTaskId] || []), ...migrated];
               normalized = { ...withoutDefault, [incomingTaskId]: combined };
             }
@@ -136,6 +135,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             });
             return { ...normalized, [resolvedTaskId]: updatedList };
           });
+        },
+        
+        onAgentStatus: (data: MultiAgentWSMessage) => {
+          console.log('📡 CHAT - Agent status received:', data);
+          const incomingTaskId = data.task_id || null;
+          if (incomingTaskId) {
+            lastTaskIdRef.current = incomingTaskId;
+          }
+          const resolvedTaskId = lastTaskIdRef.current || 'default';
           
           setMultiAgentWorkflows(prev => {
             let normalized = { ...prev };
@@ -150,14 +158,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             }
             const currentWorkflow = normalized[resolvedTaskId] || {};
             const newWorkflowStage = data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`;
-            console.log('🔍 DEBUG - Updated workflow stage for task:', resolvedTaskId, {
-              previousStage: currentWorkflow.workflowStage,
-              newStage: newWorkflowStage,
-              agent_type: data.agent_type,
-              status: data.status,
-              step_id: data.data?.step_id
-            });
-            return {
+            const newState = {
               ...normalized,
               [resolvedTaskId]: {
                 ...currentWorkflow,
@@ -168,14 +169,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 stepProgress: data.data?.progress || currentWorkflow.stepProgress
               }
             };
+            return newState;
           });
-        },
-        
-        onClarificationRequest: (data: MultiAgentWSMessage) => {
-          console.log('🔥 DEBUG CLARIFICATION - Received clarification request:', {
-            fullData: data,
-            task_id: data.task_id,
-            message: data.message,
             clarification_request: data.clarification_request,
             timestamp: data.timestamp
           });
@@ -387,12 +382,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, [currentChat?.id]);
 
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      multiAgentWebSocketService.disconnect();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      multiAgentWebSocketService.disconnect();
     };
   }, []);
 
@@ -1602,13 +1593,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                             
                             return (
                               <div className="multi-agent-workflow-message">
-                                <MultiAgentWorkflowCard
+                                <EnhancedMultiAgentWorkflowCard
                                   taskId={taskId}
                                   workflowStage={workflowData?.workflowStage || 'Initializing'}
                                   agentUpdates={normalizedAgentUpdates}
+                                  planSteps={workflowData?.planSteps || []}
+                                  executionItems={workflowData?.executionItems || []}
+                                  reviewData={workflowData?.reviewData}
                                   clarificationRequest={normalizedClarificationRequest}
                                   onClarificationResponse={handleClarificationResponse}
-                                  isExpanded={true}
                                 />
                                 
                                 <div className="mt-4 p-3 bg-[#0A0A0A]/50 rounded-lg border border-gray-600/20">

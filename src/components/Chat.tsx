@@ -11,16 +11,16 @@ import { chatService, Attachment } from "../services/api/chat.service";
 import { generateTitleFromMessage } from "../utils/titleGenerator";
 import CollapsibleSearchResults from "./CollapsibleSearchResults";
 import AnimatedAvatar from "./AnimatedAvatar";
+import AccessedWebsitesFloater from "./AccessedWebsitesFloater";
 import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
-import { multiAgentWebSocketService, MultiAgentWSMessage } from "../services/multiAgentWebSocket";
+import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
 interface Message {
-{{ ... }}
   id: string;
   content: string;
   role: "user" | "assistant" | "system";
@@ -103,41 +103,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
-          console.log('🔍 DEBUG - Agent status received:', {
-            data,
-            agent_type: data.agent_type,
-            status: data.status,
-            message: data.message,
-            task_id: data.task_id,
-            timestamp: data.timestamp,
-            step_id: data.data?.step_id || 'no-step-id'
-          });
-          const incomingTaskId = data.task_id || null;
-          if (incomingTaskId) {
-            lastTaskIdRef.current = incomingTaskId;
-            console.log('🔍 DEBUG - Updated lastTaskIdRef to:', incomingTaskId);
-          }
-          const resolvedTaskId = lastTaskIdRef.current || 'default';
-          console.log('🔍 DEBUG - Using resolvedTaskId:', resolvedTaskId);
-          
-          setAgentUpdates(prev => {
-            let normalized = { ...prev };
-            if (incomingTaskId && prev.default && Array.isArray(prev.default) && prev.default.length) {
-              const { default: defaultEntries, ...withoutDefault } = normalized;
-              const combined = [...(withoutDefault[incomingTaskId] || []), ...migrated];
-              normalized = { ...withoutDefault, [incomingTaskId]: combined };
-            }
-            const updatedList = [...(normalized[resolvedTaskId] || []), data];
-            console.log('🔍 DEBUG - Updated agentUpdates for task:', resolvedTaskId, {
-              previousCount: normalized[resolvedTaskId]?.length || 0,
-              newCount: updatedList.length,
-              latestUpdate: data
-            });
-            return { ...normalized, [resolvedTaskId]: updatedList };
-          });
-        },
-        
-        onAgentStatus: (data: MultiAgentWSMessage) => {
           console.log('📡 CHAT - Agent status received:', data);
           const incomingTaskId = data.task_id || null;
           if (incomingTaskId) {
@@ -171,6 +136,13 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             };
             return newState;
           });
+        },
+        
+        onClarificationRequest: (data: MultiAgentWSMessage) => {
+          console.log('🔥 DEBUG CLARIFICATION - Received clarification request:', {
+            fullData: data,
+            task_id: data.task_id,
+            message: data.message,
             clarification_request: data.clarification_request,
             timestamp: data.timestamp
           });

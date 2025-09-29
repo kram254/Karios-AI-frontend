@@ -381,11 +381,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       multiAgentWebSocketService.connect(currentChat.id, callbacks);
       
       return () => {
-        console.log('📡 CHAT - Disconnecting multi-agent WebSocket');
-        multiAgentWebSocketService.disconnect();
+        console.log('📡 CHAT - Preserving multi-agent WebSocket connection for chat');
       };
     }
   }, [currentChat?.id]);
+
+  useEffect(() => {
+    return () => {
+      multiAgentWebSocketService.disconnect();
+    };
+  }, []);
 
   // Handle multi-agent task creation events from ChatContext
   useEffect(() => {

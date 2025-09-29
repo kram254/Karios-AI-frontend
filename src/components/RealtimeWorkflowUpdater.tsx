@@ -35,7 +35,7 @@ export const RealtimeWorkflowUpdater: React.FC<RealtimeWorkflowUpdaterProps> = (
       }
     };
 
-    if (multiAgentWebSocketService.isConnected()) {
+    if (!multiAgentWebSocketService.isConnected()) {
       multiAgentWebSocketService.connect(chatId, callbacks);
     }
 

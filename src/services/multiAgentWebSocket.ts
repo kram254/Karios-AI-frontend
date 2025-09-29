@@ -120,11 +120,6 @@ class MultiAgentWebSocketService {
         if (this.callbacks.onWorkflowUpdate) {
           this.callbacks.onWorkflowUpdate(data);
         }
-        
-        // Handle specific workflow update types
-        if (data.agent_type && this.callbacks.onAgentStatus) {
-          this.callbacks.onAgentStatus(data);
-        }
         break;
         
       case 'agent_status':

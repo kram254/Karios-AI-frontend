@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Chat from './components/Chat';
+import { DebugChat } from './components/DebugChat';
 import WebAutomationIntegration from './components/WebAutomationIntegration';
 import AutomationWorkspace from './components/AutomationWorkspace';
 import { Sidebar } from './components/Sidebar';
@@ -183,7 +184,12 @@ function App() {
                   <Route path="/" element={<Navigate to="/chat" replace />} />
                   
                   {/* Chat */}
-                  <Route path="/chat" element={<Chat isTaskMode={isTaskMode} />} />
+                  <Route path="/chat" element={
+                    <>
+                      {currentChat && <DebugChat chatId={currentChat.id} />}
+                      <Chat isTaskMode={isTaskMode} />
+                    </>
+                  } />
                   
                   {/* Automation Workspace - Lindy-like Canvas UI */}
                   <Route path="/automation-workspace" element={<AutomationWorkspace />} />

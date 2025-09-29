@@ -16,6 +16,7 @@ import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
+import { DebugChat } from './DebugChat';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import "../styles/chat.css";
 
@@ -103,7 +104,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
-          console.log('📡 CHAT - Agent status received:', data);
+          console.log('🔥 FRONTEND DEBUG - Agent status received:', data);
+          console.log('🔥 FRONTEND DEBUG - Current workflows state before update:', multiAgentWorkflows);
           const incomingTaskId = data.task_id || null;
           if (incomingTaskId) {
             lastTaskIdRef.current = incomingTaskId;
@@ -111,29 +113,19 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           const resolvedTaskId = lastTaskIdRef.current || 'default';
           
           setMultiAgentWorkflows(prev => {
-            let normalized = { ...prev };
-            if (incomingTaskId && prev.default) {
-              const { default: defaultWorkflow, ...withoutDefault } = normalized;
-              const mergedWorkflow = {
-                ...(withoutDefault[incomingTaskId] || {}),
-                ...(defaultWorkflow || {}),
-                taskId: incomingTaskId
-              };
-              normalized = { ...withoutDefault, [incomingTaskId]: mergedWorkflow };
-            }
-            const currentWorkflow = normalized[resolvedTaskId] || {};
             const newWorkflowStage = data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`;
             const newState = {
-              ...normalized,
+              ...prev,
               [resolvedTaskId]: {
-                ...currentWorkflow,
+                ...(prev[resolvedTaskId] || {}),
                 taskId: resolvedTaskId,
                 workflowStage: newWorkflowStage,
                 lastUpdate: data.timestamp || new Date().toISOString(),
-                currentStep: data.data?.step_id || currentWorkflow.currentStep,
-                stepProgress: data.data?.progress || currentWorkflow.stepProgress
+                currentStep: data.data?.step_id,
+                stepProgress: data.data?.progress
               }
             };
+            console.log('🔥 FRONTEND DEBUG - Updated workflows state:', newState);
             return newState;
           });
         },
@@ -341,9 +333,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       
       console.log('🔥 DEBUG CHAT - Registering callbacks:', {
         onAgentStatus: typeof callbacks.onAgentStatus,
-        onClarificationRequest: typeof callbacks.onClarificationRequest,
-        onWorkflowUpdate: typeof callbacks.onWorkflowUpdate,
-        onClarificationResolved: typeof callbacks.onClarificationResolved
+        onClarificationRequest: typeof callbacks.onClarificationRequest
       });
       multiAgentWebSocketService.connect(currentChat.id, callbacks);
       

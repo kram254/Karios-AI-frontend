@@ -387,8 +387,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, [currentChat?.id]);
 
   useEffect(() => {
-    return () => {
+    const handleBeforeUnload = () => {
       multiAgentWebSocketService.disconnect();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 

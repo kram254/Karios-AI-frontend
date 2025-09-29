@@ -98,33 +98,78 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
 
   // Multi-agent WebSocket connection effect
   useEffect(() => {
-    if (currentChat?.id) {
+    if (currentChat?.id && !multiAgentWebSocketService.isConnected()) {
       console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
           console.log('🔥 FRONTEND DEBUG - Agent status received:', data);
-          const taskId = data.task_id || lastTaskIdRef.current || 'default';
           
           if (data.task_id) {
             lastTaskIdRef.current = data.task_id;
-          }
-          
-          setMultiAgentWorkflows(prev => {
-            const newWorkflowStage = data.status === 'completed' ? `${data.agent_type} Completed` : `${data.agent_type} Processing`;
-            const currentWorkflow = prev[taskId] || {};
-            return {
-              ...prev,
-              [taskId]: {
-                ...currentWorkflow,
-                taskId: taskId,
-                workflowStage: newWorkflowStage,
-                lastUpdate: data.timestamp || new Date().toISOString(),
-                currentStep: data.data?.step_id,
-                stepProgress: data.data?.progress
+            
+            setMultiAgentWorkflows(prev => {
+              const agentTypeMap: { [key: string]: string } = {
+                'PROMPT_REFINER': 'Prompt Refiner',
+                'PLANNER': 'Planner',
+                'TASK_EXECUTOR': 'Task Executor', 
+                'REVIEWER': 'Reviewer',
+                'FORMATTER': 'Formatter'
+              };
+              
+              const agentName = agentTypeMap[data.agent_type || ''] || data.agent_type || 'Unknown';
+              const newWorkflowStage = data.status === 'completed' ? `${agentName} Completed` : `${agentName} Processing`;
+              
+              const backendTaskId = data.task_id!;
+              let updatedWorkflows = { ...prev };
+              
+              const syntheticTaskKey = Object.keys(prev).find(key => 
+                key.startsWith('task_') && prev[key].workflowStage === 'Initializing'
+              );
+              
+              if (syntheticTaskKey && syntheticTaskKey !== backendTaskId) {
+                const syntheticTask = prev[syntheticTaskKey];
+                updatedWorkflows = { ...prev };
+                delete updatedWorkflows[syntheticTaskKey];
+                updatedWorkflows[backendTaskId] = {
+                  ...syntheticTask,
+                  taskId: backendTaskId
+                };
               }
-            };
-          });
+              
+              const currentWorkflow = updatedWorkflows[backendTaskId] || {};
+              const dedupKey = `${data.agent_type}-${data.status}-${data.timestamp}`;
+              const existingUpdates = currentWorkflow.agentUpdates || [];
+              const isDuplicate = existingUpdates.some((update: any) => 
+                update.agent_type === data.agent_type && 
+                update.status === data.status && 
+                update.timestamp === data.timestamp
+              );
+              
+              if (!isDuplicate) {
+                updatedWorkflows[backendTaskId] = {
+                  ...currentWorkflow,
+                  taskId: backendTaskId,
+                  workflowStage: newWorkflowStage,
+                  lastUpdate: data.timestamp || new Date().toISOString(),
+                  currentStep: data.data?.step_id,
+                  stepProgress: data.data?.progress,
+                  agentUpdates: [
+                    ...existingUpdates,
+                    {
+                      agent_type: data.agent_type,
+                      status: data.status,
+                      message: data.message,
+                      timestamp: data.timestamp,
+                      step_id: data.data?.step_id
+                    }
+                  ]
+                };
+              }
+              
+              return updatedWorkflows;
+            });
+          }
         },
         
         onClarificationRequest: (data: MultiAgentWSMessage) => {

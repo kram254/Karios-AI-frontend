@@ -30,6 +30,11 @@ export const DebugChat: React.FC<DebugChatProps> = ({ chatId }) => {
           setMessages(prev => [...prev, data]);
         },
         
+        onClarificationRequest: (data: MultiAgentWSMessage) => {
+          console.log('🔥 DEBUG - Clarification request received:', data);
+          setMessages(prev => [...prev, data]);
+        },
+        
         onConnectionEstablished: () => {
           console.log('🔥 DEBUG - Connection established');
           setIsConnected(true);
@@ -45,7 +50,12 @@ export const DebugChat: React.FC<DebugChatProps> = ({ chatId }) => {
         }
       };
 
-      multiAgentWebSocketService.connect(chatId, callbacks);
+      if (!multiAgentWebSocketService.isConnected()) {
+        multiAgentWebSocketService.connect(chatId, callbacks);
+      } else {
+        setIsConnected(true);
+        console.log('🔥 DEBUG - Using existing connection');
+      }
       
       return () => {
         console.log('🔥 DEBUG - Cleanup');
@@ -54,12 +64,23 @@ export const DebugChat: React.FC<DebugChatProps> = ({ chatId }) => {
   }, [chatId]);
 
   return (
-    <div style={{ padding: '20px', border: '2px solid red', margin: '20px' }}>
-      <h3>🔥 DEBUG MULTI-AGENT WEBSOCKET</h3>
-      <div>Chat ID: {chatId}</div>
-      <div>Connected: {isConnected ? '✅' : '❌'}</div>
-      <div>Current Stage: {workflowState.stage || 'None'}</div>
-      <div>Last Update: {workflowState.lastUpdate || 'None'}</div>
+    <div style={{ 
+      padding: '20px', 
+      border: '3px solid red', 
+      margin: '20px',
+      backgroundColor: '#ffcccc',
+      position: 'fixed',
+      top: '10px',
+      right: '10px',
+      zIndex: 9999,
+      width: '400px',
+      fontSize: '12px'
+    }}>
+      <h3 style={{ margin: '0 0 10px 0', color: 'red' }}>🔥 DEBUG WEBSOCKET</h3>
+      <div><strong>Chat ID:</strong> {chatId}</div>
+      <div><strong>Connected:</strong> {isConnected ? '✅' : '❌'}</div>
+      <div><strong>Current Stage:</strong> {workflowState.stage || 'None'}</div>
+      <div><strong>Last Update:</strong> {workflowState.lastUpdate || 'None'}</div>
       
       <div style={{ marginTop: '20px' }}>
         <strong>Messages Received ({messages.length}):</strong>

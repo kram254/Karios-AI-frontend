@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Chat from './components/Chat';
 import { DebugChat } from './components/DebugChat';
+import { TaskIdFixer } from './components/TaskIdFixer';
 import WebAutomationIntegration from './components/WebAutomationIntegration';
 import AutomationWorkspace from './components/AutomationWorkspace';
 import { Sidebar } from './components/Sidebar';
@@ -187,6 +188,17 @@ function App() {
                   <Route path="/chat" element={
                     <>
                       {currentChat && <DebugChat chatId={currentChat.id} />}
+                      {currentChat && (
+                        <TaskIdFixer 
+                          chatId={currentChat.id} 
+                          onTaskIdReceived={(taskId) => {
+                            console.log('🔥 APP - Received backend task ID:', taskId);
+                            window.dispatchEvent(new CustomEvent('backend-task-id-received', { 
+                              detail: { taskId, chatId: currentChat.id } 
+                            }));
+                          }} 
+                        />
+                      )}
                       <Chat isTaskMode={isTaskMode} />
                     </>
                   } />

@@ -6,7 +6,7 @@ interface DebugChatProps {
 }
 
 export const DebugChat: React.FC<DebugChatProps> = ({ chatId }) => {
-  const [workflowState, setWorkflowState] = useState<any>({});
+  const [workflowState, setWorkflowState] = useState<{ stage?: string; lastUpdate?: string }>({});
   const [messages, setMessages] = useState<MultiAgentWSMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -18,7 +18,7 @@ export const DebugChat: React.FC<DebugChatProps> = ({ chatId }) => {
         onAgentStatus: (data: MultiAgentWSMessage) => {
           console.log('🔥 DEBUG - Agent status received:', data);
           setMessages(prev => [...prev, data]);
-          setWorkflowState(prev => ({
+          setWorkflowState((prev: { stage?: string; lastUpdate?: string }) => ({
             ...prev,
             stage: `${data.agent_type} ${data.status}`,
             lastUpdate: new Date().toLocaleTimeString()

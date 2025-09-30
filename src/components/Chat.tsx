@@ -1354,8 +1354,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               return true;
             })
             .map((msg) => {
-              const taskId = msg.content.includes('task_id') ? extractTaskId(msg) : msg.id;
-              const workflowUpdateCount = multiAgentWorkflows[taskId]?.agentUpdates?.length || 0;
+              const extractedTaskId = msg.content.includes('task_id') ? extractTaskId(msg) : msg.id;
+              const backendTaskId = lastTaskIdRef.current;
+              const possibleTaskIds = [backendTaskId, extractedTaskId, taskIdAliases[extractedTaskId]].filter(Boolean);
+              const matchingTaskId = possibleTaskIds.find(id => multiAgentWorkflows[id]);
+              const actualTaskId = matchingTaskId || backendTaskId || extractedTaskId;
+              const workflowUpdateCount = multiAgentWorkflows[actualTaskId]?.agentUpdates?.length || 0;
               return (
               <motion.div
                 key={`${msg.id}-${workflowUpdateCount}`}
@@ -1371,7 +1375,24 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                        {/* Enhanced rendering for multi-agent workflow messages */}
                         {isMultiAgentMessage(msg) ? (
                           (() => {
-                            const taskId = extractTaskId(msg);
+                            const extractedTaskId = extractTaskId(msg);
+                            const backendTaskId = lastTaskIdRef.current;
+                            const aliasedTaskId = taskIdAliases[extractedTaskId];
+                            
+                            const possibleTaskIds = [backendTaskId, extractedTaskId, aliasedTaskId].filter(Boolean);
+                            const matchingTaskId = possibleTaskIds.find(id => multiAgentWorkflows[id]);
+                            const taskId = matchingTaskId || backendTaskId || extractedTaskId;
+                            
+                            console.log('🔍 TASK ID RESOLUTION:', {
+                              extractedTaskId,
+                              backendTaskId,
+                              aliasedTaskId,
+                              matchingTaskId,
+                              finalTaskId: taskId,
+                              availableWorkflows: Object.keys(multiAgentWorkflows),
+                              hasWorkflowData: !!multiAgentWorkflows[taskId]
+                            });
+                            
                             const workflowData = multiAgentWorkflows[taskId] || {
                               taskId,
                               workflowStage: msg.content.includes('Multi-Agent Task Created') ? 'Processing' : 'Initializing',

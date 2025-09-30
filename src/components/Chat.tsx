@@ -1364,7 +1364,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                           (() => {
                             const taskId = extractTaskId(msg);
                             let workflowData = multiAgentWorkflows[taskId];
-                            const taskAgentUpdates = agentUpdates[taskId] || [];
+                            const taskAgentUpdates = workflowData?.agentUpdates || [];
                             const clarificationRequest = clarificationRequests[taskId];
                             const normalizedAgentUpdates = taskAgentUpdates.map(update => {
                               const allowedStatuses: Array<'started' | 'completed' | 'failed' | 'processing'> = ['started', 'completed', 'failed', 'processing'];

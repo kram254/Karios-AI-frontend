@@ -132,28 +132,90 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-gray-200 rounded-lg shadow-sm mb-6"
+      className="bg-[#0A0A0A]/80 border border-[#00F3FF]/30 rounded-lg shadow-lg mb-6 backdrop-blur-sm"
     >
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-[#00F3FF]/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Brain className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-[#00F3FF]/10 rounded-lg border border-[#00F3FF]/30">
+              <Brain className="w-6 h-6 text-[#00F3FF]" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Multi-Agent Workflow</h2>
+              <h2 className="text-xl font-semibold text-[#00F3FF]">Multi-Agent Workflow</h2>
               <div className="flex items-center gap-2 mt-1">
                 {getStatusIcon(workflowStage)}
-                <span className="text-sm text-gray-600">{workflowStage}</span>
+                <span className="text-sm text-gray-300">{workflowStage}</span>
               </div>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-500">Task ID</p>
-            <p className="text-sm font-mono text-gray-900">{taskId}</p>
+            <p className="text-sm text-gray-400">Task ID</p>
+            <p className="text-sm font-mono text-[#00F3FF]">{taskId.slice(0, 8)}...</p>
           </div>
         </div>
       </div>
+      
+      {agentUpdates.length > 0 && (
+        <div className="p-6 border-b border-[#00F3FF]/20">
+          <h3 className="text-sm font-semibold text-gray-300 mb-4">Live Workflow Progress</h3>
+          <div className="space-y-3">
+            {agentUpdates.map((update, index) => {
+              const isCompleted = update.status === 'completed';
+              const isRunning = update.status === 'started' || update.status === 'processing';
+              
+              return (
+                <motion.div
+                  key={`${update.agent_type}-${index}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    isCompleted 
+                      ? 'bg-green-500/10 border-green-500/30' 
+                      : isRunning
+                      ? 'bg-[#00F3FF]/10 border-[#00F3FF]/30'
+                      : 'bg-gray-800/30 border-gray-600/30'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  ) : isRunning ? (
+                    <Clock className="w-5 h-5 text-[#00F3FF] animate-spin flex-shrink-0" />
+                  ) : (
+                    <Play className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                  )}
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${
+                        isCompleted ? 'text-green-400' : isRunning ? 'text-[#00F3FF]' : 'text-gray-400'
+                      }`}>
+                        {update.agent_type?.replace('_', ' ') || 'Agent'}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        isCompleted 
+                          ? 'bg-green-500/20 text-green-300'
+                          : isRunning
+                          ? 'bg-[#00F3FF]/20 text-[#00F3FF]'
+                          : 'bg-gray-600/20 text-gray-400'
+                      }`}>
+                        {update.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 truncate">{update.message}</p>
+                  </div>
+                  
+                  {update.timestamp && (
+                    <span className="text-xs text-gray-500 flex-shrink-0">
+                      {new Date(update.timestamp).toLocaleTimeString()}
+                    </span>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {clarificationRequest && (
@@ -161,17 +223,17 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="p-6 bg-orange-50 border-b border-orange-200"
+            className="p-6 bg-orange-500/10 border-b border-orange-500/30"
           >
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-orange-500 mt-1" />
+              <AlertCircle className="w-5 h-5 text-orange-400 mt-1" />
               <div className="flex-1">
-                <h3 className="font-semibold text-orange-900 mb-2">Clarification Required</h3>
-                <p className="text-orange-800 mb-4">{clarificationRequest.clarification_request}</p>
+                <h3 className="font-semibold text-orange-300 mb-2">Clarification Required</h3>
+                <p className="text-orange-200 mb-4">{clarificationRequest.clarification_request}</p>
                 <div className="flex gap-3">
                   <textarea
                     placeholder="Provide clarification..."
-                    className="flex-1 p-3 border border-orange-300 rounded-md resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    className="flex-1 p-3 bg-black/30 border border-orange-400/30 rounded-md resize-none text-white placeholder-gray-400 focus:ring-2 focus:ring-orange-400 focus:border-transparent"
                     rows={3}
                   />
                   <button
@@ -182,7 +244,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                         textarea.value = '';
                       }
                     }}
-                    className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+                    className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
                   >
                     Submit
                   </button>

@@ -98,8 +98,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
 
   // Multi-agent WebSocket connection effect
   useEffect(() => {
-    if (currentChat?.id && !multiAgentWebSocketService.isConnected()) {
+    if (currentChat?.id) {
       console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
+      
+      multiAgentWebSocketService.disconnect();
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
@@ -121,33 +123,22 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               const newWorkflowStage = data.status === 'completed' ? `${agentName} Completed` : `${agentName} Processing`;
               
               const backendTaskId = data.task_id!;
-              let updatedWorkflows = { ...prev };
-              
-              const syntheticTaskKey = Object.keys(prev).find(key => 
-                key.startsWith('task_') && prev[key].workflowStage === 'Initializing'
-              );
-              
-              if (syntheticTaskKey && syntheticTaskKey !== backendTaskId) {
-                const syntheticTask = prev[syntheticTaskKey];
-                updatedWorkflows = { ...prev };
-                delete updatedWorkflows[syntheticTaskKey];
-                updatedWorkflows[backendTaskId] = {
-                  ...syntheticTask,
-                  taskId: backendTaskId
-                };
-              }
-              
-              const currentWorkflow = updatedWorkflows[backendTaskId] || {};
-              const dedupKey = `${data.agent_type}-${data.status}-${data.timestamp}`;
+              const currentWorkflow = prev[backendTaskId] || {};
               const existingUpdates = currentWorkflow.agentUpdates || [];
+              
               const isDuplicate = existingUpdates.some((update: any) => 
                 update.agent_type === data.agent_type && 
                 update.status === data.status && 
                 update.timestamp === data.timestamp
               );
               
-              if (!isDuplicate) {
-                updatedWorkflows[backendTaskId] = {
+              if (isDuplicate) {
+                return prev;
+              }
+              
+              return {
+                ...prev,
+                [backendTaskId]: {
                   ...currentWorkflow,
                   taskId: backendTaskId,
                   workflowStage: newWorkflowStage,
@@ -164,10 +155,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                       step_id: data.data?.step_id
                     }
                   ]
-                };
-              }
-              
-              return updatedWorkflows;
+                }
+              };
             });
           }
         },
@@ -220,16 +209,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       multiAgentWebSocketService.connect(currentChat.id, callbacks);
       
       return () => {
-        console.log('📡 CHAT - Preserving multi-agent WebSocket connection for chat');
+        console.log('📡 CHAT - Disconnecting WebSocket for chat:', currentChat.id);
+        multiAgentWebSocketService.disconnect();
       };
     }
   }, [currentChat?.id]);
-
-  useEffect(() => {
-    return () => {
-      multiAgentWebSocketService.disconnect();
-    };
-  }, []);
 
   // Handle multi-agent task creation events from ChatContext
   useEffect(() => {

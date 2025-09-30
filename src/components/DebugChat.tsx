@@ -50,12 +50,8 @@ export const DebugChat: React.FC<DebugChatProps> = ({ chatId }) => {
         }
       };
 
-      if (!multiAgentWebSocketService.isConnected()) {
-        multiAgentWebSocketService.connect(chatId, callbacks);
-      } else {
-        setIsConnected(true);
-        console.log('🔥 DEBUG - Using existing connection');
-      }
+      multiAgentWebSocketService.connect(chatId, callbacks);
+      setIsConnected(true);
       
       return () => {
         console.log('🔥 DEBUG - Cleanup');

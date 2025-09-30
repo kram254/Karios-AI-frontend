@@ -22,7 +22,7 @@ interface MultiAgentWSCallbacks {
 
 class MultiAgentWebSocketService {
   private ws: WebSocket | null = null;
-  private callbacks: MultiAgentWSCallbacks = {};
+  private callbacksList: MultiAgentWSCallbacks[] = [];
   private chatId: string | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
@@ -37,12 +37,14 @@ class MultiAgentWebSocketService {
   connect(chatId: string, callbacks: MultiAgentWSCallbacks = {}) {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       if (this.chatId === chatId) {
+        this.callbacksList.push(callbacks);
+        console.log('🔥 DEBUG WS - Added callbacks, total handlers:', this.callbacksList.length);
         return;
       }
       this.disconnect();
     }
     this.chatId = chatId;
-    this.callbacks = callbacks;
+    this.callbacksList = [callbacks];
     this.manualDisconnect = false;
     console.log('🔥 DEBUG WS CONNECT - Storing callbacks:', {
       onAgentStatus: typeof callbacks.onAgentStatus,
@@ -83,9 +85,11 @@ class MultiAgentWebSocketService {
         this.stopPingInterval();
         this.ws = null;
         
-        if (this.callbacks.onClose) {
-          this.callbacks.onClose(event);
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onClose) {
+            callbacks.onClose(event);
+          }
+        });
         
         if (!this.manualDisconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
@@ -94,9 +98,11 @@ class MultiAgentWebSocketService {
       
       this.ws.onerror = (error) => {
         console.error('📡 MULTI-AGENT WS - WebSocket error:', error);
-        if (this.callbacks.onError) {
-          this.callbacks.onError(error);
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onError) {
+            callbacks.onError(error);
+          }
+        });
       };
       
     } catch (error) {
@@ -110,23 +116,29 @@ class MultiAgentWebSocketService {
     switch (data.type) {
       case 'connection_established':
         console.log('📡 MULTI-AGENT WS - Connection established for chat:', data.chatId);
-        if (this.callbacks.onConnectionEstablished) {
-          this.callbacks.onConnectionEstablished(data);
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onConnectionEstablished) {
+            callbacks.onConnectionEstablished(data);
+          }
+        });
         break;
         
       case 'workflow_update':
         console.log('📡 MULTI-AGENT WS - Workflow update:', data);
-        if (this.callbacks.onWorkflowUpdate) {
-          this.callbacks.onWorkflowUpdate(data);
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onWorkflowUpdate) {
+            callbacks.onWorkflowUpdate(data);
+          }
+        });
         break;
         
       case 'agent_status':
         console.log('📡 MULTI-AGENT WS - Agent status:', data.agent_type, data.status);
-        if (this.callbacks.onAgentStatus) {
-          this.callbacks.onAgentStatus(data);
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onAgentStatus) {
+            callbacks.onAgentStatus(data);
+          }
+        });
         break;
         
       case 'clarification_request':
@@ -138,21 +150,21 @@ class MultiAgentWebSocketService {
           timestamp: data.timestamp,
           fullData: data
         });
-        console.log('🔥 DEBUG WS SERVICE - onClarificationRequest callback exists:', !!this.callbacks.onClarificationRequest);
-        if (this.callbacks.onClarificationRequest) {
-          console.log('🔥 DEBUG WS SERVICE - Calling onClarificationRequest callback');
-          this.callbacks.onClarificationRequest(data);
-          console.log('🔥 DEBUG WS SERVICE - onClarificationRequest callback completed');
-        } else {
-          console.error('🔥 DEBUG WS SERVICE - No onClarificationRequest callback registered!');
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onClarificationRequest) {
+            console.log('🔥 DEBUG WS SERVICE - Calling onClarificationRequest callback');
+            callbacks.onClarificationRequest(data);
+          }
+        });
         break;
         
       case 'clarification_resolved':
         console.log('📡 MULTI-AGENT WS - Clarification resolved');
-        if (this.callbacks.onClarificationResolved) {
-          this.callbacks.onClarificationResolved(data);
-        }
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onClarificationResolved) {
+            callbacks.onClarificationResolved(data);
+          }
+        });
         break;
         
       case 'pong':
@@ -212,9 +224,9 @@ class MultiAgentWebSocketService {
     console.log(`📡 MULTI-AGENT WS - Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`);
     
     setTimeout(() => {
-      if (this.chatId) {
+      if (this.chatId && this.callbacksList.length > 0) {
         console.log(`📡 MULTI-AGENT WS - Attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-        this.connect(this.chatId, this.callbacks);
+        this.connect(this.chatId, this.callbacksList[0]);
       }
     }, delay);
   }
@@ -230,7 +242,7 @@ class MultiAgentWebSocketService {
     }
     
     this.chatId = null;
-    this.callbacks = {};
+    this.callbacksList = [];
     this.reconnectAttempts = 0;
   }
 

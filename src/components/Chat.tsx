@@ -96,6 +96,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     scrollToBottom();
   }, [currentChat?.messages]);
 
+  useEffect(() => {
+    console.log('🔥 WORKFLOWS STATE CHANGED:', Object.keys(multiAgentWorkflows).length, 'workflows', multiAgentWorkflows);
+  }, [multiAgentWorkflows]);
+
   // Multi-agent WebSocket connection effect
   useEffect(() => {
     if (currentChat?.id) {
@@ -1347,9 +1351,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               // Keep all other messages
               return true;
             })
-            .map((msg) => (
+            .map((msg) => {
+              const taskId = msg.content.includes('task_id') ? extractTaskId(msg) : msg.id;
+              const workflowUpdateCount = multiAgentWorkflows[taskId]?.agentUpdates?.length || 0;
+              return (
               <motion.div
-                key={msg.id}
+                key={`${msg.id}-${workflowUpdateCount}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`message-container ${msg.role === "user" ? "user" : "agent"}`}
@@ -1363,7 +1370,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                         {isMultiAgentMessage(msg) ? (
                           (() => {
                             const taskId = extractTaskId(msg);
-                            let workflowData = multiAgentWorkflows[taskId];
+                            const workflowData = multiAgentWorkflows[taskId] || {
+                              taskId,
+                              workflowStage: msg.content.includes('Multi-Agent Task Created') ? 'Processing' : 'Initializing',
+                              lastUpdate: new Date().toISOString(),
+                              agentUpdates: []
+                            };
                             const taskAgentUpdates = workflowData?.agentUpdates || [];
                             const clarificationRequest = clarificationRequests[taskId];
                             const normalizedAgentUpdates = taskAgentUpdates.map(update => {
@@ -1390,37 +1402,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                 }
                               : undefined;
                             
-                            if (!workflowData) {
-                              workflowData = {
-                                taskId,
-                                workflowStage: msg.content.includes('Multi-Agent Task Created') ? 'Processing' : 'Initializing',
-                                lastUpdate: new Date().toISOString()
-                              };
-                              setMultiAgentWorkflows(prev => ({
-                                ...prev,
-                                [taskId]: workflowData
-                              }));
-                            }
-                            
-                            console.log('🔥 DEBUG RENDER - Multi-agent workflow render data:', {
-                              taskId,
-                              workflowData,
-                              agentUpdatesCount: taskAgentUpdates.length,
-                              hasClarification: !!clarificationRequest,
-                              clarificationRequestRaw: clarificationRequest,
-                              normalizedClarificationRequest,
-                              currentStep: workflowData?.currentStep,
-                              stepProgress: workflowData?.stepProgress,
-                              workflowStage: workflowData?.workflowStage,
-                              fullClarificationRequestsState: clarificationRequests,
-                              agentUpdateDetails: taskAgentUpdates.map(u => ({
-                                agent_type: u.agent_type,
-                                status: u.status,
-                                step_id: u.data?.step_id,
-                                timestamp: u.timestamp
-                              }))
-                            });
-                            
                             return (
                               <div className="multi-agent-workflow-message">
                                 <EnhancedMultiAgentWorkflowCard
@@ -1433,25 +1414,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                   clarificationRequest={normalizedClarificationRequest}
                                   onClarificationResponse={handleClarificationResponse}
                                 />
-                                
-                                <div className="mt-4 p-3 bg-[#0A0A0A]/50 rounded-lg border border-gray-600/20">
-                                  <div className="text-xs text-gray-400 mb-2">🔍 DEBUG INFO:</div>
-                                  <div className="text-xs text-gray-500 space-y-1">
-                                    <div>Task ID: {taskId}</div>
-                                    <div>Workflow Stage: {workflowData?.workflowStage || 'None'}</div>
-                                    <div>Current Step: {workflowData?.currentStep || 'None'}</div>
-                                    <div>Agent Updates: {normalizedAgentUpdates.length}</div>
-                                    <div>Has Clarification: {normalizedClarificationRequest ? 'Yes' : 'No'}</div>
-                                    <div className="max-h-20 overflow-y-auto">
-                                      Agent Status: {normalizedAgentUpdates.map(u => `${u.agent_type}:${u.status}${u.data?.step_id ? `(${u.data.step_id})` : ''}`).join(', ') || 'None'}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {/* Also show the original message content */}
-                                <div className="mt-4 p-3 bg-[#1A1A2E]/50 rounded-lg border border-[#00F3FF]/20">
-                                  <MessageFormatter content={msg.content} role={msg.role} />
-                                </div>
                               </div>
                             );
                           })()
@@ -1703,7 +1665,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   </div>
                 </div>
               </motion.div>
-            ))}
+            );
+            })}
             <div ref={messagesEndRef} />
             
             {/* Animated Avatar - Show during processing states */}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Chat from './components/Chat';
-import { DebugChat } from './components/DebugChat';
 import { TaskIdFixer } from './components/TaskIdFixer';
 import WebAutomationIntegration from './components/WebAutomationIntegration';
 import AutomationWorkspace from './components/AutomationWorkspace';
@@ -187,7 +186,6 @@ function App() {
                   {/* Chat */}
                   <Route path="/chat" element={
                     <>
-                      {currentChat && <DebugChat chatId={currentChat.id} />}
                       {currentChat && (
                         <TaskIdFixer 
                           chatId={currentChat.id} 

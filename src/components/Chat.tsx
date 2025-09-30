@@ -306,14 +306,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       try {
         const jsonData = JSON.parse(msg.content.substring('[TASK_EXECUTION]'.length + 1));
         const resolved = jsonData.id || msg.id;
-        return taskIdAliases[resolved] || resolved;
+        return taskIdAliases[resolved] || lastTaskIdRef.current || resolved;
       } catch (e) {
-        return taskIdAliases[msg.id] || msg.id;
+        return taskIdAliases[msg.id] || lastTaskIdRef.current || msg.id;
       }
     }
     const taskIdMatch = msg.content.match(/Task ID: `([^`]+)`/);
-    const resolved = taskIdMatch ? taskIdMatch[1] : msg.id;
-    return taskIdAliases[resolved] || resolved;
+    if (taskIdMatch) {
+      return taskIdMatch[1];
+    }
+    return lastTaskIdRef.current || msg.id;
   };
 
   useEffect(() => {
@@ -1378,7 +1380,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                             };
                             const taskAgentUpdates = workflowData?.agentUpdates || [];
                             const clarificationRequest = clarificationRequests[taskId];
-                            const normalizedAgentUpdates = taskAgentUpdates.map(update => {
+                            const normalizedAgentUpdates = taskAgentUpdates.map((update: any) => {
                               const allowedStatuses: Array<'started' | 'completed' | 'failed' | 'processing'> = ['started', 'completed', 'failed', 'processing'];
                               const status = allowedStatuses.includes((update.status || '').toLowerCase() as any)
                                 ? (update.status as 'started' | 'completed' | 'failed' | 'processing')

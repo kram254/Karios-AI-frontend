@@ -109,7 +109,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
       return acc;
     }, {} as { [key: string]: any[] });
 
-    return Object.entries(grouped).map(([agentType, agentUpdates]) => ({
+    return (Object.entries(grouped) as [string, any[]][]).map(([agentType, agentUpdates]) => ({
       title: `${agentType.replace('_', ' ')} Agent`,
       subtitle: `${agentUpdates.length} updates`,
       items: agentUpdates.map((update, index) => ({

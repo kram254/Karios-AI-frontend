@@ -26,6 +26,17 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
 }) => {
   const [isCanvasMode, setIsCanvasMode] = useState(false);
   const [phases, setPhases] = useState<any[]>([]);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
+
+  useEffect(() => {
+    console.log('🔥 WORKFLOW CARD RE-RENDER:', {
+      taskId,
+      workflowStage,
+      agentUpdatesCount: agentUpdates.length,
+      latestUpdate: agentUpdates[agentUpdates.length - 1]
+    });
+    setLastUpdateTime(Date.now());
+  }, [agentUpdates, planSteps, executionItems, reviewData, workflowStage, taskId]);
 
   useEffect(() => {
     const updatedPhases = [];
@@ -141,7 +152,19 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
               <Brain className="w-6 h-6 text-[#00F3FF]" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-[#00F3FF]">Multi-Agent Workflow</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-[#00F3FF]">Multi-Agent Workflow</h2>
+                {agentUpdates.length > 0 && (
+                  <motion.span 
+                    key={lastUpdateTime}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="px-2 py-1 bg-[#00F3FF]/20 text-[#00F3FF] text-xs font-bold rounded-full"
+                  >
+                    {agentUpdates.length} updates
+                  </motion.span>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 {getStatusIcon(workflowStage)}
                 <span className="text-sm text-gray-300">{workflowStage}</span>

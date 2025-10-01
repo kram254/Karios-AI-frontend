@@ -1360,9 +1360,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               const matchingTaskId = possibleTaskIds.find(id => multiAgentWorkflows[id]);
               const actualTaskId = matchingTaskId || backendTaskId || extractedTaskId;
               const workflowUpdateCount = multiAgentWorkflows[actualTaskId]?.agentUpdates?.length || 0;
+              const lastUpdateTime = multiAgentWorkflows[actualTaskId]?.lastUpdate || Date.now();
               return (
               <motion.div
-                key={`${msg.id}-${workflowUpdateCount}`}
+                key={`${msg.id}-${workflowUpdateCount}-${lastUpdateTime}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`message-container ${msg.role === "user" ? "user" : "agent"}`}

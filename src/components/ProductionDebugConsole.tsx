@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Minimize2, Maximize2, Trash2, Download } from 'lucide-react';
+import { X, Minimize2, Maximize2, Trash2, Download, Copy } from 'lucide-react';
 
 interface LogEntry {
   id: string;
@@ -101,6 +101,19 @@ export const ProductionDebugConsole: React.FC = () => {
     a.download = `debug-logs-${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const copyLogs = async () => {
+    const logsText = logs.map(log => 
+      `[${log.timestamp}] ${log.emoji || ''} ${log.type.toUpperCase()}: ${log.message}`
+    ).join('\n');
+    
+    try {
+      await navigator.clipboard.writeText(logsText);
+      console.log('✅ Logs copied to clipboard!');
+    } catch (err) {
+      console.error('❌ Failed to copy logs:', err);
+    }
   };
 
   const getLogColor = (type: LogEntry['type']) => {
@@ -231,14 +244,21 @@ export const ProductionDebugConsole: React.FC = () => {
       }}>
         <span style={{ color: '#0f0', fontWeight: 'bold' }}>🔍 PRODUCTION DEBUG CONSOLE ({logs.length}/{maxLogs})</span>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} title="Copy all logs">
+            <Copy 
+              size={16} 
+              style={{ color: '#0f0', cursor: 'pointer' }}
+              onClick={copyLogs}
+            />
+          </div>
+          <div style={{ position: 'relative' }} title="Download logs">
             <Download 
               size={16} 
               style={{ color: '#0f0', cursor: 'pointer' }}
               onClick={downloadLogs}
             />
           </div>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} title="Clear logs">
             <Trash2 
               size={16} 
               style={{ color: '#f00', cursor: 'pointer' }}

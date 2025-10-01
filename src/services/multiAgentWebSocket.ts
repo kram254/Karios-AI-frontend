@@ -51,6 +51,7 @@ class MultiAgentWebSocketService {
       onAgentStatus: typeof callbacks.onAgentStatus,
       onClarificationRequest: typeof callbacks.onClarificationRequest,
       onWorkflowUpdate: typeof callbacks.onWorkflowUpdate,
+      onWorkflowStarted: typeof callbacks.onWorkflowStarted,
       onClarificationResolved: typeof callbacks.onClarificationResolved
     });
     
@@ -134,11 +135,15 @@ class MultiAgentWebSocketService {
         break;
         
       case 'workflow_started':
-        console.log('🚀🚀🚀 MULTI-AGENT WS - Workflow started:', data.task_id);
-        this.callbacksList.forEach(callbacks => {
+        console.log('🚀🚀🚀🚀 MULTI-AGENT WS - Workflow started:', data.task_id);
+        console.log('🚀 DEBUG - callbacksList length:', this.callbacksList.length);
+        this.callbacksList.forEach((callbacks, index) => {
+          console.log(`🚀 DEBUG - Callback ${index} onWorkflowStarted:`, typeof callbacks.onWorkflowStarted);
           if (callbacks.onWorkflowStarted) {
-            console.log('🚀 Calling onWorkflowStarted callback');
+            console.log('🚀🚀 CALLING onWorkflowStarted callback for callback', index);
             callbacks.onWorkflowStarted(data);
+          } else {
+            console.log('❌ onWorkflowStarted is undefined for callback', index);
           }
         });
         break;

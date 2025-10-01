@@ -116,6 +116,14 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
   };
 
   const groupAgentUpdatesByType = (updates: any[]) => {
+    const agentMap: { [key: string]: string } = {
+      'PROMPT_REFINER': 'Prompt Refiner',
+      'PLANNER': 'Planner',
+      'TASK_EXECUTOR': 'Task Executor',
+      'REVIEWER': 'Reviewer',
+      'FORMATTER': 'Formatter'
+    };
+
     const grouped = updates.reduce((acc, update) => {
       const agentType = update.agent_type || 'GENERAL';
       if (!acc[agentType]) acc[agentType] = [];
@@ -124,7 +132,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
     }, {} as { [key: string]: any[] });
 
     return (Object.entries(grouped) as [string, any[]][]).map(([agentType, agentUpdates]) => ({
-      title: `${agentType.replace('_', ' ')} Agent`,
+      title: `${agentMap[agentType] || agentType.replace('_', ' ')} Agent`,
       subtitle: `${agentUpdates.length} updates`,
       items: agentUpdates.map((update, index) => ({
         id: index + 1,
@@ -188,89 +196,126 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
             <span className="w-2 h-2 bg-[#00F3FF] rounded-full animate-pulse"></span>
             Live Workflow Progress ({agentUpdates.length} steps) - Updated: {new Date(lastUpdateTime).toLocaleTimeString()}
           </h3>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-            {agentUpdates.map((update, index) => {
-              const isCompleted = update.status === 'completed';
-              const isRunning = update.status === 'started' || update.status === 'processing';
-              const isFailed = update.status === 'failed';
-              
-              return (
-                <motion.div
-                  key={`${update.agent_type}-${update.timestamp}-${index}`}
-                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  transition={{ 
-                    delay: 0,
-                    duration: 0.3,
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 20
-                  }}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-300 ${
-                    isCompleted 
-                      ? 'bg-green-500/10 border-green-500/30 shadow-sm shadow-green-500/20' 
-                      : isRunning
-                      ? 'bg-[#00F3FF]/10 border-[#00F3FF]/30 shadow-sm shadow-[#00F3FF]/20'
-                      : isFailed
-                      ? 'bg-red-500/10 border-red-500/30 shadow-sm shadow-red-500/20'
-                      : 'bg-gray-800/30 border-gray-600/30'
-                  }`}
-                >
-                  <div className="flex-shrink-0 mt-1">
-                    {isCompleted ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    ) : isRunning ? (
-                      <Clock className="w-5 h-5 text-[#00F3FF] animate-spin" />
-                    ) : isFailed ? (
-                      <AlertCircle className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <Play className="w-5 h-5 text-gray-500" />
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-sm font-semibold ${
-                        isCompleted ? 'text-green-400' : isRunning ? 'text-[#00F3FF]' : isFailed ? 'text-red-400' : 'text-gray-400'
-                      }`}>
-                        {update.agent_type?.replace(/_/g, ' ') || 'Agent'}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        isCompleted 
-                          ? 'bg-green-500/20 text-green-300'
-                          : isRunning
-                          ? 'bg-[#00F3FF]/20 text-[#00F3FF]'
-                          : isFailed
-                          ? 'bg-red-500/20 text-red-300'
-                          : 'bg-gray-600/20 text-gray-400'
-                      }`}>
-                        {update.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-300 leading-relaxed">{update.message}</p>
-                    {update.data && Object.keys(update.data).length > 0 && (
-                      <div className="mt-2 text-xs text-gray-500 bg-black/30 rounded p-2 font-mono">
-                        {update.data.step_number && `Step ${update.data.step_number}`}
-                        {update.data.action && ` • ${update.data.action}`}
-                        {update.data.tool_name && ` • ${update.data.tool_name}`}
+          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+            {(() => {
+              const agentMap: { [key: string]: string } = {
+                'PROMPT_REFINER': 'Prompt Refiner',
+                'PLANNER': 'Planner',
+                'TASK_EXECUTOR': 'Task Executor',
+                'REVIEWER': 'Reviewer',
+                'FORMATTER': 'Formatter'
+              };
+
+              const grouped = agentUpdates.reduce((acc, update, index) => {
+                const agentType = update.agent_type || 'UNKNOWN';
+                if (!acc[agentType]) acc[agentType] = [];
+                acc[agentType].push({ ...update, originalIndex: index });
+                return acc;
+              }, {} as { [key: string]: any[] });
+
+              return (Object.entries(grouped) as [string, any[]][]).map(([agentType, updates]) => {
+                const agentName = agentMap[agentType] || agentType.replace(/_/g, ' ');
+                const allCompleted = updates.every(u => u.status === 'completed');
+                const hasStarted = updates.some(u => u.status === 'started' || u.status === 'processing');
+                
+                return (
+                  <motion.div
+                    key={agentType}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gray-900/50 rounded-lg border border-gray-700/50 overflow-hidden"
+                  >
+                    <div className={`px-4 py-3 flex items-center gap-3 ${
+                      allCompleted 
+                        ? 'bg-green-500/10 border-b border-green-500/30' 
+                        : hasStarted
+                        ? 'bg-[#00F3FF]/10 border-b border-[#00F3FF]/30'
+                        : 'bg-gray-800/30 border-b border-gray-700/30'
+                    }`}>
+                      {allCompleted ? (
+                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      ) : hasStarted ? (
+                        <Clock className="w-5 h-5 text-[#00F3FF] animate-spin flex-shrink-0" />
+                      ) : (
+                        <Play className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      )}
+                      <div className="flex-1">
+                        <span className={`font-semibold text-sm ${
+                          allCompleted ? 'text-green-400' : hasStarted ? 'text-[#00F3FF]' : 'text-gray-400'
+                        }`}>
+                          {agentName}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          {updates.length} {updates.length === 1 ? 'update' : 'updates'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-shrink-0 text-right">
-                    {update.timestamp && (
-                      <span className="text-xs text-gray-500 block">
-                        {new Date(update.timestamp).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit',
-                          second: '2-digit'
-                        })}
-                      </span>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
+                    </div>
+                    
+                    <div className="p-3 space-y-2">
+                      {updates.map((update, idx) => {
+                        const isCompleted = update.status === 'completed';
+                        const isRunning = update.status === 'started' || update.status === 'processing';
+                        const isFailed = update.status === 'failed';
+                        
+                        return (
+                          <motion.div
+                            key={`${update.agent_type}-${update.originalIndex}-${idx}`}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className={`flex items-start gap-2 p-2 rounded border ${
+                              isCompleted 
+                                ? 'bg-green-500/5 border-green-500/20' 
+                                : isRunning
+                                ? 'bg-[#00F3FF]/5 border-[#00F3FF]/20'
+                                : isFailed
+                                ? 'bg-red-500/5 border-red-500/20'
+                                : 'bg-gray-800/20 border-gray-700/20'
+                            }`}
+                          >
+                            <span className="text-gray-500 text-xs font-mono mt-0.5 flex-shrink-0">
+                              {update.originalIndex + 1}.
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                  isCompleted 
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : isRunning
+                                    ? 'bg-[#00F3FF]/20 text-[#00F3FF]'
+                                    : isFailed
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-gray-600/20 text-gray-500'
+                                }`}>
+                                  {update.status}
+                                </span>
+                                {update.timestamp && (
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(update.timestamp).toLocaleTimeString('en-US', { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit',
+                                      second: '2-digit'
+                                    })}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-300 leading-relaxed">{update.message}</p>
+                              {update.data && Object.keys(update.data).length > 0 && (
+                                <div className="mt-1 text-xs text-gray-500 bg-black/20 rounded px-2 py-1 font-mono">
+                                  {update.data.step_number && `Step ${update.data.step_number}`}
+                                  {update.data.action && ` • ${update.data.action}`}
+                                  {update.data.tool_name && ` • ${update.data.tool_name}`}
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                );
+              });
+            })()}
           </div>
         </div>
       )}

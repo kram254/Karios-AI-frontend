@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import multiAgentWebSocketService, { MultiAgentWSMessage } from '../services/multiAgentWebSocket';
 
 interface TaskIdFixerProps {
   chatId: string;
@@ -11,36 +10,6 @@ export const TaskIdFixer: React.FC<TaskIdFixerProps> = ({ chatId, onTaskIdReceiv
 
   useEffect(() => {
     if (!chatId) return;
-
-    const callbacks = {
-      onAgentStatus: (data: MultiAgentWSMessage) => {
-        if (data.task_id && data.task_id !== lastTaskIdRef.current) {
-          lastTaskIdRef.current = data.task_id;
-          onTaskIdReceived(data.task_id);
-          console.log('🔥 TASK ID FIXER - Backend task ID received:', data.task_id);
-        }
-      },
-      
-      onClarificationRequest: (data: MultiAgentWSMessage) => {
-        if (data.task_id && data.task_id !== lastTaskIdRef.current) {
-          lastTaskIdRef.current = data.task_id;
-          onTaskIdReceived(data.task_id);
-          console.log('🔥 TASK ID FIXER - Backend task ID from clarification:', data.task_id);
-        }
-      },
-      
-      onWorkflowStarted: (data: MultiAgentWSMessage) => {
-        if (data.task_id && data.task_id !== lastTaskIdRef.current) {
-          lastTaskIdRef.current = data.task_id;
-          onTaskIdReceived(data.task_id);
-          console.log('🔥 TASK ID FIXER - Backend task ID from workflow_started:', data.task_id);
-        }
-      }
-    };
-
-    if (!multiAgentWebSocketService.isConnected()) {
-      multiAgentWebSocketService.connect(chatId, callbacks);
-    }
 
     const handleTaskCreated = (event: CustomEvent) => {
       const { taskId } = event.detail;

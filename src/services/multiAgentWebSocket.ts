@@ -8,6 +8,7 @@ interface MultiAgentWSMessage {
   data?: any;
   task_id?: string;
   clarification_request?: string;
+  workflow_stage?: string;
 }
 
 interface MultiAgentWSCallbacks {

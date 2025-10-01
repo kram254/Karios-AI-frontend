@@ -268,6 +268,21 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             lastTaskIdRef.current = data.task_id;
             setActiveWorkflowTaskId(data.task_id);
             setWorkflowUpdateCounter(prev => prev + 1);
+            
+            setMultiAgentWorkflows(prev => {
+              const existingWorkflow = prev[data.task_id!] || {};
+              return {
+                ...prev,
+                [data.task_id!]: {
+                  ...existingWorkflow,
+                  taskId: data.task_id,
+                  workflowStage: data.workflow_stage || 'Initializing',
+                  lastUpdate: data.timestamp || new Date().toISOString(),
+                  agentUpdates: existingWorkflow.agentUpdates || []
+                }
+              };
+            });
+            console.log('🔥 WORKFLOW STATE INITIALIZED FOR TASK:', data.task_id);
           }
         },
         

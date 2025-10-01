@@ -38,8 +38,8 @@ class MultiAgentWebSocketService {
   connect(chatId: string, callbacks: MultiAgentWSCallbacks = {}) {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       if (this.chatId === chatId) {
-        this.callbacksList.push(callbacks);
-        console.log('🔥 DEBUG WS - Added callbacks, total handlers:', this.callbacksList.length);
+        this.callbacksList = [callbacks];
+        console.log('🔥 DEBUG WS - Replaced callbacks for same chat, total handlers:', this.callbacksList.length);
         return;
       }
       this.disconnect();

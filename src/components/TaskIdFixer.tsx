@@ -27,6 +27,14 @@ export const TaskIdFixer: React.FC<TaskIdFixerProps> = ({ chatId, onTaskIdReceiv
           onTaskIdReceived(data.task_id);
           console.log('🔥 TASK ID FIXER - Backend task ID from clarification:', data.task_id);
         }
+      },
+      
+      onWorkflowStarted: (data: MultiAgentWSMessage) => {
+        if (data.task_id && data.task_id !== lastTaskIdRef.current) {
+          lastTaskIdRef.current = data.task_id;
+          onTaskIdReceived(data.task_id);
+          console.log('🔥 TASK ID FIXER - Backend task ID from workflow_started:', data.task_id);
+        }
       }
     };
 

@@ -121,8 +121,25 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, [activeWorkflowTaskId]);
 
   useEffect(() => {
-    console.log('🔥 WORKFLOWS STATE CHANGED:', Object.keys(multiAgentWorkflows).length, 'workflows', multiAgentWorkflows);
+    console.log('🔥🔥🔥 WORKFLOWS STATE CHANGED:', {
+      totalWorkflows: Object.keys(multiAgentWorkflows).length,
+      workflows: multiAgentWorkflows,
+      activeTaskId: activeWorkflowTaskId,
+      counter: workflowUpdateCounter
+    });
   }, [multiAgentWorkflows]);
+
+  useEffect(() => {
+    console.log('🎯🎯🎯 ACTIVE TASK ID CHANGED:', {
+      activeTaskId: activeWorkflowTaskId,
+      lastTaskIdRef: lastTaskIdRef.current,
+      workflowExists: activeWorkflowTaskId ? !!multiAgentWorkflows[activeWorkflowTaskId] : false
+    });
+  }, [activeWorkflowTaskId]);
+
+  useEffect(() => {
+    console.log('🔢🔢🔢 COUNTER CHANGED:', workflowUpdateCounter);
+  }, [workflowUpdateCounter]);
 
   // Multi-agent WebSocket connection effect with reconnection handling
   useEffect(() => {
@@ -134,16 +151,29 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
-          console.log('🔥 FRONTEND DEBUG - Agent status received:', data);
+          console.log('🔥🔥🔥 FRONTEND RECEIVED MESSAGE:', {
+            type: data.type,
+            agent: data.agent_type,
+            status: data.status,
+            task_id: data.task_id,
+            message: data.message,
+            timestamp: new Date().toISOString()
+          });
           
           if (data.task_id) {
+            console.log('🔥 SETTING ACTIVE TASK ID:', data.task_id);
             lastTaskIdRef.current = data.task_id;
             setActiveWorkflowTaskId(data.task_id);
             
             const sequence = workflowMessageQueue.addMessage(data.task_id, data);
             console.log(`✅ GUARANTEED RECEIPT - Message #${sequence} stored in queue`);
+            console.log('📊 CURRENT QUEUE STATS:', workflowMessageQueue.getStats(data.task_id));
             
-            setWorkflowUpdateCounter(prev => prev + 1);
+            setWorkflowUpdateCounter(prev => {
+              const newCounter = prev + 1;
+              console.log('🔢 COUNTER INCREMENT:', prev, '→', newCounter);
+              return newCounter;
+            });
             
             setMultiAgentWorkflows(prev => {
               const agentTypeMap: { [key: string]: string } = {
@@ -229,6 +259,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               }
             };
           });
+        },
+        
+        onWorkflowStarted: (data: MultiAgentWSMessage) => {
+          console.log('🚀🚀🚀 WORKFLOW STARTED:', data);
+          if (data.task_id) {
+            console.log('🔥 WORKFLOW STARTED - SETTING ACTIVE TASK ID:', data.task_id);
+            lastTaskIdRef.current = data.task_id;
+            setActiveWorkflowTaskId(data.task_id);
+            setWorkflowUpdateCounter(prev => prev + 1);
+          }
         },
         
         onConnectionEstablished: (data: MultiAgentWSMessage) => {
@@ -1732,14 +1772,26 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             <div ref={messagesEndRef} />
             
             {activeWorkflowTaskId && (() => {
+              console.log('🎬🎬🎬 RENDER BLOCK EXECUTING:', {
+                activeWorkflowTaskId,
+                workflowUpdateCounter,
+                timestamp: new Date().toISOString()
+              });
+              
               const workflow = multiAgentWorkflows[activeWorkflowTaskId] || { agentUpdates: [] };
               const taskAgentUpdates = workflow?.agentUpdates || [];
               const clarificationRequest = clarificationRequests[activeWorkflowTaskId];
               
+              console.log('📦 WORKFLOW DATA:', {
+                workflow,
+                taskAgentUpdates: taskAgentUpdates.length,
+                clarificationRequest: !!clarificationRequest
+              });
+              
               const queuedMessages = workflowMessageQueue.getAllMessages(activeWorkflowTaskId);
               const stats = workflowMessageQueue.getStats(activeWorkflowTaskId);
               
-              console.log('🔥 RENDER CHECK - Task:', activeWorkflowTaskId, 'React Updates:', taskAgentUpdates.length, 'Queue:', queuedMessages.length, 'Counter:', workflowUpdateCounter, 'Stats:', stats);
+              console.log('🔥🔥🔥 RENDER CHECK - Task:', activeWorkflowTaskId.slice(0, 8), 'React Updates:', taskAgentUpdates.length, 'Queue:', queuedMessages.length, 'Counter:', workflowUpdateCounter, 'Stats:', stats);
               
               const updatesToRender = queuedMessages.length > 0 ? queuedMessages : taskAgentUpdates;
               
@@ -1781,8 +1833,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   }
                 : undefined;
               
+              console.log('🎨🎨🎨 ABOUT TO RENDER CARD:', {
+                normalizedAgentUpdates: normalizedAgentUpdates.length,
+                workflowStage: workflow?.workflowStage || 'Initializing',
+                taskId: activeWorkflowTaskId.slice(0, 8),
+                counter: workflowUpdateCounter
+              });
+              
               return (
-                <div key={`workflow-${activeWorkflowTaskId}-${workflowUpdateCounter}`} className="realtime-workflow-display mb-6" style={{ position: 'sticky', bottom: '100px', zIndex: 10 }}>
+                <div key={`workflow-${activeWorkflowTaskId}-${workflowUpdateCounter}`} className="realtime-workflow-display mb-6" style={{ position: 'sticky', bottom: '100px', zIndex: 10, border: '2px solid lime' }}>
+                  <div style={{ padding: '8px', background: 'rgba(0, 255, 0, 0.1)', marginBottom: '8px', fontSize: '12px', fontFamily: 'monospace' }}>
+                    DEBUG: Task {activeWorkflowTaskId.slice(0, 8)} | Updates: {normalizedAgentUpdates.length} | Counter: {workflowUpdateCounter}
+                  </div>
                   <EnhancedMultiAgentWorkflowCard
                     key={`card-${workflowUpdateCounter}`}
                     taskId={activeWorkflowTaskId}

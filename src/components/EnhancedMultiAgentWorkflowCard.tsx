@@ -29,13 +29,16 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
 
   useEffect(() => {
+    const now = Date.now();
     console.log('🔥 WORKFLOW CARD RE-RENDER:', {
       taskId,
       workflowStage,
       agentUpdatesCount: agentUpdates.length,
-      latestUpdate: agentUpdates[agentUpdates.length - 1]
+      latestUpdate: agentUpdates[agentUpdates.length - 1],
+      renderTime: new Date(now).toLocaleTimeString(),
+      allUpdates: agentUpdates
     });
-    setLastUpdateTime(Date.now());
+    setLastUpdateTime(now);
   }, [agentUpdates, planSteps, executionItems, reviewData, workflowStage, taskId]);
 
   useEffect(() => {
@@ -174,6 +177,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
           <div className="text-right">
             <p className="text-sm text-gray-400">Task ID</p>
             <p className="text-sm font-mono text-[#00F3FF]">{taskId.slice(0, 8)}...</p>
+            <p className="text-xs text-gray-500 mt-1">Last: {new Date(lastUpdateTime).toLocaleTimeString()}</p>
           </div>
         </div>
       </div>
@@ -182,7 +186,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
         <div className="p-6 border-b border-[#00F3FF]/20">
           <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
             <span className="w-2 h-2 bg-[#00F3FF] rounded-full animate-pulse"></span>
-            Live Workflow Progress ({agentUpdates.length} steps)
+            Live Workflow Progress ({agentUpdates.length} steps) - Updated: {new Date(lastUpdateTime).toLocaleTimeString()}
           </h3>
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
             {agentUpdates.map((update, index) => {

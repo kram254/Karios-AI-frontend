@@ -16,7 +16,9 @@ import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
+import { WorkflowDebugPanel } from './WorkflowDebugPanel';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
+import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -85,6 +87,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [clarificationRequests, setClarificationRequests] = useState<Record<string, MultiAgentWSMessage>>({});
   const [taskIdAliases, setTaskIdAliases] = useState<Record<string, string>>({});
   const [activeWorkflowTaskId, setActiveWorkflowTaskId] = useState<string | null>(null);
+  const [workflowUpdateCounter, setWorkflowUpdateCounter] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
@@ -98,13 +101,34 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, [currentChat?.messages]);
 
   useEffect(() => {
+    if (!activeWorkflowTaskId) return;
+
+    const reconciliationInterval = setInterval(() => {
+      const stats = workflowMessageQueue.getStats(activeWorkflowTaskId);
+      console.log(`🔍 RECONCILIATION CHECK - Task ${activeWorkflowTaskId.slice(0, 8)}:`, stats);
+
+      if (stats.missing > 0) {
+        console.warn(`⚠️ MISSING MESSAGES DETECTED - Count: ${stats.missing}, Sequences:`, stats.missingSequences);
+      }
+
+      if (stats.unrendered > 0) {
+        console.log(`📊 UNRENDERED MESSAGES - ${stats.unrendered} messages waiting to render`);
+        setWorkflowUpdateCounter(prev => prev + 1);
+      }
+    }, 5000);
+
+    return () => clearInterval(reconciliationInterval);
+  }, [activeWorkflowTaskId]);
+
+  useEffect(() => {
     console.log('🔥 WORKFLOWS STATE CHANGED:', Object.keys(multiAgentWorkflows).length, 'workflows', multiAgentWorkflows);
   }, [multiAgentWorkflows]);
 
-  // Multi-agent WebSocket connection effect
+  // Multi-agent WebSocket connection effect with reconnection handling
   useEffect(() => {
     if (currentChat?.id) {
       console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
+      console.log('🏥 QUEUE HEALTH AT CONNECTION:', workflowMessageQueue.getHealthCheck());
       
       multiAgentWebSocketService.disconnect();
       
@@ -115,6 +139,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           if (data.task_id) {
             lastTaskIdRef.current = data.task_id;
             setActiveWorkflowTaskId(data.task_id);
+            
+            const sequence = workflowMessageQueue.addMessage(data.task_id, data);
+            console.log(`✅ GUARANTEED RECEIPT - Message #${sequence} stored in queue`);
+            
+            setWorkflowUpdateCounter(prev => prev + 1);
             
             setMultiAgentWorkflows(prev => {
               const agentTypeMap: { [key: string]: string } = {
@@ -139,8 +168,13 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               );
               
               if (isDuplicate) {
+                console.log('🔥 DUPLICATE UPDATE - Still forcing re-render');
+                setWorkflowUpdateCounter(prev => prev + 1);
                 return prev;
               }
+              
+              console.log('🔥 NEW UPDATE - Agent:', data.agent_type, 'Status:', data.status, 'Total updates:', existingUpdates.length + 1);
+              setWorkflowUpdateCounter(prev => prev + 1);
               
               return {
                 ...prev,
@@ -174,6 +208,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           if (data.task_id) {
             lastTaskIdRef.current = data.task_id;
             setActiveWorkflowTaskId(data.task_id);
+            setWorkflowUpdateCounter(prev => prev + 1);
           }
           
           setClarificationRequests(prev => ({
@@ -1696,11 +1731,33 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             })}
             <div ref={messagesEndRef} />
             
-            {activeWorkflowTaskId && multiAgentWorkflows[activeWorkflowTaskId] && (() => {
-              const workflow = multiAgentWorkflows[activeWorkflowTaskId];
+            {activeWorkflowTaskId && (() => {
+              const workflow = multiAgentWorkflows[activeWorkflowTaskId] || { agentUpdates: [] };
               const taskAgentUpdates = workflow?.agentUpdates || [];
               const clarificationRequest = clarificationRequests[activeWorkflowTaskId];
-              const normalizedAgentUpdates = taskAgentUpdates.map((update: any) => {
+              
+              const queuedMessages = workflowMessageQueue.getAllMessages(activeWorkflowTaskId);
+              const stats = workflowMessageQueue.getStats(activeWorkflowTaskId);
+              
+              console.log('🔥 RENDER CHECK - Task:', activeWorkflowTaskId, 'React Updates:', taskAgentUpdates.length, 'Queue:', queuedMessages.length, 'Counter:', workflowUpdateCounter, 'Stats:', stats);
+              
+              const updatesToRender = queuedMessages.length > 0 ? queuedMessages : taskAgentUpdates;
+              
+              console.log('🎨 RENDER DECISION - Using:', queuedMessages.length > 0 ? 'QUEUE' : 'REACT STATE', 
+                'Queue:', queuedMessages.length, 'React:', taskAgentUpdates.length);
+              
+              if (queuedMessages.length > taskAgentUpdates.length) {
+                console.warn('⚠️ QUEUE HAS MORE MESSAGES THAN REACT STATE - Using queue as source of truth');
+              }
+              
+              queuedMessages.forEach(msg => {
+                if (!msg.rendered) {
+                  workflowMessageQueue.markAsRendered(activeWorkflowTaskId, msg.sequence);
+                  console.log(`✅ MARKED AS RENDERED - Message #${msg.sequence}:`, msg.agentType, msg.status);
+                }
+              });
+              
+              const normalizedAgentUpdates = updatesToRender.map((update: any) => {
                 const allowedStatuses: Array<'started' | 'completed' | 'failed' | 'processing'> = ['started', 'completed', 'failed', 'processing'];
                 const status = allowedStatuses.includes((update.status || '').toLowerCase() as any)
                   ? (update.status as 'started' | 'completed' | 'failed' | 'processing')
@@ -1725,8 +1782,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 : undefined;
               
               return (
-                <div className="realtime-workflow-display mb-6" style={{ position: 'sticky', bottom: '100px', zIndex: 10 }}>
+                <div key={`workflow-${activeWorkflowTaskId}-${workflowUpdateCounter}`} className="realtime-workflow-display mb-6" style={{ position: 'sticky', bottom: '100px', zIndex: 10 }}>
                   <EnhancedMultiAgentWorkflowCard
+                    key={`card-${workflowUpdateCounter}`}
                     taskId={activeWorkflowTaskId}
                     workflowStage={workflow?.workflowStage || 'Initializing'}
                     agentUpdates={normalizedAgentUpdates}
@@ -2126,8 +2184,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         
         {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater
-          isVisible={true} /* Always pass true and let the component handle visibility logic */
+          isVisible={true}
         />
+        
+        {activeWorkflowTaskId && (
+          <WorkflowDebugPanel taskId={activeWorkflowTaskId} />
+        )}
       </div>
       </div>
     </div>

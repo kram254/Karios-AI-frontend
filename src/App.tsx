@@ -27,6 +27,7 @@ import { AgentKnowledgeManager } from './pages/AgentKnowledgeManager';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { LanguageProvider } from './context/LanguageContext';
+import { ProductionDebugConsole } from './components/ProductionDebugConsole';
 
 // Create a dark theme
 const darkTheme = createTheme({
@@ -249,6 +250,7 @@ function App() {
             />
           )}
         </div>
+        <ProductionDebugConsole />
       </ThemeProvider>
     </LanguageProvider>
   );

@@ -84,6 +84,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [agentUpdates, setAgentUpdates] = useState<Record<string, MultiAgentWSMessage[]>>({});
   const [clarificationRequests, setClarificationRequests] = useState<Record<string, MultiAgentWSMessage>>({});
   const [taskIdAliases, setTaskIdAliases] = useState<Record<string, string>>({});
+  const [activeWorkflowTaskId, setActiveWorkflowTaskId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
@@ -113,6 +114,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           
           if (data.task_id) {
             lastTaskIdRef.current = data.task_id;
+            setActiveWorkflowTaskId(data.task_id);
             
             setMultiAgentWorkflows(prev => {
               const agentTypeMap: { [key: string]: string } = {
@@ -171,6 +173,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           
           if (data.task_id) {
             lastTaskIdRef.current = data.task_id;
+            setActiveWorkflowTaskId(data.task_id);
           }
           
           setClarificationRequests(prev => ({
@@ -1692,6 +1695,50 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             );
             })}
             <div ref={messagesEndRef} />
+            
+            {activeWorkflowTaskId && multiAgentWorkflows[activeWorkflowTaskId] && (() => {
+              const workflow = multiAgentWorkflows[activeWorkflowTaskId];
+              const taskAgentUpdates = workflow?.agentUpdates || [];
+              const clarificationRequest = clarificationRequests[activeWorkflowTaskId];
+              const normalizedAgentUpdates = taskAgentUpdates.map((update: any) => {
+                const allowedStatuses: Array<'started' | 'completed' | 'failed' | 'processing'> = ['started', 'completed', 'failed', 'processing'];
+                const status = allowedStatuses.includes((update.status || '').toLowerCase() as any)
+                  ? (update.status as 'started' | 'completed' | 'failed' | 'processing')
+                  : 'processing';
+                return {
+                  type: update.type || 'agent_status',
+                  agent_type: update.agent_type || 'UNKNOWN',
+                  status,
+                  message: update.message || '',
+                  data: update.data,
+                  timestamp: update.timestamp
+                };
+              });
+              const normalizedClarificationRequest = clarificationRequest
+                ? {
+                    type: clarificationRequest.type || 'clarification_request',
+                    task_id: clarificationRequest.task_id || activeWorkflowTaskId,
+                    clarification_request: clarificationRequest.clarification_request || '',
+                    message: clarificationRequest.message || '',
+                    timestamp: clarificationRequest.timestamp
+                  }
+                : undefined;
+              
+              return (
+                <div className="realtime-workflow-display mb-6" style={{ position: 'sticky', bottom: '100px', zIndex: 10 }}>
+                  <EnhancedMultiAgentWorkflowCard
+                    taskId={activeWorkflowTaskId}
+                    workflowStage={workflow?.workflowStage || 'Initializing'}
+                    agentUpdates={normalizedAgentUpdates}
+                    planSteps={workflow?.planSteps || []}
+                    executionItems={workflow?.executionItems || []}
+                    reviewData={workflow?.reviewData}
+                    clarificationRequest={normalizedClarificationRequest}
+                    onClarificationResponse={handleClarificationResponse}
+                  />
+                </div>
+              );
+            })()}
             
             {/* Animated Avatar - Show during processing states */}
             {(isProcessing || avatarState !== 'idle') && (

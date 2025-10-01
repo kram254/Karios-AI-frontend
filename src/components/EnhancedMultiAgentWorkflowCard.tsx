@@ -180,59 +180,90 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
       
       {agentUpdates.length > 0 && (
         <div className="p-6 border-b border-[#00F3FF]/20">
-          <h3 className="text-sm font-semibold text-gray-300 mb-4">Live Workflow Progress</h3>
-          <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 bg-[#00F3FF] rounded-full animate-pulse"></span>
+            Live Workflow Progress ({agentUpdates.length} steps)
+          </h3>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
             {agentUpdates.map((update, index) => {
               const isCompleted = update.status === 'completed';
               const isRunning = update.status === 'started' || update.status === 'processing';
+              const isFailed = update.status === 'failed';
               
               return (
                 <motion.div
-                  key={`${update.agent_type}-${index}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                  key={`${update.agent_type}-${update.timestamp}-${index}`}
+                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  transition={{ 
+                    delay: 0,
+                    duration: 0.3,
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20
+                  }}
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all duration-300 ${
                     isCompleted 
-                      ? 'bg-green-500/10 border-green-500/30' 
+                      ? 'bg-green-500/10 border-green-500/30 shadow-sm shadow-green-500/20' 
                       : isRunning
-                      ? 'bg-[#00F3FF]/10 border-[#00F3FF]/30'
+                      ? 'bg-[#00F3FF]/10 border-[#00F3FF]/30 shadow-sm shadow-[#00F3FF]/20'
+                      : isFailed
+                      ? 'bg-red-500/10 border-red-500/30 shadow-sm shadow-red-500/20'
                       : 'bg-gray-800/30 border-gray-600/30'
                   }`}
                 >
-                  {isCompleted ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  ) : isRunning ? (
-                    <Clock className="w-5 h-5 text-[#00F3FF] animate-spin flex-shrink-0" />
-                  ) : (
-                    <Play className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                  )}
+                  <div className="flex-shrink-0 mt-1">
+                    {isCompleted ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : isRunning ? (
+                      <Clock className="w-5 h-5 text-[#00F3FF] animate-spin" />
+                    ) : isFailed ? (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    ) : (
+                      <Play className="w-5 h-5 text-gray-500" />
+                    )}
+                  </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <span className={`text-sm font-semibold ${
-                        isCompleted ? 'text-green-400' : isRunning ? 'text-[#00F3FF]' : 'text-gray-400'
+                        isCompleted ? 'text-green-400' : isRunning ? 'text-[#00F3FF]' : isFailed ? 'text-red-400' : 'text-gray-400'
                       }`}>
-                        {update.agent_type?.replace('_', ' ') || 'Agent'}
+                        {update.agent_type?.replace(/_/g, ' ') || 'Agent'}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         isCompleted 
                           ? 'bg-green-500/20 text-green-300'
                           : isRunning
                           ? 'bg-[#00F3FF]/20 text-[#00F3FF]'
+                          : isFailed
+                          ? 'bg-red-500/20 text-red-300'
                           : 'bg-gray-600/20 text-gray-400'
                       }`}>
                         {update.status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 truncate">{update.message}</p>
+                    <p className="text-sm text-gray-300 leading-relaxed">{update.message}</p>
+                    {update.data && Object.keys(update.data).length > 0 && (
+                      <div className="mt-2 text-xs text-gray-500 bg-black/30 rounded p-2 font-mono">
+                        {update.data.step_number && `Step ${update.data.step_number}`}
+                        {update.data.action && ` • ${update.data.action}`}
+                        {update.data.tool_name && ` • ${update.data.tool_name}`}
+                      </div>
+                    )}
                   </div>
                   
-                  {update.timestamp && (
-                    <span className="text-xs text-gray-500 flex-shrink-0">
-                      {new Date(update.timestamp).toLocaleTimeString()}
-                    </span>
-                  )}
+                  <div className="flex-shrink-0 text-right">
+                    {update.timestamp && (
+                      <span className="text-xs text-gray-500 block">
+                        {new Date(update.timestamp).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
+                      </span>
+                    )}
+                  </div>
                 </motion.div>
               );
             })}

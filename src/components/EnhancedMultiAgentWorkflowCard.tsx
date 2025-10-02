@@ -12,6 +12,7 @@ interface EnhancedWorkflowProps {
   reviewData: any;
   clarificationRequest: any;
   onClarificationResponse?: (taskId: string, response: string) => void;
+  theme?: 'light' | 'dark';
 }
 
 export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = ({
@@ -22,7 +23,8 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
   executionItems,
   reviewData,
   clarificationRequest,
-  onClarificationResponse
+  onClarificationResponse,
+  theme = 'dark'
 }) => {
   const [isCanvasMode, setIsCanvasMode] = useState(false);
   const [phases, setPhases] = useState<any[]>([]);
@@ -237,37 +239,48 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                     key={agentType}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gray-900/50 rounded-lg border border-gray-700/50 overflow-hidden"
+                    className={theme === 'dark' 
+                      ? "bg-[#1a1a1a] rounded-lg border border-gray-700/50 overflow-hidden" 
+                      : "bg-white rounded-lg border border-gray-300 overflow-hidden shadow-sm"
+                    }
                   >
                     <div 
                       onClick={toggleCollapse}
                       className={`px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-opacity-80 transition-colors ${
-                        allCompleted 
-                          ? 'bg-green-500/10 border-b border-green-500/30' 
-                          : hasStarted
-                          ? 'bg-[#00F3FF]/10 border-b border-[#00F3FF]/30'
-                          : 'bg-gray-800/30 border-b border-gray-700/30'
+                        theme === 'dark'
+                          ? allCompleted 
+                            ? 'bg-green-500/10 border-b border-green-500/30' 
+                            : hasStarted
+                            ? 'bg-[#00F3FF]/10 border-b border-[#00F3FF]/30'
+                            : 'bg-gray-800/30 border-b border-gray-700/30'
+                          : allCompleted 
+                            ? 'bg-green-50 border-b border-green-200' 
+                            : hasStarted
+                            ? 'bg-blue-50 border-b border-blue-200'
+                            : 'bg-gray-100 border-b border-gray-200'
                       }`}
                     >
                       {isCollapsed ? (
-                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <ChevronRight className={theme === 'dark' ? "w-4 h-4 text-gray-400 flex-shrink-0" : "w-4 h-4 text-gray-600 flex-shrink-0"} />
                       ) : (
-                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <ChevronDown className={theme === 'dark' ? "w-4 h-4 text-gray-400 flex-shrink-0" : "w-4 h-4 text-gray-600 flex-shrink-0"} />
                       )}
                       {allCompleted ? (
-                        <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        <CheckCircle className={theme === 'dark' ? "w-5 h-5 text-green-500 flex-shrink-0" : "w-5 h-5 text-green-600 flex-shrink-0"} />
                       ) : hasStarted ? (
-                        <Clock className="w-5 h-5 text-[#00F3FF] animate-spin flex-shrink-0" />
+                        <Clock className={theme === 'dark' ? "w-5 h-5 text-[#00F3FF] animate-spin flex-shrink-0" : "w-5 h-5 text-blue-600 animate-spin flex-shrink-0"} />
                       ) : (
-                        <Play className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                        <Play className={theme === 'dark' ? "w-5 h-5 text-gray-500 flex-shrink-0" : "w-5 h-5 text-gray-600 flex-shrink-0"} />
                       )}
                       <div className="flex-1">
                         <span className={`font-semibold text-sm ${
-                          allCompleted ? 'text-green-400' : hasStarted ? 'text-[#00F3FF]' : 'text-gray-400'
+                          theme === 'dark'
+                            ? allCompleted ? 'text-green-400' : hasStarted ? 'text-[#00F3FF]' : 'text-gray-400'
+                            : allCompleted ? 'text-green-700' : hasStarted ? 'text-blue-700' : 'text-gray-700'
                         }`}>
                           {agentName}
                         </span>
-                        <span className="text-xs text-gray-500 ml-2">
+                        <span className={theme === 'dark' ? "text-xs text-gray-500 ml-2" : "text-xs text-gray-600 ml-2"}>
                           {updates.length} {updates.length === 1 ? 'update' : 'updates'}
                         </span>
                       </div>
@@ -294,34 +307,40 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.05 }}
-                            className={`flex items-start gap-2 p-2 rounded border ${
-                              isCompleted 
-                                ? 'bg-green-500/5 border-green-500/20' 
-                                : isRunning
-                                ? 'bg-[#00F3FF]/5 border-[#00F3FF]/20'
-                                : isFailed
-                                ? 'bg-red-500/5 border-red-500/20'
-                                : 'bg-gray-800/20 border-gray-700/20'
-                            }`}
+                            className={theme === 'dark'
+                              ? "flex items-start gap-3 p-3 bg-black/20 rounded-md hover:bg-black/30 transition-colors"
+                              : "flex items-start gap-3 p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                            }
                           >
-                            <span className="text-gray-500 text-xs font-mono mt-0.5 flex-shrink-0">
-                              {update.originalIndex + 1}.
-                            </span>
+                            <div className={theme === 'dark'
+                              ? "flex-shrink-0 text-xs font-bold text-[#00F3FF] bg-[#00F3FF]/20 w-7 h-7 rounded-full flex items-center justify-center"
+                              : "flex-shrink-0 text-xs font-bold text-blue-600 bg-blue-100 w-7 h-7 rounded-full flex items-center justify-center"
+                            }>
+                              {update.originalIndex + 1}
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                                  isCompleted 
-                                    ? 'bg-green-500/20 text-green-400'
-                                    : isRunning
-                                    ? 'bg-[#00F3FF]/20 text-[#00F3FF]'
-                                    : isFailed
-                                    ? 'bg-red-500/20 text-red-400'
-                                    : 'bg-gray-600/20 text-gray-500'
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                                  theme === 'dark'
+                                    ? isCompleted 
+                                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                      : isRunning
+                                      ? 'bg-[#00F3FF]/20 text-[#00F3FF] border border-[#00F3FF]/30'
+                                      : isFailed
+                                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                      : 'bg-gray-700/50 text-gray-400 border border-gray-600/30'
+                                    : isCompleted 
+                                      ? 'bg-green-100 text-green-700 border border-green-300' 
+                                      : isRunning
+                                      ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                      : isFailed
+                                      ? 'bg-red-100 text-red-700 border border-red-300'
+                                      : 'bg-gray-200 text-gray-700 border border-gray-300'
                                 }`}>
                                   {update.status}
                                 </span>
                                 {update.timestamp && (
-                                  <span className="text-xs text-gray-500">
+                                  <span className={theme === 'dark' ? "text-xs text-gray-500" : "text-xs text-gray-600"}>
                                     {new Date(update.timestamp).toLocaleTimeString('en-US', { 
                                       hour: '2-digit', 
                                       minute: '2-digit',
@@ -330,9 +349,12 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-300 leading-relaxed">{update.message}</p>
+                              <p className={theme === 'dark' ? "text-sm text-gray-300 leading-relaxed" : "text-sm text-gray-800 leading-relaxed"}>{update.message}</p>
                               {update.data && Object.keys(update.data).length > 0 && (
-                                <div className="mt-1 text-xs text-gray-500 bg-black/20 rounded px-2 py-1 font-mono">
+                                <div className={theme === 'dark'
+                                  ? "mt-1 text-xs text-gray-500 bg-black/20 rounded px-2 py-1 font-mono"
+                                  : "mt-1 text-xs text-gray-600 bg-gray-100 rounded px-2 py-1 font-mono"
+                                }>
                                   {update.data.step_number && `Step ${update.data.step_number}`}
                                   {update.data.action && ` • ${update.data.action}`}
                                   {update.data.tool_name && ` • ${update.data.tool_name}`}
@@ -392,13 +414,15 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
         )}
       </AnimatePresence>
 
-      <div className="p-6">
-        <WorkflowCanvas
-          phases={phases}
-          isCanvasMode={isCanvasMode}
-          onToggleCanvas={() => setIsCanvasMode(!isCanvasMode)}
-        />
-      </div>
+      {theme === 'light' && (
+        <div className="p-6">
+          <WorkflowCanvas
+            phases={phases}
+            isCanvasMode={isCanvasMode}
+            onToggleCanvas={() => setIsCanvasMode(!isCanvasMode)}
+          />
+        </div>
+      )}
     </motion.div>
   );
 };

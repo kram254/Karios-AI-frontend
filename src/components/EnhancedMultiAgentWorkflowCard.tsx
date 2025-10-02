@@ -66,6 +66,18 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
     const plannerComplete = grouped['PLANNER']?.some((u: any) => u.status === 'completed');
     const plannerData = grouped['PLANNER']?.find((u: any) => u.status === 'completed' && u.data?.execution_plan);
 
+    if (grouped['PROMPT_REFINER']) {
+      console.log('🎯🎯🎯 CARD RECEIVED - PROMPT_REFINER updates:', grouped['PROMPT_REFINER'].length);
+      grouped['PROMPT_REFINER'].forEach((update: any, idx: number) => {
+        console.log(`🎯🎯🎯 CARD - Update ${idx + 1}:`, {
+          status: update.status,
+          hasData: !!update.data,
+          hasPrpData: !!update.data?.prp_data,
+          dataKeys: update.data ? Object.keys(update.data) : []
+        });
+      });
+    }
+
     console.log('🔍 PROMPT REFINER CHECK:', {
       promptRefinerComplete,
       hasPromptRefinerData: !!promptRefinerData,
@@ -84,7 +96,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
       }
     }
 
-    if (plannerComplete && plannerData && !showPlanCard && approvedAgents.has('PROMPT_REFINER')) {
+    if (plannerComplete && plannerData && !showPlanCard) {
       console.log('🎯 SETTING showPlanCard = true', {
         execution_plan: plannerData.data?.execution_plan
       });
@@ -344,6 +356,16 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           {updates.length} {updates.length === 1 ? 'update' : 'updates'}
                         </span>
                       </div>
+                      {(() => {
+                        if (agentType === 'PROMPT_REFINER') {
+                          console.log('🎯🎯🎯 BUTTON CHECK - PROMPT_REFINER card:', {
+                            showPromptCard,
+                            allCompleted,
+                            willRenderButton: showPromptCard && allCompleted
+                          });
+                        }
+                        return null;
+                      })()}
                       {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
                         <button
                           onClick={(e) => {

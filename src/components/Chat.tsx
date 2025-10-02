@@ -204,7 +204,32 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               }
               
               console.log('🔥 NEW UPDATE - Agent:', data.agent_type, 'Status:', data.status, 'Total updates:', existingUpdates.length + 1);
+              
+              if (data.agent_type === 'PROMPT_REFINER' && data.status === 'completed') {
+                console.log('🎯🎯🎯 FRONTEND RECEIVED PROMPT_REFINER COMPLETION');
+                console.log('🎯🎯🎯 FRONTEND - Raw data object:', data.data);
+                console.log('🎯🎯🎯 FRONTEND - Has prp_data?', !!data.data?.prp_data);
+                if (data.data?.prp_data) {
+                  console.log('🎯🎯🎯 FRONTEND - prp_data keys:', Object.keys(data.data.prp_data));
+                  console.log('🎯🎯🎯 FRONTEND - prp_data preview:', JSON.stringify(data.data.prp_data).substring(0, 200));
+                }
+              }
+              
               setWorkflowUpdateCounter(prev => prev + 1);
+              
+              const newUpdate = {
+                type: data.type || 'agent_status',
+                agent_type: data.agent_type,
+                status: data.status,
+                message: data.message,
+                timestamp: data.timestamp,
+                data: data.data
+              };
+              
+              if (data.agent_type === 'PROMPT_REFINER' && data.status === 'completed') {
+                console.log('🎯🎯🎯 FRONTEND STORING UPDATE:', newUpdate);
+                console.log('🎯🎯🎯 FRONTEND - Update has data.prp_data?', !!newUpdate.data?.prp_data);
+              }
               
               return {
                 ...prev,
@@ -217,13 +242,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   stepProgress: data.data?.progress,
                   agentUpdates: [
                     ...existingUpdates,
-                    {
-                      agent_type: data.agent_type,
-                      status: data.status,
-                      message: data.message,
-                      timestamp: data.timestamp,
-                      step_id: data.data?.step_id
-                    }
+                    newUpdate
                   ]
                 }
               };
@@ -1510,6 +1529,19 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                 timestamp: update.timestamp
                               };
                             });
+                            
+                            const promptRefinerUpdate = normalizedAgentUpdates.find((u: any) => 
+                              u.agent_type === 'PROMPT_REFINER' && u.status === 'completed'
+                            );
+                            if (promptRefinerUpdate) {
+                              console.log('🎯🎯🎯 PASSING TO CARD - PROMPT_REFINER update found');
+                              console.log('🎯🎯🎯 PASSING TO CARD - Has data?', !!promptRefinerUpdate.data);
+                              console.log('🎯🎯🎯 PASSING TO CARD - Has prp_data?', !!promptRefinerUpdate.data?.prp_data);
+                              if (promptRefinerUpdate.data?.prp_data) {
+                                console.log('🎯🎯🎯 PASSING TO CARD - prp_data keys:', Object.keys(promptRefinerUpdate.data.prp_data));
+                              }
+                            }
+                            
                             const normalizedClarificationRequest = clarificationRequest
                               ? {
                                   type: clarificationRequest.type || 'clarification_request',

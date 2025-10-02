@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WorkflowCanvas } from './WorkflowCanvas';
-import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList, Maximize2 } from 'lucide-react';
+import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EnhancedWorkflowProps {
@@ -66,7 +66,18 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
     const plannerComplete = grouped['PLANNER']?.some((u: any) => u.status === 'completed');
     const plannerData = grouped['PLANNER']?.find((u: any) => u.status === 'completed' && u.data?.execution_plan);
 
+    console.log('🔍 PROMPT REFINER CHECK:', {
+      promptRefinerComplete,
+      hasPromptRefinerData: !!promptRefinerData,
+      promptRefinerUpdates: grouped['PROMPT_REFINER'],
+      showPromptCard,
+      dataStructure: promptRefinerData?.data
+    });
+
     if (promptRefinerComplete && promptRefinerData && !showPromptCard) {
+      console.log('🎯 SETTING showPromptCard = true', {
+        prp_data: promptRefinerData.data?.prp_data
+      });
       setShowPromptCard(true);
       if (!editedPrompt && promptRefinerData.data?.prp_data) {
         setEditedPrompt(JSON.stringify(promptRefinerData.data.prp_data, null, 2));
@@ -74,6 +85,9 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
     }
 
     if (plannerComplete && plannerData && !showPlanCard && approvedAgents.has('PROMPT_REFINER')) {
+      console.log('🎯 SETTING showPlanCard = true', {
+        execution_plan: plannerData.data?.execution_plan
+      });
       setShowPlanCard(true);
       if (!editedPlan && plannerData.data?.execution_plan) {
         setEditedPlan(plannerData.data.execution_plan);
@@ -330,6 +344,30 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           {updates.length} {updates.length === 1 ? 'update' : 'updates'}
                         </span>
                       </div>
+                      {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPromptModal(true);
+                          }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span className="text-sm">Review & Approve</span>
+                        </button>
+                      )}
+                      {agentType === 'PLANNER' && showPlanCard && allCompleted && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPlanModal(true);
+                          }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
+                        >
+                          <ClipboardList className="w-4 h-4" />
+                          <span className="text-sm">Review & Approve</span>
+                        </button>
+                      )}
                     </div>
                     
                     <AnimatePresence>
@@ -411,39 +449,6 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                         );
                       })}
 
-                            {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
-                              <motion.div 
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mt-3 flex justify-center"
-                              >
-                                <button
-                                  onClick={() => setShowPromptModal(true)}
-                                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
-                                >
-                                  <FileText className="w-5 h-5" />
-                                  <span>Review Refined Prompt</span>
-                                  <Maximize2 className="w-4 h-4" />
-                                </button>
-                              </motion.div>
-                            )}
-
-                            {agentType === 'PLANNER' && showPlanCard && allCompleted && (
-                              <motion.div 
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mt-3 flex justify-center"
-                              >
-                                <button
-                                  onClick={() => setShowPlanModal(true)}
-                                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
-                                >
-                                  <ClipboardList className="w-5 h-5" />
-                                  <span>Review Execution Plan</span>
-                                  <Maximize2 className="w-4 h-4" />
-                                </button>
-                              </motion.div>
-                            )}
                           </div>
                         </motion.div>
                       )}

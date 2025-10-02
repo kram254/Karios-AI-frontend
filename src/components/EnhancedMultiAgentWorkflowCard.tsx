@@ -290,9 +290,21 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
 
               return filteredEntries.map(([agentType, updates]) => {
                 const agentName = agentMap[agentType] || agentType.replace(/_/g, ' ');
-                const allCompleted = updates.every(u => u.status === 'completed');
+                const latestUpdate = updates[updates.length - 1];
+                const allCompleted = latestUpdate?.status === 'completed';
                 const hasStarted = updates.some(u => u.status === 'started' || u.status === 'processing');
                 const isCollapsed = collapsedAgents.has(agentType);
+                
+                if (agentType === 'PROMPT_REFINER') {
+                  console.log('🎯🎯🎯 RENDER LOGIC - PROMPT_REFINER:', {
+                    updatesCount: updates.length,
+                    latestStatus: latestUpdate?.status,
+                    allCompleted,
+                    hasStarted,
+                    showPromptCard,
+                    willRenderButton: allCompleted && showPromptCard
+                  });
+                }
                 
                 const toggleCollapse = () => {
                   setCollapsedAgents(prev => {

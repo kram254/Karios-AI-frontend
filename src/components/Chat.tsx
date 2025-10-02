@@ -1856,24 +1856,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 counter: workflowUpdateCounter
               });
               
-              return (
-                <div key={`workflow-${activeWorkflowTaskId}-${workflowUpdateCounter}`} className="realtime-workflow-display mb-6" style={{ position: 'sticky', bottom: '100px', zIndex: 10, border: '2px solid lime' }}>
-                  <div style={{ padding: '8px', background: 'rgba(0, 255, 0, 0.1)', marginBottom: '8px', fontSize: '12px', fontFamily: 'monospace' }}>
-                    DEBUG: Task {activeWorkflowTaskId.slice(0, 8)} | Updates: {normalizedAgentUpdates.length} | Counter: {workflowUpdateCounter}
-                  </div>
-                  <EnhancedMultiAgentWorkflowCard
-                    key={`card-${workflowUpdateCounter}`}
-                    taskId={activeWorkflowTaskId}
-                    workflowStage={workflow?.workflowStage || 'Initializing'}
-                    agentUpdates={normalizedAgentUpdates}
-                    planSteps={workflow?.planSteps || []}
-                    executionItems={workflow?.executionItems || []}
-                    reviewData={workflow?.reviewData}
-                    clarificationRequest={normalizedClarificationRequest}
-                    onClarificationResponse={handleClarificationResponse}
-                  />
-                </div>
-              );
+              return null;
             })()}
             
             {/* Animated Avatar - Show during processing states */}

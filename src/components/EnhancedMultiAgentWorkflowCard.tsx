@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WorkflowCanvas } from './WorkflowCanvas';
-import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EnhancedWorkflowProps {
@@ -14,6 +14,8 @@ interface EnhancedWorkflowProps {
   onClarificationResponse?: (taskId: string, response: string) => void;
   theme?: 'light' | 'dark';
 }
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = ({
   taskId,
@@ -30,6 +32,13 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
   const [phases, setPhases] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
   const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set());
+  const [approvedAgents, setApprovedAgents] = useState<Set<string>>(new Set());
+  const [editingPrompt, setEditingPrompt] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState('');
+  const [editedPlan, setEditedPlan] = useState<any>(null);
+  const [showPromptCard, setShowPromptCard] = useState(false);
+  const [showPlanCard, setShowPlanCard] = useState(false);
 
   useEffect(() => {
     const now = Date.now();
@@ -42,7 +51,33 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
       allUpdates: agentUpdates
     });
     setLastUpdateTime(now);
-  }, [agentUpdates, planSteps, executionItems, reviewData, workflowStage, taskId]);
+
+    const grouped = agentUpdates.reduce((acc, update) => {
+      const agentType = update.agent_type || 'UNKNOWN';
+      if (!acc[agentType]) acc[agentType] = [];
+      acc[agentType].push(update);
+      return acc;
+    }, {} as { [key: string]: any[] });
+
+    const promptRefinerComplete = grouped['PROMPT_REFINER']?.some((u: any) => u.status === 'completed');
+    const promptRefinerData = grouped['PROMPT_REFINER']?.find((u: any) => u.status === 'completed' && u.data?.prp_data);
+    const plannerComplete = grouped['PLANNER']?.some((u: any) => u.status === 'completed');
+    const plannerData = grouped['PLANNER']?.find((u: any) => u.status === 'completed' && u.data?.execution_plan);
+
+    if (promptRefinerComplete && promptRefinerData && !showPromptCard) {
+      setShowPromptCard(true);
+      if (!editedPrompt && promptRefinerData.data?.prp_data) {
+        setEditedPrompt(JSON.stringify(promptRefinerData.data.prp_data, null, 2));
+      }
+    }
+
+    if (plannerComplete && plannerData && !showPlanCard && approvedAgents.has('PROMPT_REFINER')) {
+      setShowPlanCard(true);
+      if (!editedPlan && plannerData.data?.execution_plan) {
+        setEditedPlan(plannerData.data.execution_plan);
+      }
+    }
+  }, [agentUpdates, planSteps, executionItems, reviewData, workflowStage, taskId, showPromptCard, showPlanCard, editedPrompt, editedPlan, approvedAgents]);
 
   useEffect(() => {
     const updatedPhases = [];
@@ -216,7 +251,16 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                 return acc;
               }, {} as { [key: string]: any[] });
 
-              return (Object.entries(grouped) as [string, any[]][]).map(([agentType, updates]) => {
+              const filteredEntries = (Object.entries(grouped) as [string, any[]][]).filter(([agentType]) => {
+                if (agentType === 'PROMPT_REFINER') return true;
+                if (agentType === 'PLANNER') return approvedAgents.has('PROMPT_REFINER');
+                if (agentType === 'TASK_EXECUTOR') return approvedAgents.has('PLANNER');
+                if (agentType === 'REVIEWER') return approvedAgents.has('TASK_EXECUTOR');
+                if (agentType === 'FORMATTER') return approvedAgents.has('REVIEWER');
+                return false;
+              });
+
+              return filteredEntries.map(([agentType, updates]) => {
                 const agentName = agentMap[agentType] || agentType.replace(/_/g, ' ');
                 const allCompleted = updates.every(u => u.status === 'completed');
                 const hasStarted = updates.some(u => u.status === 'started' || u.status === 'processing');
@@ -364,6 +408,118 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           </motion.div>
                         );
                       })}
+
+                            {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
+                              <div className={`mt-4 p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-900/50 border-[#00F3FF]/30' : 'bg-blue-50 border-blue-200'}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className={`font-semibold ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-700'}`}>Refined Prompt</h4>
+                                  <div className="flex gap-2">
+                                    {editingPrompt ? (
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const parsedData = JSON.parse(editedPrompt);
+                                            const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-prompt`, {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({
+                                                task_id: taskId,
+                                                edited_prp_data: parsedData
+                                              })
+                                            });
+                                            const result = await response.json();
+                                            if (result.success) {
+                                              setEditingPrompt(false);
+                                              setApprovedAgents(prev => new Set(prev).add('PROMPT_REFINER'));
+                                              console.log('✅ Prompt Refiner approved successfully');
+                                            }
+                                          } catch (error) {
+                                            console.error('❌ Approval error:', error);
+                                          }
+                                        }}
+                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                                      >
+                                        <Save className="w-4 h-4" /> Save & Approve
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => setEditingPrompt(true)}
+                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-[#00F3FF]/20 text-[#00F3FF] hover:bg-[#00F3FF]/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                      >
+                                        <Edit2 className="w-4 h-4" /> Edit
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                {editingPrompt ? (
+                                  <textarea
+                                    value={editedPrompt}
+                                    onChange={(e) => setEditedPrompt(e.target.value)}
+                                    className={`w-full h-64 p-3 rounded font-mono text-sm ${theme === 'dark' ? 'bg-black/30 text-gray-300 border border-gray-700' : 'bg-white text-gray-800 border border-gray-300'}`}
+                                  />
+                                ) : (
+                                  <pre className={`whitespace-pre-wrap text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-700'}`}>{editedPrompt}</pre>
+                                )}
+                              </div>
+                            )}
+
+                            {agentType === 'PLANNER' && showPlanCard && allCompleted && (
+                              <div className={`mt-4 p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-900/50 border-[#00F3FF]/30' : 'bg-blue-50 border-blue-200'}`}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className={`font-semibold ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-700'}`}>Execution Plan</h4>
+                                  <div className="flex gap-2">
+                                    {editingPlan ? (
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-plan`, {
+                                              method: 'POST',
+                                              headers: { 'Content-Type': 'application/json' },
+                                              body: JSON.stringify({
+                                                task_id: taskId,
+                                                edited_plan: editedPlan
+                                              })
+                                            });
+                                            const result = await response.json();
+                                            if (result.success) {
+                                              setEditingPlan(false);
+                                              setApprovedAgents(prev => new Set(prev).add('PLANNER'));
+                                              console.log('✅ Planner approved successfully');
+                                            }
+                                          } catch (error) {
+                                            console.error('❌ Approval error:', error);
+                                          }
+                                        }}
+                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                                      >
+                                        <Save className="w-4 h-4" /> Save & Approve
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => setEditingPlan(true)}
+                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-[#00F3FF]/20 text-[#00F3FF] hover:bg-[#00F3FF]/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                      >
+                                        <Edit2 className="w-4 h-4" /> Edit
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                {editingPlan ? (
+                                  <textarea
+                                    value={JSON.stringify(editedPlan, null, 2)}
+                                    onChange={(e) => {
+                                      try {
+                                        setEditedPlan(JSON.parse(e.target.value));
+                                      } catch (err) {
+                                      }
+                                    }}
+                                    className={`w-full h-64 p-3 rounded font-mono text-sm ${theme === 'dark' ? 'bg-black/30 text-gray-300 border border-gray-700' : 'bg-white text-gray-800 border border-gray-300'}`}
+                                  />
+                                ) : (
+                                  <pre className={`whitespace-pre-wrap text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-700'}`}>{JSON.stringify(editedPlan, null, 2)}</pre>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </motion.div>
                       )}

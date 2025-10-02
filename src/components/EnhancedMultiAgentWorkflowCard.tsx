@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WorkflowCanvas } from './WorkflowCanvas';
-import { Brain, Play, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EnhancedWorkflowProps {
@@ -27,6 +27,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
   const [isCanvasMode, setIsCanvasMode] = useState(false);
   const [phases, setPhases] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
+  const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const now = Date.now();
@@ -217,6 +218,19 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                 const agentName = agentMap[agentType] || agentType.replace(/_/g, ' ');
                 const allCompleted = updates.every(u => u.status === 'completed');
                 const hasStarted = updates.some(u => u.status === 'started' || u.status === 'processing');
+                const isCollapsed = collapsedAgents.has(agentType);
+                
+                const toggleCollapse = () => {
+                  setCollapsedAgents(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(agentType)) {
+                      newSet.delete(agentType);
+                    } else {
+                      newSet.add(agentType);
+                    }
+                    return newSet;
+                  });
+                };
                 
                 return (
                   <motion.div
@@ -225,13 +239,21 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-gray-900/50 rounded-lg border border-gray-700/50 overflow-hidden"
                   >
-                    <div className={`px-4 py-3 flex items-center gap-3 ${
-                      allCompleted 
-                        ? 'bg-green-500/10 border-b border-green-500/30' 
-                        : hasStarted
-                        ? 'bg-[#00F3FF]/10 border-b border-[#00F3FF]/30'
-                        : 'bg-gray-800/30 border-b border-gray-700/30'
-                    }`}>
+                    <div 
+                      onClick={toggleCollapse}
+                      className={`px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-opacity-80 transition-colors ${
+                        allCompleted 
+                          ? 'bg-green-500/10 border-b border-green-500/30' 
+                          : hasStarted
+                          ? 'bg-[#00F3FF]/10 border-b border-[#00F3FF]/30'
+                          : 'bg-gray-800/30 border-b border-gray-700/30'
+                      }`}
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      )}
                       {allCompleted ? (
                         <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                       ) : hasStarted ? (
@@ -251,8 +273,17 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                       </div>
                     </div>
                     
-                    <div className="p-3 space-y-2">
-                      {updates.map((update, idx) => {
+                    <AnimatePresence>
+                      {!isCollapsed && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-3 space-y-2">
+                            {updates.map((update, idx) => {
                         const isCompleted = update.status === 'completed';
                         const isRunning = update.status === 'started' || update.status === 'processing';
                         const isFailed = update.status === 'failed';
@@ -311,7 +342,10 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           </motion.div>
                         );
                       })}
-                    </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 );
               });

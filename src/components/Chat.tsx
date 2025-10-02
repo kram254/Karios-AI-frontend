@@ -1832,7 +1832,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   : 'processing';
                 return {
                   type: update.type || 'agent_status',
-                  agent_type: update.agent_type || 'UNKNOWN',
+                  agent_type: update.agent_type || update.agentType || update.agent || 'UNKNOWN',
                   status,
                   message: update.message || '',
                   data: update.data,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WorkflowCanvas } from './WorkflowCanvas';
-import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save } from 'lucide-react';
+import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface EnhancedWorkflowProps {
@@ -39,6 +39,8 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
   const [editedPlan, setEditedPlan] = useState<any>(null);
   const [showPromptCard, setShowPromptCard] = useState(false);
   const [showPlanCard, setShowPlanCard] = useState(false);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
 
   useEffect(() => {
     const now = Date.now();
@@ -410,115 +412,37 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                       })}
 
                             {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
-                              <div className={`mt-4 p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-900/50 border-[#00F3FF]/30' : 'bg-blue-50 border-blue-200'}`}>
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className={`font-semibold ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-700'}`}>Refined Prompt</h4>
-                                  <div className="flex gap-2">
-                                    {editingPrompt ? (
-                                      <button
-                                        onClick={async () => {
-                                          try {
-                                            const parsedData = JSON.parse(editedPrompt);
-                                            const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-prompt`, {
-                                              method: 'POST',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({
-                                                task_id: taskId,
-                                                edited_prp_data: parsedData
-                                              })
-                                            });
-                                            const result = await response.json();
-                                            if (result.success) {
-                                              setEditingPrompt(false);
-                                              setApprovedAgents(prev => new Set(prev).add('PROMPT_REFINER'));
-                                              console.log('✅ Prompt Refiner approved successfully');
-                                            }
-                                          } catch (error) {
-                                            console.error('❌ Approval error:', error);
-                                          }
-                                        }}
-                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                                      >
-                                        <Save className="w-4 h-4" /> Save & Approve
-                                      </button>
-                                    ) : (
-                                      <button
-                                        onClick={() => setEditingPrompt(true)}
-                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-[#00F3FF]/20 text-[#00F3FF] hover:bg-[#00F3FF]/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                                      >
-                                        <Edit2 className="w-4 h-4" /> Edit
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                                {editingPrompt ? (
-                                  <textarea
-                                    value={editedPrompt}
-                                    onChange={(e) => setEditedPrompt(e.target.value)}
-                                    className={`w-full h-64 p-3 rounded font-mono text-sm ${theme === 'dark' ? 'bg-black/30 text-gray-300 border border-gray-700' : 'bg-white text-gray-800 border border-gray-300'}`}
-                                  />
-                                ) : (
-                                  <pre className={`whitespace-pre-wrap text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-700'}`}>{editedPrompt}</pre>
-                                )}
-                              </div>
+                              <motion.div 
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-3 flex justify-center"
+                              >
+                                <button
+                                  onClick={() => setShowPromptModal(true)}
+                                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
+                                >
+                                  <FileText className="w-5 h-5" />
+                                  <span>Review Refined Prompt</span>
+                                  <Maximize2 className="w-4 h-4" />
+                                </button>
+                              </motion.div>
                             )}
 
                             {agentType === 'PLANNER' && showPlanCard && allCompleted && (
-                              <div className={`mt-4 p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-900/50 border-[#00F3FF]/30' : 'bg-blue-50 border-blue-200'}`}>
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className={`font-semibold ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-700'}`}>Execution Plan</h4>
-                                  <div className="flex gap-2">
-                                    {editingPlan ? (
-                                      <button
-                                        onClick={async () => {
-                                          try {
-                                            const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-plan`, {
-                                              method: 'POST',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({
-                                                task_id: taskId,
-                                                edited_plan: editedPlan
-                                              })
-                                            });
-                                            const result = await response.json();
-                                            if (result.success) {
-                                              setEditingPlan(false);
-                                              setApprovedAgents(prev => new Set(prev).add('PLANNER'));
-                                              console.log('✅ Planner approved successfully');
-                                            }
-                                          } catch (error) {
-                                            console.error('❌ Approval error:', error);
-                                          }
-                                        }}
-                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                                      >
-                                        <Save className="w-4 h-4" /> Save & Approve
-                                      </button>
-                                    ) : (
-                                      <button
-                                        onClick={() => setEditingPlan(true)}
-                                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${theme === 'dark' ? 'bg-[#00F3FF]/20 text-[#00F3FF] hover:bg-[#00F3FF]/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                                      >
-                                        <Edit2 className="w-4 h-4" /> Edit
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                                {editingPlan ? (
-                                  <textarea
-                                    value={JSON.stringify(editedPlan, null, 2)}
-                                    onChange={(e) => {
-                                      try {
-                                        setEditedPlan(JSON.parse(e.target.value));
-                                      } catch (err) {
-                                      }
-                                    }}
-                                    className={`w-full h-64 p-3 rounded font-mono text-sm ${theme === 'dark' ? 'bg-black/30 text-gray-300 border border-gray-700' : 'bg-white text-gray-800 border border-gray-300'}`}
-                                  />
-                                ) : (
-                                  <pre className={`whitespace-pre-wrap text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-700'}`}>{JSON.stringify(editedPlan, null, 2)}</pre>
-                                )}
-                              </div>
+                              <motion.div 
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mt-3 flex justify-center"
+                              >
+                                <button
+                                  onClick={() => setShowPlanModal(true)}
+                                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
+                                >
+                                  <ClipboardList className="w-5 h-5" />
+                                  <span>Review Execution Plan</span>
+                                  <Maximize2 className="w-4 h-4" />
+                                </button>
+                              </motion.div>
                             )}
                           </div>
                         </motion.div>
@@ -579,6 +503,216 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
           />
         </div>
       )}
+
+      <AnimatePresence>
+        {showPromptModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowPromptModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full max-w-4xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] border-2 border-[#00F3FF]/30' : 'bg-white border-2 border-blue-200'}`}
+            >
+              <div className={`flex items-center justify-between p-6 border-b ${theme === 'dark' ? 'border-[#00F3FF]/20 bg-gradient-to-r from-[#00F3FF]/10 to-transparent' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-transparent'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-[#00F3FF]/20' : 'bg-blue-100'}`}>
+                    <FileText className={`w-6 h-6 ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-600'}`} />
+                  </div>
+                  <div>
+                    <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-700'}`}>Refined Prompt</h3>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Review and edit before proceeding</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPromptModal(false)}
+                  className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-[#00F3FF]/10 text-gray-400 hover:text-[#00F3FF]' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)]">
+                {editingPrompt ? (
+                  <textarea
+                    value={editedPrompt}
+                    onChange={(e) => setEditedPrompt(e.target.value)}
+                    className={`w-full h-96 p-4 rounded-lg font-mono text-sm resize-none focus:outline-none focus:ring-2 transition-all ${theme === 'dark' ? 'bg-black/40 text-gray-300 border border-gray-700 focus:ring-[#00F3FF] focus:border-[#00F3FF]' : 'bg-gray-50 text-gray-800 border border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
+                    placeholder="Enter refined prompt..."
+                  />
+                ) : (
+                  <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-black/40 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <pre className={`whitespace-pre-wrap text-sm font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>{editedPrompt}</pre>
+                  </div>
+                )}
+              </div>
+
+              <div className={`flex items-center justify-end gap-3 p-6 border-t ${theme === 'dark' ? 'border-[#00F3FF]/20 bg-black/20' : 'border-blue-200 bg-gray-50'}`}>
+                {editingPrompt ? (
+                  <>
+                    <button
+                      onClick={() => setEditingPrompt(false)}
+                      className={`px-6 py-2.5 rounded-lg font-medium transition-all ${theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const parsedData = JSON.parse(editedPrompt);
+                          const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-prompt`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              task_id: taskId,
+                              edited_prp_data: parsedData
+                            })
+                          });
+                          const result = await response.json();
+                          if (result.success) {
+                            setEditingPrompt(false);
+                            setShowPromptModal(false);
+                            setApprovedAgents(prev => new Set(prev).add('PROMPT_REFINER'));
+                            console.log('✅ Prompt Refiner approved successfully');
+                          }
+                        } catch (error) {
+                          console.error('❌ Approval error:', error);
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-green-500/50' : 'bg-gradient-to-r from-green-600 to-green-500 text-white hover:shadow-green-500/50'}`}
+                    >
+                      <Save className="w-5 h-5" />
+                      Save & Approve
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setEditingPrompt(true)}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:shadow-blue-500/50'}`}
+                  >
+                    <Edit2 className="w-5 h-5" />
+                    Edit Prompt
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPlanModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowPlanModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full max-w-4xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden ${theme === 'dark' ? 'bg-[#0a0a0a] border-2 border-[#00F3FF]/30' : 'bg-white border-2 border-blue-200'}`}
+            >
+              <div className={`flex items-center justify-between p-6 border-b ${theme === 'dark' ? 'border-[#00F3FF]/20 bg-gradient-to-r from-[#00F3FF]/10 to-transparent' : 'border-blue-200 bg-gradient-to-r from-blue-50 to-transparent'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-[#00F3FF]/20' : 'bg-blue-100'}`}>
+                    <ClipboardList className={`w-6 h-6 ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-600'}`} />
+                  </div>
+                  <div>
+                    <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-700'}`}>Execution Plan</h3>
+                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Review and edit before execution</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPlanModal(false)}
+                  className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-[#00F3FF]/10 text-gray-400 hover:text-[#00F3FF]' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)]">
+                {editingPlan ? (
+                  <textarea
+                    value={JSON.stringify(editedPlan, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        setEditedPlan(JSON.parse(e.target.value));
+                      } catch (err) {
+                      }
+                    }}
+                    className={`w-full h-96 p-4 rounded-lg font-mono text-sm resize-none focus:outline-none focus:ring-2 transition-all ${theme === 'dark' ? 'bg-black/40 text-gray-300 border border-gray-700 focus:ring-[#00F3FF] focus:border-[#00F3FF]' : 'bg-gray-50 text-gray-800 border border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
+                    placeholder="Enter execution plan..."
+                  />
+                ) : (
+                  <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-black/40 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+                    <pre className={`whitespace-pre-wrap text-sm font-mono ${theme === 'dark' ? 'text-gray-300' : 'text-gray-800'}`}>{JSON.stringify(editedPlan, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+
+              <div className={`flex items-center justify-end gap-3 p-6 border-t ${theme === 'dark' ? 'border-[#00F3FF]/20 bg-black/20' : 'border-blue-200 bg-gray-50'}`}>
+                {editingPlan ? (
+                  <>
+                    <button
+                      onClick={() => setEditingPlan(false)}
+                      className={`px-6 py-2.5 rounded-lg font-medium transition-all ${theme === 'dark' ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-plan`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              task_id: taskId,
+                              edited_plan: editedPlan
+                            })
+                          });
+                          const result = await response.json();
+                          if (result.success) {
+                            setEditingPlan(false);
+                            setShowPlanModal(false);
+                            setApprovedAgents(prev => new Set(prev).add('PLANNER'));
+                            console.log('✅ Planner approved successfully');
+                          }
+                        } catch (error) {
+                          console.error('❌ Approval error:', error);
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-green-500/50' : 'bg-gradient-to-r from-green-600 to-green-500 text-white hover:shadow-green-500/50'}`}
+                    >
+                      <Save className="w-5 h-5" />
+                      Save & Approve
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setEditingPlan(true)}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:shadow-blue-500/50'}`}
+                  >
+                    <Edit2 className="w-5 h-5" />
+                    Edit Plan
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

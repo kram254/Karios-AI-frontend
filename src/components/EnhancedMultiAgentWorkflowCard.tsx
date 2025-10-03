@@ -279,12 +279,25 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                 return acc;
               }, {} as { [key: string]: any[] });
 
+              const promptRefinerDone = grouped['PROMPT_REFINER']?.some((u: any) => u.status === 'completed');
+              const plannerDone = grouped['PLANNER']?.some((u: any) => u.status === 'completed');
+              const executorDone = grouped['TASK_EXECUTOR']?.some((u: any) => u.status === 'completed');
+              const reviewerDone = grouped['REVIEWER']?.some((u: any) => u.status === 'completed');
+
+              console.log('🎯🎯🎯 CARD VISIBILITY CHECK:', {
+                allAgents: Object.keys(grouped),
+                promptRefinerDone,
+                plannerDone,
+                plannerUpdatesCount: grouped['PLANNER']?.length || 0,
+                plannerShouldShow: promptRefinerDone || (grouped['PLANNER']?.length || 0) > 0
+              });
+
               const filteredEntries = (Object.entries(grouped) as [string, any[]][]).filter(([agentType]) => {
                 if (agentType === 'PROMPT_REFINER') return true;
-                if (agentType === 'PLANNER') return approvedAgents.has('PROMPT_REFINER');
-                if (agentType === 'TASK_EXECUTOR') return approvedAgents.has('PLANNER');
-                if (agentType === 'REVIEWER') return approvedAgents.has('TASK_EXECUTOR');
-                if (agentType === 'FORMATTER') return approvedAgents.has('REVIEWER');
+                if (agentType === 'PLANNER') return promptRefinerDone || grouped['PLANNER']?.length > 0;
+                if (agentType === 'TASK_EXECUTOR') return plannerDone || grouped['TASK_EXECUTOR']?.length > 0;
+                if (agentType === 'REVIEWER') return executorDone || grouped['REVIEWER']?.length > 0;
+                if (agentType === 'FORMATTER') return reviewerDone || grouped['FORMATTER']?.length > 0;
                 return false;
               });
 
@@ -387,7 +400,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
                         >
                           <FileText className="w-4 h-4" />
-                          <span className="text-sm">Review & Approve</span>
+                          <span className="text-sm">Check Prompt</span>
                         </button>
                       )}
                       {agentType === 'PLANNER' && showPlanCard && allCompleted && (
@@ -399,7 +412,7 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-[#00F3FF] to-[#0099CC] text-black hover:shadow-[#00F3FF]/50' : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white hover:shadow-blue-500/50'}`}
                         >
                           <ClipboardList className="w-4 h-4" />
-                          <span className="text-sm">Review & Approve</span>
+                          <span className="text-sm">Check Plan</span>
                         </button>
                       )}
                     </div>
@@ -482,6 +495,116 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
                           </motion.div>
                         );
                       })}
+
+                            {(() => {
+                              if (agentType !== 'PLANNER' || !allCompleted) return null;
+                              const planUpdateData = updates.find((u: any) => u.status === 'completed' && u.data?.execution_plan);
+                              if (!planUpdateData?.data?.execution_plan) return null;
+                              
+                              return (
+                                <div className={`mt-4 p-4 rounded-lg ${theme === 'dark' ? 'bg-black/40 border border-[#00F3FF]/20' : 'bg-white border border-blue-200'}`}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className={`text-sm font-semibold flex items-center gap-2 ${theme === 'dark' ? 'text-[#00F3FF]' : 'text-blue-600'}`}>
+                                      <ClipboardList className="w-4 h-4" />
+                                      Execution Plan
+                                    </h4>
+                                    {!editingPlan ? (
+                                      <button
+                                        onClick={() => {
+                                          setEditingPlan(true);
+                                          if (!editedPlan) {
+                                            setEditedPlan(planUpdateData.data.execution_plan);
+                                          }
+                                        }}
+                                        className={`p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'hover:bg-[#00F3FF]/20 text-[#00F3FF]' : 'hover:bg-blue-100 text-blue-600'}`}
+                                      >
+                                        <Edit2 className="w-4 h-4" />
+                                      </button>
+                                    ) : (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setEditingPlan(false);
+                                            setEditedPlan(planUpdateData.data.execution_plan);
+                                          }}
+                                          className={`p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-100 text-red-600'}`}
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-plan`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  task_id: taskId,
+                                                  approved: true,
+                                                  edited_plan: editedPlan
+                                                })
+                                              });
+                                              if (response.ok) {
+                                                setEditingPlan(false);
+                                                console.log('✅ Plan updated and saved');
+                                              }
+                                            } catch (error) {
+                                              console.error('Failed to save plan:', error);
+                                            }
+                                          }}
+                                          className={`p-1.5 rounded-md transition-colors ${theme === 'dark' ? 'hover:bg-green-500/20 text-green-400' : 'hover:bg-green-100 text-green-600'}`}
+                                        >
+                                          <Save className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {editingPlan ? (
+                                    <textarea
+                                      value={typeof editedPlan === 'string' ? editedPlan : JSON.stringify(editedPlan, null, 2)}
+                                      onChange={(e) => setEditedPlan(e.target.value)}
+                                      className={`w-full h-64 p-3 rounded-md font-mono text-xs ${
+                                        theme === 'dark' 
+                                          ? 'bg-black/40 text-gray-300 border border-[#00F3FF]/30' 
+                                          : 'bg-white text-gray-800 border border-blue-300'
+                                      }`}
+                                    />
+                                  ) : (
+                                    <div className={`text-xs space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      {typeof planUpdateData.data.execution_plan === 'string' ? (
+                                        <pre className="whitespace-pre-wrap font-mono">{planUpdateData.data.execution_plan}</pre>
+                                      ) : (
+                                        <>
+                                          {planUpdateData.data.execution_plan.steps?.map((step: any, idx: number) => (
+                                            <div key={idx} className={`p-3 rounded-md ${theme === 'dark' ? 'bg-black/20' : 'bg-gray-50'}`}>
+                                              <div className="flex items-start gap-2">
+                                                <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                  theme === 'dark' ? 'bg-[#00F3FF]/20 text-[#00F3FF]' : 'bg-blue-100 text-blue-600'
+                                                }`}>
+                                                  {idx + 1}
+                                                </span>
+                                                <div className="flex-1">
+                                                  <p className="font-semibold mb-1">{step.action || step.description}</p>
+                                                  {step.tool && (
+                                                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
+                                                      Tool: {step.tool}
+                                                    </p>
+                                                  )}
+                                                  {step.expected_output && (
+                                                    <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                      {step.expected_output}
+                                                    </p>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
 
                           </div>
                         </motion.div>

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { WorkflowCanvas } from './WorkflowCanvas';
-import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList } from 'lucide-react';
+import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList, Code, BarChart3, FileCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ExecutionOutputModal, ReviewScoreModal, FormattedOutputModal } from './WorkflowOutputModals';
 
 interface EnhancedWorkflowProps {
   taskId: string;
@@ -41,18 +42,19 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   const [showPlanCard, setShowPlanCard] = useState(false);
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showExecutionModal, setShowExecutionModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showFormatterModal, setShowFormatterModal] = useState(false);
+  const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const now = Date.now();
-    console.log('🔥 WORKFLOW CARD RE-RENDER:', {
-      taskId,
-      workflowStage,
-      agentUpdatesCount: agentUpdates.length,
-      latestUpdate: agentUpdates[agentUpdates.length - 1],
-      renderTime: new Date(now).toLocaleTimeString(),
-      allUpdates: agentUpdates
-    });
-    setLastUpdateTime(now);
+    if (updateDebounceRef.current) {
+      clearTimeout(updateDebounceRef.current);
+    }
+    
+    updateDebounceRef.current = setTimeout(() => {
+      const now = Date.now();
+      setLastUpdateTime(now);
 
     const grouped = agentUpdates.reduce((acc, update) => {
       const agentType = update.agent_type || 'UNKNOWN';
@@ -105,7 +107,12 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
         setEditedPlan(plannerData.data.execution_plan);
       }
     }
-  }, [agentUpdates, planSteps, executionItems, reviewData, workflowStage, taskId, showPromptCard, showPlanCard, editedPrompt, editedPlan, approvedAgents]);
+    }, 500);
+    
+    return () => {
+      if (updateDebounceRef.current) clearTimeout(updateDebounceRef.current);
+    };
+  }, [agentUpdates]);
 
   useEffect(() => {
     const updatedPhases = [];
@@ -415,6 +422,51 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                           <span className="text-sm">Check Plan</span>
                         </button>
                       )}
+                      {agentType === 'TASK_EXECUTOR' && allCompleted && (() => {
+                        const executorData = updates.find((u: any) => u.status === 'completed' && u.data?.execution_results);
+                        return executorData ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowExecutionModal(true);
+                          }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-black hover:shadow-emerald-500/50' : 'bg-gradient-to-r from-green-600 to-green-400 text-white hover:shadow-green-500/50'}`}
+                        >
+                          <Code className="w-4 h-4" />
+                          <span className="text-sm">Check Output</span>
+                        </button>
+                        ) : null;
+                      })()}
+                      {agentType === 'REVIEWER' && allCompleted && (() => {
+                        const reviewerData = updates.find((u: any) => u.status === 'completed' && u.data?.quality_score !== undefined);
+                        return reviewerData ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowReviewModal(true);
+                          }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:shadow-purple-500/50' : 'bg-gradient-to-r from-purple-600 to-purple-400 text-white hover:shadow-purple-500/50'}`}
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                          <span className="text-sm">Check Review Score</span>
+                        </button>
+                        ) : null;
+                      })()}
+                      {agentType === 'FORMATTER' && allCompleted && (() => {
+                        const formatterData = updates.find((u: any) => u.status === 'completed' && u.data?.formatted_output);
+                        return formatterData ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowFormatterModal(true);
+                          }}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-black hover:shadow-orange-500/50' : 'bg-gradient-to-r from-orange-600 to-orange-400 text-white hover:shadow-orange-500/50'}`}
+                        >
+                          <FileCheck className="w-4 h-4" />
+                          <span className="text-sm">Formatted Output</span>
+                        </button>
+                        ) : null;
+                      })()}
                     </div>
                     
                     <AnimatePresence>
@@ -875,6 +927,64 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ExecutionOutputModal
+        show={showExecutionModal}
+        onClose={() => setShowExecutionModal(false)}
+        executionResults={(() => {
+          const grouped = agentUpdates.reduce((acc, u) => {
+            const t = u.agent_type || 'UNKNOWN';
+            if (!acc[t]) acc[t] = [];
+            acc[t].push(u);
+            return acc;
+          }, {} as { [key: string]: any[] });
+          const d = grouped['TASK_EXECUTOR']?.find((u: any) => u.status === 'completed' && u.data?.execution_results);
+          return d?.data?.execution_results || 'No output available';
+        })()}
+        theme={theme}
+      />
+
+      <ReviewScoreModal
+        show={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        qualityScore={(() => {
+          const grouped = agentUpdates.reduce((acc, u) => {
+            const t = u.agent_type || 'UNKNOWN';
+            if (!acc[t]) acc[t] = [];
+            acc[t].push(u);
+            return acc;
+          }, {} as { [key: string]: any[] });
+          const d = grouped['REVIEWER']?.find((u: any) => u.status === 'completed' && u.data?.quality_score !== undefined);
+          return d?.data?.quality_score || 0;
+        })()}
+        reviewReport={(() => {
+          const grouped = agentUpdates.reduce((acc, u) => {
+            const t = u.agent_type || 'UNKNOWN';
+            if (!acc[t]) acc[t] = [];
+            acc[t].push(u);
+            return acc;
+          }, {} as { [key: string]: any[] });
+          const d = grouped['REVIEWER']?.find((u: any) => u.status === 'completed' && u.data?.quality_score !== undefined);
+          return d?.data?.review_report || 'No review data available';
+        })()}
+        theme={theme}
+      />
+
+      <FormattedOutputModal
+        show={showFormatterModal}
+        onClose={() => setShowFormatterModal(false)}
+        formattedOutput={(() => {
+          const grouped = agentUpdates.reduce((acc, u) => {
+            const t = u.agent_type || 'UNKNOWN';
+            if (!acc[t]) acc[t] = [];
+            acc[t].push(u);
+            return acc;
+          }, {} as { [key: string]: any[] });
+          const d = grouped['FORMATTER']?.find((u: any) => u.status === 'completed' && u.data?.formatted_output);
+          return d?.data?.formatted_output || 'No formatted output available';
+        })()}
+        theme={theme}
+      />
     </motion.div>
   );
 };
@@ -882,15 +992,17 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
 export const EnhancedMultiAgentWorkflowCard = React.memo(
   EnhancedMultiAgentWorkflowCardComponent,
   (prevProps, nextProps) => {
-    return (
-      prevProps.taskId === nextProps.taskId &&
-      prevProps.workflowStage === nextProps.workflowStage &&
-      prevProps.agentUpdates.length === nextProps.agentUpdates.length &&
-      prevProps.planSteps === nextProps.planSteps &&
-      prevProps.executionItems === nextProps.executionItems &&
-      prevProps.reviewData === nextProps.reviewData &&
-      prevProps.clarificationRequest === nextProps.clarificationRequest &&
-      prevProps.theme === nextProps.theme
-    );
+    if (prevProps.taskId !== nextProps.taskId) return false;
+    if (prevProps.workflowStage !== nextProps.workflowStage) return false;
+    if (prevProps.theme !== nextProps.theme) return false;
+    
+    if (prevProps.agentUpdates.length !== nextProps.agentUpdates.length) return false;
+    
+    const prevLastUpdate = prevProps.agentUpdates[prevProps.agentUpdates.length - 1];
+    const nextLastUpdate = nextProps.agentUpdates[nextProps.agentUpdates.length - 1];
+    if (prevLastUpdate?.timestamp !== nextLastUpdate?.timestamp) return false;
+    if (prevLastUpdate?.status !== nextLastUpdate?.status) return false;
+    
+    return true;
   }
 );

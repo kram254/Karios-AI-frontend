@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ChangeEvent } from "react";
+import React, { useState, useEffect, useRef, ChangeEvent, useCallback, useMemo } from "react";
 import { MessageSquare, Send, Plus, X, Globe, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { useChat } from "../context/ChatContext";
@@ -19,6 +19,7 @@ import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard
 import { WorkflowDebugPanel } from './WorkflowDebugPanel';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
+import { useThrottle } from "../hooks/useThrottle";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -115,31 +116,21 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         console.log(`📊 UNRENDERED MESSAGES - ${stats.unrendered} messages waiting to render`);
         setWorkflowUpdateCounter(prev => prev + 1);
       }
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(reconciliationInterval);
   }, [activeWorkflowTaskId]);
 
   useEffect(() => {
-    console.log('🔥🔥🔥 WORKFLOWS STATE CHANGED:', {
-      totalWorkflows: Object.keys(multiAgentWorkflows).length,
-      workflows: multiAgentWorkflows,
-      activeTaskId: activeWorkflowTaskId,
-      counter: workflowUpdateCounter
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔥 WORKFLOWS STATE CHANGED:', {
+        totalWorkflows: Object.keys(multiAgentWorkflows).length,
+        activeTaskId: activeWorkflowTaskId
+      });
+    }
   }, [multiAgentWorkflows]);
 
-  useEffect(() => {
-    console.log('🎯🎯🎯 ACTIVE TASK ID CHANGED:', {
-      activeTaskId: activeWorkflowTaskId,
-      lastTaskIdRef: lastTaskIdRef.current,
-      workflowExists: activeWorkflowTaskId ? !!multiAgentWorkflows[activeWorkflowTaskId] : false
-    });
-  }, [activeWorkflowTaskId]);
 
-  useEffect(() => {
-    console.log('🔢🔢🔢 COUNTER CHANGED:', workflowUpdateCounter);
-  }, [workflowUpdateCounter]);
 
   // Multi-agent WebSocket connection effect with reconnection handling
   useEffect(() => {
@@ -169,12 +160,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             console.log(`✅ GUARANTEED RECEIPT - Message #${sequence} stored in queue`);
             console.log('📊 CURRENT QUEUE STATS:', workflowMessageQueue.getStats(data.task_id));
             
-            setWorkflowUpdateCounter(prev => {
-              const newCounter = prev + 1;
-              console.log('🔢 COUNTER INCREMENT:', prev, '→', newCounter);
-              return newCounter;
-            });
-            
             setMultiAgentWorkflows(prev => {
               const agentTypeMap: { [key: string]: string } = {
                 'PROMPT_REFINER': 'Prompt Refiner',
@@ -198,8 +183,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               );
               
               if (isDuplicate) {
-                console.log('🔥 DUPLICATE UPDATE - Still forcing re-render');
-                setWorkflowUpdateCounter(prev => prev + 1);
+                console.log('🔥 DUPLICATE UPDATE - Skipping to prevent re-render');
                 return prev;
               }
               
@@ -214,8 +198,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   console.log('🎯🎯🎯 FRONTEND - prp_data preview:', JSON.stringify(data.data.prp_data).substring(0, 200));
                 }
               }
-              
-              setWorkflowUpdateCounter(prev => prev + 1);
               
               const newUpdate = {
                 type: data.type || 'agent_status',

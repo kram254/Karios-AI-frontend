@@ -17,7 +17,7 @@ interface EnhancedWorkflowProps {
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
-export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = ({
+const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> = ({
   taskId,
   workflowStage,
   agentUpdates,
@@ -878,3 +878,19 @@ export const EnhancedMultiAgentWorkflowCard: React.FC<EnhancedWorkflowProps> = (
     </motion.div>
   );
 };
+
+export const EnhancedMultiAgentWorkflowCard = React.memo(
+  EnhancedMultiAgentWorkflowCardComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.taskId === nextProps.taskId &&
+      prevProps.workflowStage === nextProps.workflowStage &&
+      prevProps.agentUpdates.length === nextProps.agentUpdates.length &&
+      prevProps.planSteps === nextProps.planSteps &&
+      prevProps.executionItems === nextProps.executionItems &&
+      prevProps.reviewData === nextProps.reviewData &&
+      prevProps.clarificationRequest === nextProps.clarificationRequest &&
+      prevProps.theme === nextProps.theme
+    );
+  }
+);

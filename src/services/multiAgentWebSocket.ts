@@ -18,6 +18,7 @@ interface MultiAgentWSCallbacks {
   onWorkflowStarted?: (data: MultiAgentWSMessage) => void;
   onClarificationResolved?: (data: MultiAgentWSMessage) => void;
   onConnectionEstablished?: (data: MultiAgentWSMessage) => void;
+  onNewMessage?: (data: MultiAgentWSMessage) => void;
   onError?: (error: Event) => void;
   onClose?: (event: CloseEvent) => void;
 }
@@ -180,6 +181,15 @@ class MultiAgentWebSocketService {
         this.callbacksList.forEach(callbacks => {
           if (callbacks.onClarificationResolved) {
             callbacks.onClarificationResolved(data);
+          }
+        });
+        break;
+      
+      case 'new_message':
+        console.log('💬 MULTI-AGENT WS - New message received:', data);
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onNewMessage) {
+            callbacks.onNewMessage(data);
           }
         });
         break;

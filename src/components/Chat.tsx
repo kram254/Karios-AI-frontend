@@ -291,6 +291,21 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           console.log('📡 CHAT - Multi-agent WebSocket connected for chat:', data.chatId);
         },
         
+        onNewMessage: async (data: MultiAgentWSMessage) => {
+          console.log('💬 CHAT - New message received from multi-agent system:', data);
+          if (data.data?.message) {
+            const msg = data.data.message;
+            setMessages(prev => [...prev, {
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              chatId: data.chatId,
+              timestamp: msg.timestamp || new Date().toISOString()
+            }]);
+            console.log('✅ Message added to chat from multi-agent system');
+          }
+        },
+        
         onError: (error: Event) => {
           console.error('📡 CHAT - Multi-agent WebSocket error:', error);
         },

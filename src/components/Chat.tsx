@@ -293,16 +293,19 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         
         onNewMessage: async (data: MultiAgentWSMessage) => {
           console.log('💬 CHAT - New message received from multi-agent system:', data);
-          if (data.data?.message) {
-            const msg = data.data.message;
-            setMessages(prev => [...prev, {
-              id: msg.id,
+          console.log('💬 CHAT - Message structure:', { hasDataMessage: !!data.data?.message, hasMessage: !!(data as any).message });
+          
+          const msg = (data as any).message || data.data?.message;
+          if (msg) {
+            console.log('💬 CHAT - Extracted message:', msg);
+            await addMessage({
               role: msg.role,
               content: msg.content,
-              chatId: data.chatId,
-              timestamp: msg.timestamp || new Date().toISOString()
-            }]);
+              chatId: data.chatId
+            });
             console.log('✅ Message added to chat from multi-agent system');
+          } else {
+            console.error('❌ CHAT - No message found in data:', data);
           }
         },
         

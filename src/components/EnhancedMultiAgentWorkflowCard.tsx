@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { WorkflowCanvas } from './WorkflowCanvas';
-import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList, Code, BarChart3, FileCheck } from 'lucide-react';
+import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList, Code, BarChart3, FileCheck, Box, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExecutionOutputModal, ReviewScoreModal, FormattedOutputModal } from './WorkflowOutputModals';
 
@@ -45,6 +45,7 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showFormatterModal, setShowFormatterModal] = useState(false);
+  const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set());
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -547,6 +548,144 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                           </motion.div>
                         );
                       })}
+
+                            {(() => {
+                              if (agentType !== 'TASK_EXECUTOR' || !allCompleted) return null;
+                              const executorData = updates.find((u: any) => u.status === 'completed' && u.data?.execution_results);
+                              if (!executorData?.data?.execution_results?.step_results) return null;
+                              
+                              const stepResults = executorData.data.execution_results.step_results;
+                              
+                              const getToolIcon = (toolName: string) => {
+                                const lowerTool = toolName.toLowerCase();
+                                if (lowerTool.includes('perplexity') || lowerTool.includes('sonar')) {
+                                  return <img src="https://pplx-res.cloudinary.com/image/upload/v1687199952/favicon_lty4np.svg" alt="Perplexity" className="w-4 h-4" />;
+                                }
+                                if (lowerTool.includes('google')) {
+                                  return <img src="https://www.google.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" alt="Google" className="w-4 h-4" />;
+                                }
+                                if (lowerTool.includes('code') || lowerTool.includes('python') || lowerTool.includes('execute')) {
+                                  return <img src="https://www.python.org/static/favicon.ico" alt="Python" className="w-4 h-4" />;
+                                }
+                                if (lowerTool.includes('scraper') || lowerTool.includes('scrape') || lowerTool.includes('web')) {
+                                  return <img src="https://www.google.com/chrome/static/images/chrome-logo-m100.svg" alt="Chrome" className="w-4 h-4" />;
+                                }
+                                if (lowerTool.includes('content') || lowerTool.includes('generation') || lowerTool.includes('openai')) {
+                                  return <img src="https://openai.com/favicon.ico" alt="OpenAI" className="w-4 h-4" />;
+                                }
+                                return <Box className="w-4 h-4" />;
+                              };
+                              
+                              const getToolDisplayName = (toolName: string, action: string) => {
+                                const lowerTool = toolName.toLowerCase();
+                                if (lowerTool.includes('perplexity') || lowerTool.includes('sonar')) return 'Search Perplexity';
+                                if (lowerTool.includes('google')) return 'Google Search';
+                                if (lowerTool.includes('scraper')) return 'Extract Webpage Text';
+                                if (lowerTool.includes('code')) return 'Execute Code';
+                                if (lowerTool.includes('content')) return 'Generate Content';
+                                return action || toolName;
+                              };
+                              
+                              return (
+                                <div className={`mt-4 space-y-2`}>
+                                  <div className={`flex items-center gap-2 mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    <Zap className="w-4 h-4" />
+                                    <h4 className="text-sm font-semibold">Tools Used</h4>
+                                  </div>
+                                  {stepResults.map((step: any, idx: number) => {
+                                    const isExpanded = expandedTools.has(idx);
+                                    const toolName = step.tool_name || 'Unknown Tool';
+                                    const action = step.action || '';
+                                    const displayName = getToolDisplayName(toolName, action);
+                                    const isSuccess = step.success;
+                                    
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className={`rounded-lg border transition-all ${theme === 'dark' ? 'bg-black/20 border-gray-700/50 hover:border-[#00F3FF]/30' : 'bg-white border-gray-200 hover:border-blue-300'}`}
+                                      >
+                                        <button
+                                          onClick={() => {
+                                            const newExpanded = new Set(expandedTools);
+                                            if (isExpanded) {
+                                              newExpanded.delete(idx);
+                                            } else {
+                                              newExpanded.add(idx);
+                                            }
+                                            setExpandedTools(newExpanded);
+                                          }}
+                                          className="w-full px-4 py-3 flex items-center justify-between"
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-[#00F3FF]/10 text-[#00F3FF]' : 'bg-blue-50 text-blue-600'}`}>
+                                              {getToolIcon(toolName)}
+                                            </div>
+                                            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                                              {displayName}
+                                            </span>
+                                          </div>
+                                          <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''} ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`} />
+                                        </button>
+                                        
+                                        <AnimatePresence>
+                                          {isExpanded && (
+                                            <motion.div
+                                              initial={{ height: 0, opacity: 0 }}
+                                              animate={{ height: 'auto', opacity: 1 }}
+                                              exit={{ height: 0, opacity: 0 }}
+                                              transition={{ duration: 0.2 }}
+                                              className="overflow-hidden"
+                                            >
+                                              <div className={`px-4 pb-4 space-y-3 border-t ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200'}`}>
+                                                {step.parameters && Object.keys(step.parameters).length > 0 && (
+                                                  <div className="pt-3">
+                                                    <div className={`text-xs font-medium mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Query</div>
+                                                    <div className={`text-sm p-3 rounded-md font-mono ${theme === 'dark' ? 'bg-black/40 text-gray-300' : 'bg-gray-50 text-gray-800'}`}>
+                                                      {typeof step.parameters === 'string' 
+                                                        ? step.parameters 
+                                                        : step.parameters.query || step.parameters.prompt || step.parameters.code || JSON.stringify(step.parameters, null, 2)}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                
+                                                {step.output && (
+                                                  <div>
+                                                    <div className={`text-xs font-medium mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Result</div>
+                                                    <div className={`text-sm p-3 rounded-md max-h-64 overflow-y-auto ${theme === 'dark' ? 'bg-black/40 text-gray-300' : 'bg-gray-50 text-gray-800'}`}>
+                                                      <pre className="whitespace-pre-wrap font-mono text-xs">
+                                                        {typeof step.output === 'string' 
+                                                          ? step.output.length > 500 
+                                                            ? step.output.substring(0, 500) + '...' 
+                                                            : step.output
+                                                          : JSON.stringify(step.output, null, 2).substring(0, 500)
+                                                        }
+                                                      </pre>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                
+                                                {step.duration && (
+                                                  <div className={`text-xs flex items-center gap-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
+                                                    <Clock className="w-3 h-3" />
+                                                    <span>Duration: {step.duration.toFixed(2)}s</span>
+                                                  </div>
+                                                )}
+                                                
+                                                {!isSuccess && step.error && (
+                                                  <div className={`text-xs p-2 rounded-md ${theme === 'dark' ? 'bg-red-500/10 text-red-400 border border-red-500/30' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                                    <span className="font-semibold">Error: </span>{step.error}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </motion.div>
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()}
 
                             {(() => {
                               if (agentType !== 'PLANNER' || !allCompleted) return null;

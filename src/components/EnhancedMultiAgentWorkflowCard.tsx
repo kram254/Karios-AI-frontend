@@ -33,7 +33,6 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   const [phases, setPhases] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
   const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set(['PROMPT_REFINER', 'PLANNER', 'TASK_EXECUTOR', 'REVIEWER', 'FORMATTER']));
-  const [approvedAgents, setApprovedAgents] = useState<Set<string>>(new Set());
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [editingPlan, setEditingPlan] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState('');
@@ -932,7 +931,6 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                           if (result.success) {
                             setEditingPrompt(false);
                             setShowPromptModal(false);
-                            setApprovedAgents(prev => new Set(prev).add('PROMPT_REFINER'));
                             console.log('✅ Prompt Refiner approved successfully');
                           }
                         } catch (error) {
@@ -1039,7 +1037,6 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                           if (result.success) {
                             setEditingPlan(false);
                             setShowPlanModal(false);
-                            setApprovedAgents(prev => new Set(prev).add('PLANNER'));
                             console.log('✅ Planner approved successfully');
                           }
                         } catch (error) {

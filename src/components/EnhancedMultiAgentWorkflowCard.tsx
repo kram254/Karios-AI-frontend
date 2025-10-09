@@ -46,6 +46,9 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   const [showFormatterModal, setShowFormatterModal] = useState(false);
   const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set());
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const evalsEnabled = (import.meta as any).env.VITE_ENABLE_EVALS_FOR_AGENTS === 'true';
+  const [evalTraces, setEvalTraces] = useState<any[]>([]);
+  const [loadingTraces, setLoadingTraces] = useState(false);
 
   useEffect(() => {
     if (updateDebounceRef.current) {
@@ -113,6 +116,24 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
       if (updateDebounceRef.current) clearTimeout(updateDebounceRef.current);
     };
   }, [agentUpdates]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!evalsEnabled) return;
+      try {
+        setLoadingTraces(true);
+        const res = await fetch(`${API_BASE_URL}/api/evals/task/${taskId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setEvalTraces(Array.isArray(data.items) ? data.items : []);
+        }
+      } catch (e) {
+      } finally {
+        setLoadingTraces(false);
+      }
+    };
+    load();
+  }, [lastUpdateTime]);
 
   useEffect(() => {
     const updatedPhases = [];
@@ -804,6 +825,59 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                 );
               });
             })()}
+          </div>
+        </div>
+      )}
+
+      {evalsEnabled && (
+        <div className="p-6 border-b border-[#00F3FF]/20">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+              <span className="w-2 h-2 bg-[#00F3FF] rounded-full"></span>
+              Traces
+            </h3>
+            <button
+              onClick={async () => {
+                try {
+                  setLoadingTraces(true);
+                  const res = await fetch(`${API_BASE_URL}/api/evals/task/${taskId}`);
+                  if (res.ok) {
+                    const data = await res.json();
+                    setEvalTraces(Array.isArray(data.items) ? data.items : []);
+                  }
+                } catch (e) {
+                } finally {
+                  setLoadingTraces(false);
+                }
+              }}
+              className="px-3 py-1.5 text-xs rounded-md bg-[#00F3FF]/20 text-[#00F3FF] hover:bg-[#00F3FF]/30"
+            >
+              {loadingTraces ? 'Loading' : 'Refresh'}
+            </button>
+          </div>
+          <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+            {evalTraces.length === 0 ? (
+              <div className="text-xs text-gray-400">No traces</div>
+            ) : (
+              evalTraces.slice(-100).reverse().map((t, i) => (
+                <div key={i} className="p-3 rounded-md bg-black/20 border border-[#00F3FF]/10">
+                  <div className="flex items-center gap-2 text-xs text-gray-300">
+                    <span className="font-mono text-[#00F3FF]">{t.agent_type || 'unknown'}</span>
+                    {t.tool_name && <span className="text-gray-400">• {t.tool_name}</span>}
+                    <span className="px-2 py-0.5 rounded-full bg-gray-800 text-gray-200">{t.status}</span>
+                    {typeof t.latency_ms === 'number' && <span className="text-gray-400">{t.latency_ms}ms</span>}
+                    {typeof t.tokens === 'number' && <span className="text-gray-400">{t.tokens} tok</span>}
+                    {typeof t.cost === 'number' && <span className="text-gray-400">${t.cost}</span>}
+                    {typeof t.quality_score === 'number' && <span className="text-gray-400">q:{t.quality_score}</span>}
+                  </div>
+                  {t.data && Object.keys(t.data || {}).length > 0 && (
+                    <div className="mt-2 text-[11px] text-gray-400 font-mono whitespace-pre-wrap">
+                      {JSON.stringify(t.data).length > 400 ? JSON.stringify(t.data).slice(0, 400) + '...' : JSON.stringify(t.data)}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

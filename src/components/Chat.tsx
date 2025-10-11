@@ -17,9 +17,11 @@ import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
 import { WorkflowDebugPanel } from './WorkflowDebugPanel';
+import GeminiBrowser from './GeminiBrowser';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
+import { nextLevelAutomationService } from "../services/nextLevelAutomation";
 import "../styles/chat.css";
 
 // Use our local Message interface that extends the API ChatMessage properties
@@ -89,6 +91,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [taskIdAliases, setTaskIdAliases] = useState<Record<string, string>>({});
   const [activeWorkflowTaskId, setActiveWorkflowTaskId] = useState<string | null>(null);
   const [workflowUpdateCounter, setWorkflowUpdateCounter] = useState<number>(0);
+  const [showGeminiBrowser, setShowGeminiBrowser] = useState(false);
+  const [geminiBrowserTask, setGeminiBrowserTask] = useState<string>('');
+  const [nextLevelCapabilities, setNextLevelCapabilities] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
@@ -295,6 +300,21 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           console.log('💬 CHAT - New message received from multi-agent system:', data);
           console.log('💬 CHAT - Message structure:', { hasDataMessage: !!data.data?.message, hasMessage: !!(data as any).message });
           
+          if (data.type === 'gemini_browser_start') {
+            console.log('🌟 GEMINI BROWSER START signal received:', data);
+            const instruction = (data as any).instruction || data.data?.instruction || '';
+            if (instruction) {
+              setGeminiBrowserTask(instruction);
+              setShowGeminiBrowser(true);
+            }
+            return;
+          }
+          
+          if (data.type === 'autonomous_task_progress') {
+            console.log('📊 Task progress update:', data);
+            return;
+          }
+          
           const msg = (data as any).message || data.data?.message;
           if (msg) {
             console.log('💬 CHAT - Extracted message:', msg);
@@ -404,6 +424,40 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       window.removeEventListener('multi-agent-task-created', handleMultiAgentTaskCreated as EventListener);
     };
   }, [currentChat?.id]);
+
+  useEffect(() => {
+    const checkCapabilities = async () => {
+      const capabilities = await nextLevelAutomationService.getCapabilities();
+      setNextLevelCapabilities(capabilities);
+    };
+    checkCapabilities();
+  }, []);
+
+  useEffect(() => {
+    const handleGeminiBrowserTrigger = (event: CustomEvent) => {
+      const { instruction, strategy } = event.detail;
+      if (strategy === 'gemini_computer_use' || strategy === 'gemini') {
+        setGeminiBrowserTask(instruction);
+        setShowGeminiBrowser(true);
+      }
+    };
+
+    const handleAutomationShow = (event: CustomEvent) => {
+      const detail = event.detail;
+      if (detail?.strategy === 'gemini_computer_use' || detail?.use_gemini) {
+        setGeminiBrowserTask(detail.instruction || detail.task || '');
+        setShowGeminiBrowser(true);
+      }
+    };
+
+    window.addEventListener('gemini:browser:open', handleGeminiBrowserTrigger as EventListener);
+    window.addEventListener('automation:gemini:start', handleAutomationShow as EventListener);
+
+    return () => {
+      window.removeEventListener('gemini:browser:open', handleGeminiBrowserTrigger as EventListener);
+      window.removeEventListener('automation:gemini:start', handleAutomationShow as EventListener);
+    };
+  }, []);
 
   const isMultiAgentMessage = (msg: Message) => {
     return msg.role === 'assistant' && (
@@ -2007,7 +2061,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                  className={`search-text-button neon-btn-secondary ${isSearchMode ? 'search-active' : ''}`}
                  onClick={() => {
                    if (currentChat?.chat_type === 'internet_search') return;
-                   // Only use toggleSearchMode - it now handles internetSearchEnabled synchronization
                    toggleSearchMode();
                  }}
                  disabled={currentChat?.chat_type === 'internet_search'}
@@ -2021,6 +2074,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 onAutomationResult={async (result) => {
                   console.log('🎯 Chat.tsx - Web automation result received:', result);
                   console.log('🎯 Current automation state:', { automationActive, automationSessionId, automationChatId });
+                  
+                  if (result.strategy === 'gemini_computer_use' || result.use_gemini === true) {
+                    setGeminiBrowserTask(result.task_description || pendingAutomationTask || 'Web automation task');
+                    setShowGeminiBrowser(true);
+                  }
                   
                   if (result.type === 'session_started') {
                     console.log('🎯 Processing session_started result');
@@ -2282,6 +2340,19 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         
         {activeWorkflowTaskId && (
           <WorkflowDebugPanel taskId={activeWorkflowTaskId} />
+        )}
+        
+        {showGeminiBrowser && geminiBrowserTask && (
+          <GeminiBrowser
+            taskInstruction={geminiBrowserTask}
+            onClose={() => {
+              setShowGeminiBrowser(false);
+              setGeminiBrowserTask('');
+            }}
+            onMinimize={() => {
+              setShowGeminiBrowser(false);
+            }}
+          />
         )}
       </div>
       </div>

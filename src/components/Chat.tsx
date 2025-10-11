@@ -315,17 +315,44 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             return;
           }
           
-          const msg = (data as any).message || data.data?.message;
-          if (msg) {
-            console.log('💬 CHAT - Extracted message:', msg);
-            await addMessage({
-              role: msg.role,
-              content: msg.content,
-              chatId: data.chatId
-            });
-            console.log('✅ Message added to chat from multi-agent system');
+          if (data.type === 'new_message') {
+            const msg = (data as any).message || data.data?.message;
+            if (msg && currentChat?.id === data.chatId) {
+              console.log('💬 CHAT - Received new_message from backend, updating UI only');
+              setCurrentChat(prev => {
+                if (!prev || prev.id !== data.chatId) return prev;
+                const messageExists = prev.messages.some(m => m.id === msg.id);
+                if (messageExists) {
+                  console.log('💬 CHAT - Message already exists, skipping');
+                  return prev;
+                }
+                return {
+                  ...prev,
+                  messages: [...prev.messages, {
+                    id: msg.id,
+                    content: msg.content,
+                    role: msg.role,
+                    timestamp: msg.timestamp,
+                    created_at: msg.timestamp,
+                    chat_id: data.chatId
+                  }]
+                };
+              });
+              console.log('✅ Message added to UI (backend already saved it)');
+            }
           } else {
-            console.error('❌ CHAT - No message found in data:', data);
+            const msg = (data as any).message || data.data?.message;
+            if (msg) {
+              console.log('💬 CHAT - Extracted message (not new_message type):', msg);
+              await addMessage({
+                role: msg.role,
+                content: msg.content,
+                chatId: data.chatId
+              });
+              console.log('✅ Message added to chat from multi-agent system');
+            } else {
+              console.error('❌ CHAT - No message found in data:', data);
+            }
           }
         },
         

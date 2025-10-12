@@ -59,12 +59,17 @@ const GeminiBrowser: React.FC<GeminiBrowserProps> = ({
   };
 
   const executeWithGemini = useCallback(async () => {
+    console.log('🚀🚀🚀 GEMINI BROWSER - executeWithGemini called');
+    console.log('🚀🚀🚀 GEMINI BROWSER - Task instruction:', taskInstruction);
+    
     setIsExecuting(true);
     setTaskStatus('running');
     setSessionTime(0);
     
+    console.log('🚀🚀🚀 GEMINI BROWSER - Status set to running, calling nextLevelAutomationService');
+    
     try {
-      const result = await nextLevelAutomationService.executeWorkflow({
+      const workflowPayload = {
         user_instruction: taskInstruction,
         workflow_steps: [],
         strategy: 'gemini_computer_use',
@@ -72,11 +77,19 @@ const GeminiBrowser: React.FC<GeminiBrowserProps> = ({
           headless: false,
           enable_browser_view: true
         }
-      });
+      };
+      
+      console.log('🚀🚀🚀 GEMINI BROWSER - Workflow payload:', workflowPayload);
+      
+      const result = await nextLevelAutomationService.executeWorkflow(workflowPayload);
+      
+      console.log('🚀🚀🚀 GEMINI BROWSER - Workflow result:', result);
       
       if (result.success) {
+        console.log('🚀🚀🚀 GEMINI BROWSER - Workflow succeeded');
         setTaskStatus('completed');
         if (result.steps) {
+          console.log('🚀🚀🚀 GEMINI BROWSER - Setting steps:', result.steps.length);
           setSteps(result.steps.map((step: any, idx: number) => ({
             step: idx + 1,
             description: step.description,
@@ -85,15 +98,18 @@ const GeminiBrowser: React.FC<GeminiBrowserProps> = ({
           })));
         }
         if (result.data?.screenshot) {
+          console.log('🚀🚀🚀 GEMINI BROWSER - Setting screenshot');
           setBrowserView(`data:image/png;base64,${result.data.screenshot}`);
         }
       } else {
+        console.error('🚀🚀🚀 GEMINI BROWSER - Workflow failed:', result);
         setTaskStatus('failed');
       }
     } catch (error) {
-      console.error('Gemini execution error:', error);
+      console.error('🚀🚀🚀 GEMINI BROWSER - Execution error:', error);
       setTaskStatus('failed');
     } finally {
+      console.log('🚀🚀🚀 GEMINI BROWSER - Execution finished, setting isExecuting to false');
       setIsExecuting(false);
     }
   }, [taskInstruction]);
@@ -113,8 +129,12 @@ const GeminiBrowser: React.FC<GeminiBrowserProps> = ({
   }, [executeWithGemini]);
 
   useEffect(() => {
+    console.log('🌐🌐🌐 GEMINI BROWSER MOUNTED - Task instruction:', taskInstruction);
     if (taskInstruction) {
+      console.log('🌐🌐🌐 GEMINI BROWSER - Starting execution automatically');
       executeWithGemini();
+    } else {
+      console.warn('🌐🌐🌐 GEMINI BROWSER - No task instruction provided');
     }
   }, []);
 

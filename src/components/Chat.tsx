@@ -18,7 +18,6 @@ import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
 import { WorkflowDebugPanel } from './WorkflowDebugPanel';
 import GeminiBrowser from './GeminiBrowser';
-import BrowserAutomationCanvas from './BrowserAutomationCanvas';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
@@ -95,9 +94,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [showGeminiBrowser, setShowGeminiBrowser] = useState(false);
   const [geminiBrowserTask, setGeminiBrowserTask] = useState<string>('');
   const [nextLevelCapabilities, setNextLevelCapabilities] = useState<any>(null);
-  const [showBrowserCanvas, setShowBrowserCanvas] = useState(false);
-  const [browserCanvasTask, setBrowserCanvasTask] = useState<string>('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
@@ -323,26 +319,25 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             const msg = (data as any).message || data.data?.message;
             if (msg && currentChat?.id === data.chatId) {
               console.log('💬 CHAT - Received new_message from backend, updating UI only');
-              setCurrentChat(prev => {
-                if (!prev || prev.id !== data.chatId) return prev;
-                const messageExists = prev.messages.some(m => m.id === msg.id);
-                if (messageExists) {
+              if (currentChat) {
+                const messageExists = currentChat.messages.some((m: any) => m.id === msg.id);
+                if (!messageExists) {
+                  setCurrentChat({
+                    ...currentChat,
+                    messages: [...currentChat.messages, {
+                      id: msg.id,
+                      content: msg.content,
+                      role: msg.role,
+                      timestamp: msg.timestamp,
+                      created_at: msg.timestamp,
+                      chat_id: data.chatId
+                    }]
+                  });
+                  console.log('✅ Message added to UI (backend already saved it)');
+                } else {
                   console.log('💬 CHAT - Message already exists, skipping');
-                  return prev;
                 }
-                return {
-                  ...prev,
-                  messages: [...prev.messages, {
-                    id: msg.id,
-                    content: msg.content,
-                    role: msg.role,
-                    timestamp: msg.timestamp,
-                    created_at: msg.timestamp,
-                    chat_id: data.chatId
-                  }]
-                };
-              });
-              console.log('✅ Message added to UI (backend already saved it)');
+              }
             }
           } else {
             const msg = (data as any).message || data.data?.message;
@@ -805,13 +800,16 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     console.log('🔄 AUTOMATION ACTIVE:', automationActive);
     
     if (!automationActive && keywordMatch) {
-      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching browser canvas');
+      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching Gemini Browser');
+      console.log('🎯 BROWSER AUTOMATION KEYWORDS MATCHED:', messageContent);
       
       await addMessage({ role: 'user', content: messageContent });
       
-      setBrowserCanvasTask(messageContent);
-      setShowBrowserCanvas(true);
+      console.log('🎯 SETTING GEMINI BROWSER TASK:', messageContent);
+      setGeminiBrowserTask(messageContent);
+      setShowGeminiBrowser(true);
       setAutomationActive(true);
+      console.log('🎯 GEMINI BROWSER STATE SET - showGeminiBrowser: true');
       
       try { 
         window.dispatchEvent(new Event('automation:show')); 
@@ -828,7 +826,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       setPendingAutomationTask(messageContent);
       console.log('🎯 SET PENDING AUTOMATION TASK:', messageContent);
       setIsProcessing(false);
-      console.log('🎯 PROCESSING STOPPED - automation trigger path');
+      console.log('🎯 PROCESSING STOPPED - Gemini Browser should now be visible');
       return;
     }
     
@@ -1364,12 +1362,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }
 
   return (
-    <div className="flex h-full bg-[#0A0A0A] relative overflow-hidden">
-      <div 
-        className={`flex flex-col transition-all duration-300 ease-out ${
-          showBrowserCanvas ? 'w-80' : 'flex-1'
-        }`}
-      >
+    <div className="flex h-full bg-[#0A0A0A]">
+      <div className="flex flex-col flex-1">
         {/* Chat Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
           <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
@@ -2384,31 +2378,27 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         )}
         
         {showGeminiBrowser && geminiBrowserTask && (
-          <GeminiBrowser
-            taskInstruction={geminiBrowserTask}
-            onClose={() => {
-              setShowGeminiBrowser(false);
-              setGeminiBrowserTask('');
-            }}
-            onMinimize={() => {
-              setShowGeminiBrowser(false);
-            }}
-          />
+          <>
+            {console.log('🌐🌐🌐 CHAT - Rendering GeminiBrowser component')}
+            {console.log('🌐🌐🌐 CHAT - showGeminiBrowser:', showGeminiBrowser)}
+            {console.log('🌐🌐🌐 CHAT - geminiBrowserTask:', geminiBrowserTask)}
+            <GeminiBrowser
+              taskInstruction={geminiBrowserTask}
+              onClose={() => {
+                console.log('🌐🌐🌐 CHAT - GeminiBrowser onClose called');
+                setShowGeminiBrowser(false);
+                setGeminiBrowserTask('');
+                setAutomationActive(false);
+              }}
+              onMinimize={() => {
+                console.log('🌐🌐🌐 CHAT - GeminiBrowser onMinimize called');
+                setShowGeminiBrowser(false);
+              }}
+            />
+          </>
         )}
       </div>
       
-      <BrowserAutomationCanvas
-        isActive={showBrowserCanvas}
-        onClose={() => {
-          setShowBrowserCanvas(false);
-          setBrowserCanvasTask('');
-          setAutomationActive(false);
-        }}
-        sessionId={automationSessionId || undefined}
-        chatId={automationChatId || currentChat?.id}
-        taskDescription={browserCanvasTask}
-        onSidebarCollapse={setSidebarCollapsed}
-      />
       </div>
     </div>
   );

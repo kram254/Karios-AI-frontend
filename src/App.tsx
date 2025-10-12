@@ -90,6 +90,19 @@ function App() {
   const { currentChat } = useChat();
   const location = useLocation();
 
+  React.useEffect(() => {
+    const handleBrowserAutomation = (e: CustomEvent) => {
+      if (e.detail?.collapse !== undefined) {
+        setIsSidebarCollapsed(e.detail.collapse);
+      }
+    };
+
+    window.addEventListener('browser-automation:sidebar-collapse' as any, handleBrowserAutomation);
+    return () => {
+      window.removeEventListener('browser-automation:sidebar-collapse' as any, handleBrowserAutomation);
+    };
+  }, []);
+
   // Determine which dashboard to show based on user role
   const DashboardComponent = () => {
     // if (!user) return <Navigate to="/login" replace />;

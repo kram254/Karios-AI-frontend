@@ -18,6 +18,7 @@ import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
 import { WorkflowDebugPanel } from './WorkflowDebugPanel';
 import GeminiBrowser from './GeminiBrowser';
+import BrowserAutomationCanvas from './BrowserAutomationCanvas';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
@@ -94,6 +95,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [showGeminiBrowser, setShowGeminiBrowser] = useState(false);
   const [geminiBrowserTask, setGeminiBrowserTask] = useState<string>('');
   const [nextLevelCapabilities, setNextLevelCapabilities] = useState<any>(null);
+  const [showBrowserCanvas, setShowBrowserCanvas] = useState(false);
+  const [browserCanvasTask, setBrowserCanvasTask] = useState<string>('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
@@ -801,7 +805,14 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     console.log('🔄 AUTOMATION ACTIVE:', automationActive);
     
     if (!automationActive && keywordMatch) {
-      console.log('🎯 AUTOMATION TRIGGER DETECTED - dispatching events');
+      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching browser canvas');
+      
+      await addMessage({ role: 'user', content: messageContent });
+      
+      setBrowserCanvasTask(messageContent);
+      setShowBrowserCanvas(true);
+      setAutomationActive(true);
+      
       try { 
         window.dispatchEvent(new Event('automation:show')); 
         console.log('🎯 DISPATCHED automation:show');
@@ -1353,9 +1364,12 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }
 
   return (
-    <div className="flex h-full bg-[#0A0A0A]">
-      {/* Main chat area */}
-      <div className="flex flex-col flex-1">
+    <div className="flex h-full bg-[#0A0A0A] relative overflow-hidden">
+      <div 
+        className={`flex flex-col transition-all duration-300 ease-out ${
+          showBrowserCanvas ? 'w-80' : 'flex-1'
+        }`}
+      >
         {/* Chat Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
           <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
@@ -2382,6 +2396,19 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           />
         )}
       </div>
+      
+      <BrowserAutomationCanvas
+        isActive={showBrowserCanvas}
+        onClose={() => {
+          setShowBrowserCanvas(false);
+          setBrowserCanvasTask('');
+          setAutomationActive(false);
+        }}
+        sessionId={automationSessionId || undefined}
+        chatId={automationChatId || currentChat?.id}
+        taskDescription={browserCanvasTask}
+        onSidebarCollapse={setSidebarCollapsed}
+      />
       </div>
     </div>
   );

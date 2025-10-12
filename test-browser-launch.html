@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Launch Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #fff;
+        }
+        .test-container {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+        h1 {
+            color: #00f3ff;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+        button {
+            background: #00f3ff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00d4e0;
+        }
+        #logs {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00f3ff;
+            padding-left: 10px;
+        }
+        .log-success {
+            border-left-color: #0f0;
+            color: #0f0;
+        }
+        .log-error {
+            border-left-color: #f00;
+            color: #f00;
+        }
+        .log-info {
+            border-left-color: #00f3ff;
+            color: #00f3ff;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status-idle {
+            background: #333;
+        }
+        .status-testing {
+            background: #ff9800;
+            color: #000;
+        }
+        .status-success {
+            background: #4caf50;
+            color: #000;
+        }
+        .status-failed {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🌐 Gemini Browser Launch Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Instructions</h2>
+            <p>This test simulates the browser automation keyword detection logic from Chat.tsx</p>
+            <p>Click the test buttons below to verify the keyword matching works correctly.</p>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Cases</h2>
+            <button onclick="testKeyword('I need you to go to amazon.com and search for Samsung Galaxy M56')">
+                Test: Amazon Search
+            </button>
+            <button onclick="testKeyword('Please browse to google.com')">
+                Test: Browse Command
+            </button>
+            <button onclick="testKeyword('Navigate to https://example.com')">
+                Test: Navigate URL
+            </button>
+            <button onclick="testKeyword('What is the weather today?')">
+                Test: Non-Browser Query (Should NOT trigger)
+            </button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Status</h2>
+            <div id="status" class="status status-idle">Idle - Ready to test</div>
+        </div>
+
+        <div class="test-section">
+            <h2>Debug Logs</h2>
+            <div id="logs"></div>
+        </div>
+    </div>
+
+    <script>
+        const automationKeywords = /(browse|visit|navigate to|go to|open website|web automation|click on|fill form|search on|scrape|extract from|amazon\.com|http:\/\/|https:\/\/|\.com|\.org|\.net|\.co\.)/i;
+        
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(message, statusClass) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${statusClass}`;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            updateStatus('Logs cleared - Ready to test', 'status-idle');
+            log('Logs cleared', 'info');
+        }
+
+        function testKeyword(messageContent) {
+            log('='.repeat(60), 'info');
+            log(`🔄 TESTING MESSAGE: "${messageContent}"`, 'info');
+            
+            updateStatus('Testing...', 'status-testing');
+            
+            const keywordMatch = automationKeywords.test(messageContent);
+            
+            log(`🔄 AUTOMATION KEYWORD TEST: ${keywordMatch}`, keywordMatch ? 'success' : 'info');
+            
+            if (keywordMatch) {
+                log('🎯 AUTOMATION TRIGGER DETECTED - Browser would launch!', 'success');
+                log('🎯 BROWSER AUTOMATION KEYWORDS MATCHED', 'success');
+                log('🎯 SETTING GEMINI BROWSER TASK: ' + messageContent, 'success');
+                log('🎯 setShowGeminiBrowser(true)', 'success');
+                log('🎯 setAutomationActive(true)', 'success');
+                log('🎯 GEMINI BROWSER STATE SET - showGeminiBrowser: true', 'success');
+                log('🎯 SET PENDING AUTOMATION TASK', 'success');
+                log('🎯 PROCESSING STOPPED - Gemini Browser should now be visible', 'success');
+                
+                updateStatus('✅ SUCCESS - Browser would launch!', 'status-success');
+                
+                log('', 'info');
+                log('✨ EXPECTED BEHAVIOR:', 'success');
+                log('  1. GeminiBrowser component would render', 'success');
+                log('  2. Task instruction would be passed to component', 'success');
+                log('  3. executeWithGemini() would be called automatically', 'success');
+                log('  4. Chrome browser would open with automation', 'success');
+            } else {
+                log('❌ NO AUTOMATION TRIGGER - Would go to multi-agent system', 'error');
+                log('This message would be processed by the normal chat flow', 'info');
+                
+                updateStatus('❌ FAILED - No browser keywords detected', 'status-failed');
+            }
+            
+            log('='.repeat(60), 'info');
+        }
+
+        log('🚀 Browser Launch Test initialized', 'success');
+        log('Ready to test keyword detection logic', 'info');
+        log('', 'info');
+        log('📋 Automation Keywords Pattern:', 'info');
+        log(automationKeywords.toString(), 'info');
+    </script>
+</body>
+</html>

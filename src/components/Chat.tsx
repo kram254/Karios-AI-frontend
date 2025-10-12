@@ -736,6 +736,30 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     setMessage("");
     console.log('🔄 INPUT FIELD CLEARED');
     
+    const automationKeywords = /(browse|visit|navigate to|go to|open website|web automation|click on|fill form|search on|scrape|extract from|amazon\.com|http:\/\/|https:\/\/|\.com|\.org|\.net|\.co\.)/i;
+    const keywordMatch = automationKeywords.test(messageContent);
+    console.log('🔄 AUTOMATION KEYWORD TEST:', keywordMatch);
+    console.log('🔄 AUTOMATION ACTIVE:', automationActive);
+    
+    if (!automationActive && keywordMatch) {
+      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching Gemini Browser');
+      console.log('🎯 BROWSER AUTOMATION KEYWORDS MATCHED:', messageContent);
+      
+      await addMessage({ role: 'user', content: messageContent });
+      
+      console.log('🎯 SETTING GEMINI BROWSER TASK:', messageContent);
+      setGeminiBrowserTask(messageContent);
+      setShowGeminiBrowser(true);
+      setAutomationActive(true);
+      console.log('🎯 GEMINI BROWSER STATE SET - showGeminiBrowser: true');
+      
+      setPendingAutomationTask(messageContent);
+      console.log('🎯 SET PENDING AUTOMATION TASK:', messageContent);
+      setIsProcessing(false);
+      console.log('🎯 PROCESSING STOPPED - Gemini Browser should now be visible');
+      return;
+    }
+    
     console.log('🔥 MULTI-AGENT TASK DETECTION - Starting analysis...');
     const isFirstMessage = !currentChat?.messages || currentChat.messages.filter(m => m.role === 'user').length === 0;
     console.log('🔥 IS FIRST MESSAGE:', isFirstMessage);
@@ -794,45 +818,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       return;
     }
 
-    const automationKeywords = /(browse|visit|navigate to|go to|open website|web automation|click on|fill form|search on|scrape|extract from|http:\/\/|https:\/\/|\.com|\.org|\.net|\.co\.)/i;
-    const keywordMatch = automationKeywords.test(messageContent);
-    console.log('🔄 AUTOMATION KEYWORD TEST:', keywordMatch);
-    console.log('🔄 AUTOMATION ACTIVE:', automationActive);
-    
-    if (!automationActive && keywordMatch) {
-      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching Gemini Browser');
-      console.log('🎯 BROWSER AUTOMATION KEYWORDS MATCHED:', messageContent);
-      
-      await addMessage({ role: 'user', content: messageContent });
-      
-      console.log('🎯 SETTING GEMINI BROWSER TASK:', messageContent);
-      setGeminiBrowserTask(messageContent);
-      setShowGeminiBrowser(true);
-      setAutomationActive(true);
-      console.log('🎯 GEMINI BROWSER STATE SET - showGeminiBrowser: true');
-      
-      try { 
-        window.dispatchEvent(new Event('automation:show')); 
-        console.log('🎯 DISPATCHED automation:show');
-      } catch (e) {
-        console.error('🎯 ERROR dispatching automation:show:', e);
-      }
-      try { 
-        window.dispatchEvent(new Event('automation:start')); 
-        console.log('🎯 DISPATCHED automation:start');
-      } catch (e) {
-        console.error('🎯 ERROR dispatching automation:start:', e);
-      }
-      setPendingAutomationTask(messageContent);
-      console.log('🎯 SET PENDING AUTOMATION TASK:', messageContent);
-      setIsProcessing(false);
-      console.log('🎯 PROCESSING STOPPED - Gemini Browser should now be visible');
-      return;
-    }
-    
-    
-    
-    // Handle search or automation modes differently
     if (automationActive) {
       console.log('🤖 AUTOMATION ACTIVE PATH - Submitting message to web automation workflow');
       console.log('🤖 AUTOMATION STATE:', { automationActive, automationSessionId, automationChatId, task: messageContent });

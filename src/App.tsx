@@ -169,14 +169,12 @@ function App() {
               },
             }}
           />
-          {!isSidebarCollapsed && (
-            <Sidebar
-              isCollapsed={isSidebarCollapsed}
-              onCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              onSettingsClick={() => setIsSettingsOpen(true)}
-            />
-          )}
-          {!isSidebarCollapsed && location.pathname === '/chat' && currentChat && (
+          <Sidebar
+            isCollapsed={isSidebarCollapsed}
+            onCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            onSettingsClick={() => setIsSettingsOpen(true)}
+          />
+          {location.pathname === '/chat' && currentChat && !isSidebarCollapsed && (
             <div className="w-64 border-r border-[#2A2A2A] bg-[#0A0A0A] flex-shrink-0">
               <TaskPanel 
                 chatId={currentChat.id} 

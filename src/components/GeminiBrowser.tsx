@@ -184,53 +184,7 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="w-1/3 border-r flex flex-col bg-gray-50">
-            <div className="p-4 border-b bg-white">
-              <p className="text-sm text-gray-700 leading-relaxed">
-                {taskInstruction}
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-              {steps.map((step) => (
-                <div key={step.step} className="mb-4">
-                  <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-xs font-bold text-orange-600">
-                      {step.step}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800 mb-1">
-                        {step.description}
-                      </p>
-                      {step.toolCall && (
-                        <div className="bg-white rounded p-2 border">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs text-gray-500">ToolCall</span>
-                            <code className="text-xs font-mono text-blue-600">
-                              {step.toolCall.name}
-                            </code>
-                          </div>
-                          {Object.keys(step.toolCall.args).length > 0 && (
-                            <pre className="text-xs text-gray-600 overflow-x-auto">
-                              {JSON.stringify(step.toolCall.args, null, 2)}
-                            </pre>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {isExecuting && steps.length === 0 && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="w-2/3 flex flex-col bg-gray-900">
+          <div className="w-full flex flex-col bg-gray-900">
             {taskStatus === 'completed' && (
               <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                 <div className="text-center">

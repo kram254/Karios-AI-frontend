@@ -17,7 +17,7 @@ import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
 import { WorkflowDebugPanel } from './WorkflowDebugPanel';
-import GeminiBrowser from './GeminiBrowser';
+import KariosBrowser from './GeminiBrowser';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
@@ -91,8 +91,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [taskIdAliases, setTaskIdAliases] = useState<Record<string, string>>({});
   const [activeWorkflowTaskId, setActiveWorkflowTaskId] = useState<string | null>(null);
   const [workflowUpdateCounter, setWorkflowUpdateCounter] = useState<number>(0);
-  const [showGeminiBrowser, setShowGeminiBrowser] = useState(false);
-  const [geminiBrowserTask, setGeminiBrowserTask] = useState<string>('');
+  const [showKariosBrowser, setShowKariosBrowser] = useState(false);
+  const [kariosBrowserTask, setKariosBrowserTask] = useState<string>('');
   const [nextLevelCapabilities, setNextLevelCapabilities] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -301,11 +301,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           console.log('💬 CHAT - Message structure:', { hasDataMessage: !!data.data?.message, hasMessage: !!(data as any).message });
           
           if (data.type === 'gemini_browser_start') {
-            console.log('🌟 GEMINI BROWSER START signal received:', data);
+            console.log('🌟 KARIOS BROWSER START signal received:', data);
             const instruction = (data as any).instruction || data.data?.instruction || '';
             if (instruction) {
-              setGeminiBrowserTask(instruction);
-              setShowGeminiBrowser(true);
+              setKariosBrowserTask(instruction);
+              setShowKariosBrowser(true);
             }
             return;
           }
@@ -460,27 +460,27 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, []);
 
   useEffect(() => {
-    const handleGeminiBrowserTrigger = (event: CustomEvent) => {
+    const handleKariosBrowserTrigger = (event: CustomEvent) => {
       const { instruction, strategy } = event.detail;
       if (strategy === 'gemini_computer_use' || strategy === 'gemini') {
-        setGeminiBrowserTask(instruction);
-        setShowGeminiBrowser(true);
+        setKariosBrowserTask(instruction);
+        setShowKariosBrowser(true);
       }
     };
 
     const handleAutomationShow = (event: CustomEvent) => {
       const detail = event.detail;
       if (detail?.strategy === 'gemini_computer_use' || detail?.use_gemini) {
-        setGeminiBrowserTask(detail.instruction || detail.task || '');
-        setShowGeminiBrowser(true);
+        setKariosBrowserTask(detail.instruction || detail.task || '');
+        setShowKariosBrowser(true);
       }
     };
 
-    window.addEventListener('gemini:browser:open', handleGeminiBrowserTrigger as EventListener);
+    window.addEventListener('gemini:browser:open', handleKariosBrowserTrigger as EventListener);
     window.addEventListener('automation:gemini:start', handleAutomationShow as EventListener);
 
     return () => {
-      window.removeEventListener('gemini:browser:open', handleGeminiBrowserTrigger as EventListener);
+      window.removeEventListener('gemini:browser:open', handleKariosBrowserTrigger as EventListener);
       window.removeEventListener('automation:gemini:start', handleAutomationShow as EventListener);
     };
   }, []);
@@ -742,21 +742,23 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     console.log('🔄 AUTOMATION ACTIVE:', automationActive);
     
     if (!automationActive && keywordMatch) {
-      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching Gemini Browser');
+      console.log('🎯 AUTOMATION TRIGGER DETECTED - launching Karios Browser');
       console.log('🎯 BROWSER AUTOMATION KEYWORDS MATCHED:', messageContent);
       
       await addMessage({ role: 'user', content: messageContent });
       
-      console.log('🎯 SETTING GEMINI BROWSER TASK:', messageContent);
-      setGeminiBrowserTask(messageContent);
-      setShowGeminiBrowser(true);
+      console.log('🎯 SETTING KARIOS BROWSER TASK:', messageContent);
+      setKariosBrowserTask(messageContent);
+      setShowKariosBrowser(true);
       setAutomationActive(true);
-      console.log('🎯 GEMINI BROWSER STATE SET - showGeminiBrowser: true');
+      console.log('🎯 KARIOS BROWSER STATE SET - showKariosBrowser: true');
+      
+      window.dispatchEvent(new CustomEvent('browser-automation:sidebar-collapse', { detail: { collapse: true } }));
       
       setPendingAutomationTask(messageContent);
       console.log('🎯 SET PENDING AUTOMATION TASK:', messageContent);
       setIsProcessing(false);
-      console.log('🎯 PROCESSING STOPPED - Gemini Browser should now be visible');
+      console.log('🎯 PROCESSING STOPPED - Karios Browser should now be visible');
       return;
     }
     
@@ -1348,7 +1350,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
 
   return (
     <div className="flex h-full bg-[#0A0A0A]">
-      <div className="flex flex-col flex-1">
+      <div className={`flex flex-col transition-all duration-300 ease-out ${showKariosBrowser ? 'w-96 border-r border-gray-800' : 'flex-1'}`}>
         {/* Chat Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
           <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
@@ -2096,8 +2098,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   console.log('🎯 Current automation state:', { automationActive, automationSessionId, automationChatId });
                   
                   if (result.strategy === 'gemini_computer_use' || result.use_gemini === true) {
-                    setGeminiBrowserTask(result.task_description || pendingAutomationTask || 'Web automation task');
-                    setShowGeminiBrowser(true);
+                    setKariosBrowserTask(result.task_description || pendingAutomationTask || 'Web automation task');
+                    setShowKariosBrowser(true);
                   }
                   
                   if (result.type === 'session_started') {
@@ -2353,7 +2355,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         <div className="chat-ai-notice neon-text">Karios AI | Verify important Info.</div>
         
         
-        {/* Floating search results button that appears after searching is complete */}
         <AccessedWebsitesFloater
           isVisible={true}
         />
@@ -2362,31 +2363,30 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           <WorkflowDebugPanel taskId={activeWorkflowTaskId} />
         )}
         
-        {showGeminiBrowser && geminiBrowserTask && (
-          <>
-            {console.log('🌐🌐🌐 CHAT - Rendering GeminiBrowser component')}
-            {console.log('🌐🌐🌐 CHAT - showGeminiBrowser:', showGeminiBrowser)}
-            {console.log('🌐🌐🌐 CHAT - geminiBrowserTask:', geminiBrowserTask)}
-            <GeminiBrowser
-              taskInstruction={geminiBrowserTask}
-              onClose={() => {
-                console.log('🌐🌐🌐 CHAT - GeminiBrowser onClose called');
-                setShowGeminiBrowser(false);
-                setGeminiBrowserTask('');
-                setAutomationActive(false);
-              }}
-              onMinimize={() => {
-                console.log('🌐🌐🌐 CHAT - GeminiBrowser onMinimize called');
-                setShowGeminiBrowser(false);
-              }}
-            />
-          </>
-        )}
       </div>
       
       </div>
+      
+      {showKariosBrowser && kariosBrowserTask && (
+        <div className="flex-1 transition-all duration-300 ease-out">
+          <KariosBrowser
+            taskInstruction={kariosBrowserTask}
+            onClose={() => {
+              setShowKariosBrowser(false);
+              setKariosBrowserTask('');
+              setAutomationActive(false);
+              window.dispatchEvent(new CustomEvent('browser-automation:sidebar-collapse', { detail: { collapse: false } }));
+            }}
+            onMinimize={() => {
+              setShowKariosBrowser(false);
+            }}
+          />
+        </div>
+      )}
     </div>
+    
   );
 };
 
 export default Chat;
+

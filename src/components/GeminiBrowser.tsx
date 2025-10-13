@@ -21,7 +21,7 @@ interface GeminiBrowserProps {
   onMinimize?: () => void;
 }
 
-const GeminiBrowser: React.FC<GeminiBrowserProps> = ({ 
+const KariosBrowser: React.FC<GeminiBrowserProps> = ({ 
   taskInstruction, 
   onClose, 
   onMinimize 
@@ -139,14 +139,13 @@ const GeminiBrowser: React.FC<GeminiBrowserProps> = ({
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-2xl w-[95vw] h-[90vh] flex flex-col">
+    <div className="h-full w-full flex flex-col bg-white">
         <div className="flex items-center justify-between px-4 py-3 border-b bg-orange-50">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center text-white font-bold">
-              B
+            <div className="w-8 h-8 bg-[#00F3FF] rounded flex items-center justify-center text-black font-bold">
+              K
             </div>
-            <h2 className="text-lg font-semibold text-gray-800">Gemini Browser</h2>
+            <h2 className="text-lg font-semibold text-gray-800">Karios AI</h2>
           </div>
           
           <div className="flex items-center gap-2">
@@ -335,9 +334,8 @@ const GeminiBrowser: React.FC<GeminiBrowserProps> = ({
             </button>
           )}
         </div>
-      </div>
     </div>
   );
 };
 
-export default GeminiBrowser;
+export default KariosBrowser;

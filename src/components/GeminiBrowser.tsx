@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Minimize2, Square, Play, StopCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { X, Minimize2, Play, StopCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { nextLevelAutomationService } from '../services/nextLevelAutomation';
 
 interface ToolCall {
@@ -149,23 +149,6 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              onClick={executeWithGemini}
-              disabled={isExecuting}
-              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-gray-300 flex items-center gap-2"
-            >
-              {isExecuting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Deploying
-                </>
-              ) : (
-                <>
-                  <Square className="w-4 h-4" />
-                  Deploy
-                </>
-              )}
-            </button>
             {onMinimize && (
               <button
                 onClick={onMinimize}

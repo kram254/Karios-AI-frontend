@@ -79,10 +79,12 @@ class NextLevelAutomationService {
 
   async executeWorkflow(request: WorkflowRequest): Promise<WorkflowResult> {
     try {
+      const token = localStorage.getItem('token') || 'fake_token_for_development';
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/unified/execute-workflow`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
       });

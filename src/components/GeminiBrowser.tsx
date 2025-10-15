@@ -2,19 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Minimize2, Play, StopCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { nextLevelAutomationService } from '../services/nextLevelAutomation';
 
-interface ToolCall {
-  name: string;
-  args: Record<string, any>;
-  result?: any;
-}
-
-interface ExecutionStep {
-  step: number;
-  description: string;
-  toolCall: ToolCall;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-}
-
 interface GeminiBrowserProps {
   taskInstruction: string;
   onClose: () => void;
@@ -27,7 +14,6 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
   onMinimize 
 }) => {
   const [isExecuting, setIsExecuting] = useState(false);
-  const [steps, setSteps] = useState<ExecutionStep[]>([]);
   const [currentUrl, setCurrentUrl] = useState('about:blank');
   const [sessionTime, setSessionTime] = useState(0);
   const [browserView, setBrowserView] = useState<string | null>(null);
@@ -88,15 +74,6 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
       if (result.success) {
         console.log('🚀🚀🚀 GEMINI BROWSER - Workflow succeeded');
         setTaskStatus('completed');
-        if (result.steps) {
-          console.log('🚀🚀🚀 GEMINI BROWSER - Setting steps:', result.steps.length);
-          setSteps(result.steps.map((step: any, idx: number) => ({
-            step: idx + 1,
-            description: step.description,
-            toolCall: step.toolCall,
-            status: 'completed'
-          })));
-        }
         if (result.data?.screenshot) {
           console.log('🚀🚀🚀 GEMINI BROWSER - Setting screenshot');
           setBrowserView(`data:image/png;base64,${result.data.screenshot}`);
@@ -120,7 +97,6 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
   }, []);
 
   const handleRestart = useCallback(() => {
-    setSteps([]);
     setCurrentUrl('about:blank');
     setBrowserView(null);
     setSessionTime(0);

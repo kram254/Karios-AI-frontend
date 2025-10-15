@@ -1964,7 +1964,20 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 counter: workflowUpdateCounter
               });
               
-              return null;
+              return (
+                <div className="multi-agent-workflow-message mb-4">
+                  <EnhancedMultiAgentWorkflowCard
+                    taskId={activeWorkflowTaskId}
+                    workflowStage={workflow?.workflowStage || 'Initializing'}
+                    agentUpdates={normalizedAgentUpdates}
+                    planSteps={workflow?.planSteps || []}
+                    executionItems={workflow?.executionItems || []}
+                    reviewData={workflow?.reviewData}
+                    clarificationRequest={normalizedClarificationRequest}
+                    onClarificationResponse={handleClarificationResponse}
+                  />
+                </div>
+              );
             })()}
             
             {/* Animated Avatar - Show during processing states */}

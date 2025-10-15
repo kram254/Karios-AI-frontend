@@ -1573,6 +1573,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                             const matchingTaskId = possibleTaskIds.find(id => multiAgentWorkflows[id]);
                             const taskId = matchingTaskId || backendTaskId || extractedTaskId;
                             
+                            if (taskId === activeWorkflowTaskId) {
+                              return null;
+                            }
+                            
                             console.log('🔍 TASK ID RESOLUTION:', {
                               extractedTaskId,
                               backendTaskId,

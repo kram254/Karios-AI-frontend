@@ -56,8 +56,7 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
     }
     
     updateDebounceRef.current = setTimeout(() => {
-      const now = Date.now();
-      setLastUpdateTime(now);
+      setLastUpdateTime(Date.now());
 
     const grouped = agentUpdates.reduce((acc, update) => {
       const agentType = update.agent_type || 'UNKNOWN';
@@ -71,51 +70,33 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
     const plannerComplete = grouped['PLANNER']?.some((u: any) => u.status === 'completed');
     const plannerData = grouped['PLANNER']?.find((u: any) => u.status === 'completed' && u.data?.execution_plan);
 
-    if (grouped['PROMPT_REFINER']) {
-      console.log('🎯🎯🎯 CARD RECEIVED - PROMPT_REFINER updates:', grouped['PROMPT_REFINER'].length);
-      grouped['PROMPT_REFINER'].forEach((update: any, idx: number) => {
-        console.log(`🎯🎯🎯 CARD - Update ${idx + 1}:`, {
-          status: update.status,
-          hasData: !!update.data,
-          hasPrpData: !!update.data?.prp_data,
-          dataKeys: update.data ? Object.keys(update.data) : []
-        });
-      });
-    }
-
-    console.log('🔍 PROMPT REFINER CHECK:', {
-      promptRefinerComplete,
-      hasPromptRefinerData: !!promptRefinerData,
-      promptRefinerUpdates: grouped['PROMPT_REFINER'],
-      showPromptCard,
-      dataStructure: promptRefinerData?.data
+    setShowPromptCard(prev => {
+      if (prev) return prev;
+      if (promptRefinerComplete && promptRefinerData) {
+        if (!editedPrompt && promptRefinerData.data?.prp_data) {
+          setEditedPrompt(JSON.stringify(promptRefinerData.data.prp_data, null, 2));
+        }
+        return true;
+      }
+      return false;
     });
 
-    if (promptRefinerComplete && promptRefinerData && !showPromptCard) {
-      console.log('🎯 SETTING showPromptCard = true', {
-        prp_data: promptRefinerData.data?.prp_data
-      });
-      setShowPromptCard(true);
-      if (!editedPrompt && promptRefinerData.data?.prp_data) {
-        setEditedPrompt(JSON.stringify(promptRefinerData.data.prp_data, null, 2));
+    setShowPlanCard(prev => {
+      if (prev) return prev;
+      if (plannerComplete && plannerData) {
+        if (!editedPlan && plannerData.data?.execution_plan) {
+          setEditedPlan(plannerData.data.execution_plan);
+        }
+        return true;
       }
-    }
-
-    if (plannerComplete && plannerData && !showPlanCard) {
-      console.log('🎯 SETTING showPlanCard = true', {
-        execution_plan: plannerData.data?.execution_plan
-      });
-      setShowPlanCard(true);
-      if (!editedPlan && plannerData.data?.execution_plan) {
-        setEditedPlan(plannerData.data.execution_plan);
-      }
-    }
+      return false;
+    });
     }, 500);
     
     return () => {
       if (updateDebounceRef.current) clearTimeout(updateDebounceRef.current);
     };
-  }, [agentUpdates]);
+  }, [agentUpdates, editedPrompt, editedPlan]);
 
   useEffect(() => {
     const load = async () => {
@@ -312,14 +293,6 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
               const executorDone = grouped['TASK_EXECUTOR']?.some((u: any) => u.status === 'completed');
               const reviewerDone = grouped['REVIEWER']?.some((u: any) => u.status === 'completed');
 
-              console.log('🎯🎯🎯 CARD VISIBILITY CHECK:', {
-                allAgents: Object.keys(grouped),
-                promptRefinerDone,
-                plannerDone,
-                plannerUpdatesCount: grouped['PLANNER']?.length || 0,
-                plannerShouldShow: promptRefinerDone || (grouped['PLANNER']?.length || 0) > 0
-              });
-
               const filteredEntries = (Object.entries(grouped) as [string, any[]][]).filter(([agentType]) => {
                 if (agentType === 'PROMPT_REFINER') return true;
                 if (agentType === 'PLANNER') return promptRefinerDone || grouped['PLANNER']?.length > 0;
@@ -335,17 +308,6 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                 const allCompleted = latestUpdate?.status === 'completed';
                 const hasStarted = updates.some(u => u.status === 'started' || u.status === 'processing');
                 const isCollapsed = collapsedAgents.has(agentType);
-                
-                if (agentType === 'PROMPT_REFINER') {
-                  console.log('🎯🎯🎯 RENDER LOGIC - PROMPT_REFINER:', {
-                    updatesCount: updates.length,
-                    latestStatus: latestUpdate?.status,
-                    allCompleted,
-                    hasStarted,
-                    showPromptCard,
-                    willRenderButton: allCompleted && showPromptCard
-                  });
-                }
                 
                 const toggleCollapse = () => {
                   setCollapsedAgents(prev => {
@@ -409,16 +371,6 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                           {updates.length} {updates.length === 1 ? 'update' : 'updates'}
                         </span>
                       </div>
-                      {(() => {
-                        if (agentType === 'PROMPT_REFINER') {
-                          console.log('🎯🎯🎯 BUTTON CHECK - PROMPT_REFINER card:', {
-                            showPromptCard,
-                            allCompleted,
-                            willRenderButton: showPromptCard && allCompleted
-                          });
-                        }
-                        return null;
-                      })()}
                       {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
                         <button
                           onClick={(e) => {

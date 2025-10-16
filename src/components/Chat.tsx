@@ -399,6 +399,22 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           }
         },
         
+        onTaskCompleted: async (data: MultiAgentWSMessage) => {
+          console.log('✅ CHAT - Task completed event received:', data.task_id);
+          const taskId = data.task_id || lastTaskIdRef.current;
+          if (taskId && currentChat?.id) {
+            const userMessage = currentChat.messages.find(m => m.role === 'user');
+            if (userMessage) {
+              const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
+                id: taskId,
+                message: userMessage.content
+              })}`;
+              await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat.id });
+              console.log('✅ TaskMessage added after completion');
+            }
+          }
+        },
+        
         onError: (error: Event) => {
           console.error('📡 CHAT - Multi-agent WebSocket error:', error);
         },
@@ -835,28 +851,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         if (taskData.success && taskData.task_id) {
           const backendTaskId = taskData.task_id;
           lastTaskIdRef.current = backendTaskId;
-          
-          const taskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
-            id: backendTaskId,
-            message: messageContent
-          })}`;
-          
-          await addMessage({ role: 'assistant', content: taskMessage, chatId: currentChat?.id || '' });
-          console.log('🔥 Task execution message added with backend UUID:', backendTaskId);
-        } else {
-          const fallbackTaskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
-            id: `task_${Date.now()}`,
-            message: messageContent
-          })}`;
-          await addMessage({ role: 'assistant', content: fallbackTaskMessage, chatId: currentChat?.id || '' });
+          console.log('🔥 Task created with ID:', backendTaskId, '- waiting for completion before adding TaskMessage');
         }
       } catch (error) {
         console.error('🔥 Backend task creation error:', error);
-        const fallbackTaskMessage = `[TASK_EXECUTION]\n${JSON.stringify({
-          id: `task_${Date.now()}`,
-          message: messageContent
-        })}`;
-        await addMessage({ role: 'assistant', content: fallbackTaskMessage, chatId: currentChat?.id || '' });
       }
       
       setIsProcessing(false);

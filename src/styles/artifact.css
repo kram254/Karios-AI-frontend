@@ -185,7 +185,7 @@
 .artifact-loading {
   display: flex;
   align-items: center;
-  justify-center;
+  justify-content: center;
   height: 100%;
   color: white;
 }

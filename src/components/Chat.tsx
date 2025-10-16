@@ -23,6 +23,11 @@ import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
 import { nextLevelAutomationService } from "../services/nextLevelAutomation";
 import "../styles/chat.css";
+import "../styles/artifact.css";
+import { useArtifactSystem } from "../hooks/useArtifactSystem";
+import { CanvasLayout } from "./artifacts/CanvasLayout";
+import { ArtifactRenderer } from "./artifacts/ArtifactRenderer";
+import { MessageWithArtifact } from "./artifacts/MessageWithArtifact";
 
 // Use our local Message interface that extends the API ChatMessage properties
 interface Message {
@@ -98,13 +103,39 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
 
+  const {
+    activeArtifact,
+    layoutMode,
+    detectAndCreateArtifact,
+    expandArtifact,
+    collapseArtifact,
+    getArtifactsForMessage,
+    scrollChatToBottom,
+    handleChatScroll,
+    handleArtifactScroll,
+    chatScrollRef,
+    artifactScrollRef
+  } = useArtifactSystem(currentChat?.id || '');
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentChat?.messages]);
+    scrollChatToBottom();
+    
+    if (currentChat?.messages) {
+      currentChat.messages.forEach((msg: Message) => {
+        if (msg.role === 'assistant' && msg.content) {
+          const artifacts = getArtifactsForMessage(msg.id);
+          if (artifacts.length === 0) {
+            detectAndCreateArtifact(msg.content, msg.role, msg.id);
+          }
+        }
+      });
+    }
+  }, [currentChat?.messages, scrollChatToBottom, detectAndCreateArtifact, getArtifactsForMessage]);
 
   useEffect(() => {
     if (!activeWorkflowTaskId) return;
@@ -317,9 +348,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           
           if (data.type === 'new_message') {
             const msg = (data as any).message || data.data?.message;
-            if (msg && currentChat?.id === data.chatId) {
-              console.log('💬 CHAT - Received new_message from backend, updating UI only');
-              if (currentChat) {
+            console.log('💬 CHAT - new_message event:', { 
+              hasMsg: !!msg, 
+              currentChatId: currentChat?.id, 
+              dataChatId: data.chatId,
+              msgContent: msg?.content?.substring(0, 100)
+            });
+            
+            if (msg) {
+              if (currentChat && currentChat.id === data.chatId) {
                 const messageExists = currentChat.messages.some((m: any) => m.id === msg.id);
                 if (!messageExists) {
                   setCurrentChat({
@@ -333,9 +370,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                       chat_id: data.chatId
                     }]
                   });
-                  console.log('✅ Message added to UI (backend already saved it)');
-                } else {
-                  console.log('💬 CHAT - Message already exists, skipping');
+                  console.log('✅ Message added to UI from new_message event');
+                }
+              } else {
+                console.log('💬 CHAT - Chat ID mismatch or no current chat, fetching latest chat');
+                try {
+                  const response = await chatService.getChat(data.chatId);
+                  if (response.data) {
+                    setCurrentChat(response.data);
+                    console.log('✅ Chat refreshed with new message');
+                  }
+                } catch (error) {
+                  console.error('❌ Failed to refresh chat:', error);
                 }
               }
             }
@@ -349,8 +395,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 chatId: data.chatId
               });
               console.log('✅ Message added to chat from multi-agent system');
-            } else {
-              console.error('❌ CHAT - No message found in data:', data);
             }
           }
         },
@@ -1348,7 +1392,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     );
   }
 
-  return (
+  const chatMainContent = (
     <div className="flex h-full bg-[#0A0A0A]">
       <div className={`flex flex-col transition-all duration-300 ease-out ${showKariosBrowser ? 'w-96 border-r border-gray-800' : 'flex-1'}`}>
         {/* Chat Header */}
@@ -1363,7 +1407,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
 
 
       {/* Messages Display Area */}
-      <div className={`flex-1 overflow-y-auto ${compact ? 'px-2 py-2' : 'px-4 py-4'} space-y-4`}>
+      <div 
+        ref={chatScrollRef}
+        onScroll={handleChatScroll}
+        className={`flex-1 overflow-y-auto ${compact ? 'px-2 py-2' : 'px-4 py-4'} space-y-4`}
+      >
         {/* Search results are now presented as part of the AI's response in chat bubbles */}
         
         {/* Always render chat messages - search results will appear as agent responses */}
@@ -2401,7 +2449,25 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         </div>
       )}
     </div>
-    
+  );
+
+  const artifactContent = activeArtifact ? (
+    <div ref={artifactScrollRef} onScroll={handleArtifactScroll} className="h-full">
+      <ArtifactRenderer
+        artifact={activeArtifact}
+        onClose={() => collapseArtifact()}
+        onExecute={async (artifact) => {
+          console.log('Executing artifact:', artifact.id);
+        }}
+      />
+    </div>
+  ) : null;
+
+  return (
+    <CanvasLayout
+      chatContent={chatMainContent}
+      artifactContent={artifactContent}
+    />
   );
 };
 

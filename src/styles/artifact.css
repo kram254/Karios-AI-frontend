@@ -1,0 +1,341 @@
+.canvas-layout-container {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-chat-panel {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.2s ease-in-out;
+  position: relative;
+}
+
+.canvas-artifact-panel {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.canvas-resize-handle {
+  cursor: col-resize;
+  user-select: none;
+  position: relative;
+  z-index: 100;
+}
+
+.canvas-resize-handle:hover {
+  background: linear-gradient(90deg, 
+    rgba(0,243,255,0.2) 0%, 
+    rgba(0,243,255,0.4) 50%, 
+    rgba(0,243,255,0.2) 100%
+  );
+}
+
+.canvas-resize-handle:active {
+  background: linear-gradient(90deg, 
+    rgba(0,243,255,0.5) 0%, 
+    rgba(0,243,255,0.8) 50%, 
+    rgba(0,243,255,0.5) 100%
+  );
+}
+
+.artifact-preview-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.artifact-preview-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+.artifact-preview-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.artifact-preview-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 200ms ease-in, transform 200ms ease-in;
+}
+
+.artifact-renderer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1A1A1A;
+}
+
+.artifact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2A2A2A;
+  background: #0A0A0A;
+}
+
+.artifact-content {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.artifact-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.artifact-button {
+  padding: 8px;
+  border-radius: 8px;
+  background: #2A2A2A;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.artifact-button:hover {
+  background: #3A3A3A;
+  transform: translateY(-1px);
+}
+
+.artifact-button:active {
+  transform: translateY(0);
+}
+
+.artifact-button.primary {
+  background: rgba(0, 243, 255, 0.1);
+  color: #00F3FF;
+}
+
+.artifact-button.primary:hover {
+  background: rgba(0, 243, 255, 0.2);
+}
+
+.artifact-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.artifact-button:disabled:hover {
+  background: #2A2A2A;
+  transform: none;
+}
+
+.artifact-code-block {
+  margin: 0;
+  padding: 1.5rem;
+  background: transparent;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  overflow: auto;
+}
+
+.artifact-code-block::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.artifact-code-block::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.artifact-code-block::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+}
+
+.artifact-code-block::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 243, 255, 0.5);
+}
+
+.artifact-iframe-container {
+  width: 100%;
+  height: 100%;
+  background: white;
+  border: none;
+  position: relative;
+}
+
+.artifact-loading {
+  display: flex;
+  align-items: center;
+  justify-center;
+  height: 100%;
+  color: white;
+}
+
+.artifact-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #ff6b6b;
+  padding: 2rem;
+  text-align: center;
+}
+
+.artifact-execution-result {
+  border-top: 1px solid #2A2A2A;
+  padding: 1rem;
+  background: #0A0A0A;
+  max-height: 300px;
+  overflow: auto;
+}
+
+.artifact-execution-result pre {
+  margin: 0;
+  color: white;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.artifact-copy-notification {
+  position: absolute;
+  top: 4rem;
+  right: 1rem;
+  background: #10b981;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  animation: slideInNotification 0.3s ease-out, fadeOutNotification 0.3s ease-in 1.7s forwards;
+  z-index: 1000;
+}
+
+@keyframes slideInNotification {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOutNotification {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .canvas-layout-container[data-mode="split"] {
+    grid-template-columns: 100fr !important;
+  }
+
+  .canvas-artifact-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+
+  .canvas-resize-handle {
+    display: none;
+  }
+}
+
+.artifact-preview-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, 
+    rgba(0,243,255,0) 0%, 
+    rgba(0,243,255,0.1) 50%, 
+    rgba(0,243,255,0) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.artifact-preview-card:hover .artifact-preview-glow {
+  opacity: 1;
+}
+
+.artifact-complexity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.artifact-complexity-low {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.artifact-complexity-medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.artifact-complexity-high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.artifact-executable-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #00F3FF;
+  font-size: 11px;
+}
+
+.artifact-executable-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00F3FF;
+  animation: artifactPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes artifactPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

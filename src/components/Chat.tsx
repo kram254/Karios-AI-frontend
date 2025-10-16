@@ -355,35 +355,14 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               msgContent: msg?.content?.substring(0, 100)
             });
             
-            if (msg) {
-              if (currentChat && currentChat.id === data.chatId) {
-                const messageExists = currentChat.messages.some((m: any) => m.id === msg.id);
-                if (!messageExists) {
-                  setCurrentChat({
-                    ...currentChat,
-                    messages: [...currentChat.messages, {
-                      id: msg.id,
-                      content: msg.content,
-                      role: msg.role,
-                      timestamp: msg.timestamp,
-                      created_at: msg.timestamp,
-                      chat_id: data.chatId
-                    }]
-                  });
-                  console.log('✅ Message added to UI from new_message event');
-                }
-              } else {
-                console.log('💬 CHAT - Chat ID mismatch or no current chat, fetching latest chat');
-                try {
-                  const response = await chatService.getChat(data.chatId);
-                  if (response.data) {
-                    setCurrentChat(response.data);
-                    console.log('✅ Chat refreshed with new message');
-                  }
-                } catch (error) {
-                  console.error('❌ Failed to refresh chat:', error);
-                }
-              }
+            if (msg && msg.content) {
+              console.log('💬 CHAT - Adding message to UI via addMessage');
+              await addMessage({
+                role: msg.role,
+                content: msg.content,
+                chatId: data.chatId
+              });
+              console.log('✅ Message added to UI from new_message event');
             }
           } else {
             const msg = (data as any).message || data.data?.message;

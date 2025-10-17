@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Minimize2, Play, StopCircle, RefreshCw, Loader2 } from 'lucide-react';
-import { nextLevelAutomationService } from '../services/nextLevelAutomation';
 
 interface GeminiBrowserProps {
   taskInstruction: string;
@@ -52,42 +51,15 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
     setTaskStatus('running');
     setSessionTime(0);
     
-    console.log('🚀🚀🚀 GEMINI BROWSER - Status set to running, calling nextLevelAutomationService');
+    console.log('🚀🚀🚀 GEMINI BROWSER - Displaying multi-agent workflow progress');
     
     try {
-      const workflowPayload = {
-        user_instruction: taskInstruction,
-        workflow_steps: [],
-        strategy: 'gemini_computer_use',
-        context: {
-          headless: false,
-          enable_browser_view: true
-        }
-      };
-      
-      console.log('🚀🚀🚀 GEMINI BROWSER - Workflow payload:', workflowPayload);
-      
-      const result = await nextLevelAutomationService.executeWorkflow(workflowPayload);
-      
-      console.log('🚀🚀🚀 GEMINI BROWSER - Workflow result:', result);
-      
-      if (result.success) {
-        console.log('🚀🚀🚀 GEMINI BROWSER - Workflow succeeded');
-        setTaskStatus('completed');
-        if (result.data?.screenshot) {
-          console.log('🚀🚀🚀 GEMINI BROWSER - Setting screenshot');
-          setBrowserView(`data:image/png;base64,${result.data.screenshot}`);
-        }
-      } else {
-        console.error('🚀🚀🚀 GEMINI BROWSER - Workflow failed:', result);
-        setTaskStatus('failed');
-      }
+      console.log('🚀🚀🚀 GEMINI BROWSER - Multi-agent workflow is executing in chat panel');
+      console.log('🚀🚀🚀 GEMINI BROWSER - Browser is showing live progress view');
+      setTaskStatus('running');
     } catch (error) {
-      console.error('🚀🚀🚀 GEMINI BROWSER - Execution error:', error);
+      console.error('🚀🚀🚀 GEMINI BROWSER - Error:', error);
       setTaskStatus('failed');
-    } finally {
-      console.log('🚀🚀🚀 GEMINI BROWSER - Execution finished, setting isExecuting to false');
-      setIsExecuting(false);
     }
   }, [taskInstruction]);
 
@@ -112,7 +84,7 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
     } else {
       console.warn('🌐🌐🌐 GEMINI BROWSER - No task instruction provided');
     }
-  }, []);
+  }, [taskInstruction, executeWithGemini]);
 
   return (
     <div className="h-full w-full flex flex-col bg-white">
@@ -192,9 +164,11 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
                         title="Browser View"
                       />
                     ) : (
-                      <div className="text-center">
+                      <div className="text-center p-8">
                         <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
-                        <p className="text-gray-600">Loading browser...</p>
+                        <p className="text-gray-800 font-semibold text-lg mb-2">Multi-Agent Workflow Running</p>
+                        <p className="text-gray-600 max-w-md mx-auto">Your task is being executed by the AI multi-agent system. Check the workflow card in the chat panel on the left for live progress updates.</p>
+                        <p className="text-gray-500 text-sm mt-4">Task: "{taskInstruction}"</p>
                       </div>
                     )}
                   </div>

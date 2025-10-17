@@ -1398,7 +1398,10 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             .sort((a, b) => {
               const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
               const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
-              return timeA - timeB;
+              if (timeA !== timeB) return timeA - timeB;
+              if (a.role === 'user' && b.role === 'assistant') return -1;
+              if (a.role === 'assistant' && b.role === 'user') return 1;
+              return (a.id || '').localeCompare(b.id || '');
             })
             .filter((msg, index, array) => {
               // Always keep the first message
@@ -1672,6 +1675,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                   reviewData={workflowData?.reviewData}
                                   clarificationRequest={normalizedClarificationRequest}
                                   onClarificationResponse={handleClarificationResponse}
+                                  compact={showKariosBrowser}
                                 />
                               </div>
                             );
@@ -2008,6 +2012,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                     reviewData={workflow?.reviewData}
                     clarificationRequest={normalizedClarificationRequest}
                     onClarificationResponse={handleClarificationResponse}
+                    compact={showKariosBrowser}
                   />
                 </div>
               );

@@ -14,6 +14,7 @@ interface EnhancedWorkflowProps {
   clarificationRequest: any;
   onClarificationResponse?: (taskId: string, response: string) => void;
   theme?: 'light' | 'dark';
+  compact?: boolean;
 }
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -27,7 +28,8 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   reviewData,
   clarificationRequest,
   onClarificationResponse,
-  theme = 'dark'
+  theme = 'dark',
+  compact = false
 }) => {
   const [isCanvasMode, setIsCanvasMode] = useState(false);
   const [phases, setPhases] = useState<any[]>([]);
@@ -229,17 +231,17 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#0A0A0A]/80 border border-[#00F3FF]/30 rounded-lg shadow-lg mb-6 backdrop-blur-sm"
+      className={`bg-[#0A0A0A]/80 border border-[#00F3FF]/30 rounded-lg shadow-lg mb-6 backdrop-blur-sm transition-all duration-300 ${compact ? 'max-w-md' : ''}`}
     >
-      <div className="p-6 border-b border-[#00F3FF]/20">
+      <div className={`${compact ? 'p-3' : 'p-6'} border-b border-[#00F3FF]/20 transition-all duration-300`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#00F3FF]/10 rounded-lg border border-[#00F3FF]/30">
-              <Brain className="w-6 h-6 text-[#00F3FF]" />
+            <div className={`${compact ? 'p-1' : 'p-2'} bg-[#00F3FF]/10 rounded-lg border border-[#00F3FF]/30`}>
+              <Brain className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} text-[#00F3FF]`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold text-[#00F3FF]">Multi-Agent Workflow</h2>
+                <h2 className={`${compact ? 'text-base' : 'text-xl'} font-semibold text-[#00F3FF]`}>Multi-Agent Workflow</h2>
                 {agentUpdates.length > 0 && (
                   <motion.span 
                     key={lastUpdateTime}
@@ -271,7 +273,7 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
             <span className="w-2 h-2 bg-[#00F3FF] rounded-full animate-pulse"></span>
             Live Workflow Progress ({agentUpdates.length} steps) - Updated: {new Date(lastUpdateTime).toLocaleTimeString()}
           </h3>
-          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+          <div className={`space-y-3 ${compact ? 'max-h-[300px]' : 'max-h-[500px]'} overflow-y-auto pr-2`}>
             {(() => {
               const agentMap: { [key: string]: string } = {
                 'PROMPT_REFINER': 'Prompt Refiner',

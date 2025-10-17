@@ -1395,7 +1395,11 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         {currentChat && (
           <>
             {currentChat.messages
-            // Filter out duplicate messages (messages with the same content sent within 1 second)
+            .sort((a, b) => {
+              const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+              const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+              return timeA - timeB;
+            })
             .filter((msg, index, array) => {
               // Always keep the first message
               if (index === 0) return true;

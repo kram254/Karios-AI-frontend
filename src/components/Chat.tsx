@@ -249,6 +249,17 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                 console.log('🎯🎯🎯 FRONTEND - Update has data.prp_data?', !!newUpdate.data?.prp_data);
               }
               
+              window.dispatchEvent(new CustomEvent('workflow:update', {
+                detail: {
+                  stage: newWorkflowStage,
+                  agent_type: data.agent_type,
+                  status: data.status,
+                  message: data.message,
+                  task_id: backendTaskId
+                }
+              }));
+              console.log('📡 DISPATCHED workflow:update event to browser');
+              
               return {
                 ...prev,
                 [backendTaskId]: {
@@ -380,6 +391,15 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         
         onTaskCompleted: async (data: MultiAgentWSMessage) => {
           console.log('✅ CHAT - Task completed event received:', data.task_id);
+          
+          window.dispatchEvent(new CustomEvent('workflow:completed', {
+            detail: {
+              task_id: data.task_id,
+              message: 'Task execution completed successfully'
+            }
+          }));
+          console.log('📡 DISPATCHED workflow:completed event to browser');
+          
           const taskId = data.task_id || lastTaskIdRef.current;
           if (taskId && currentChat?.id) {
             const userMessage = currentChat.messages.find(m => m.role === 'user');
@@ -2422,13 +2442,17 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         <div className="flex-1 transition-all duration-300 ease-out">
           <KariosBrowser
             taskInstruction={kariosBrowserTask}
+            chatId={currentChat?.id}
+            taskId={activeWorkflowTaskId || lastTaskIdRef.current || undefined}
             onClose={() => {
+              console.log('🚪 KARIOS BROWSER - Closing browser, dispatching collapse event');
               setShowKariosBrowser(false);
               setKariosBrowserTask('');
               setAutomationActive(false);
               window.dispatchEvent(new CustomEvent('browser-automation:sidebar-collapse', { detail: { collapse: false } }));
             }}
             onMinimize={() => {
+              console.log('📉 KARIOS BROWSER - Minimizing browser');
               setShowKariosBrowser(false);
             }}
           />

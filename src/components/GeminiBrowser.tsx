@@ -5,19 +5,27 @@ interface GeminiBrowserProps {
   taskInstruction: string;
   onClose: () => void;
   onMinimize?: () => void;
+  chatId?: string;
+  taskId?: string;
 }
 
 const KariosBrowser: React.FC<GeminiBrowserProps> = ({ 
   taskInstruction, 
   onClose, 
-  onMinimize 
+  onMinimize,
+  chatId,
+  taskId
 }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentUrl, setCurrentUrl] = useState('about:blank');
   const [sessionTime, setSessionTime] = useState(0);
   const [browserView, setBrowserView] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
+  const [workflowStage, setWorkflowStage] = useState<string>('Initializing');
+  const [executionLogs, setExecutionLogs] = useState<string[]>([]);
   const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const EXECUTION_TIMEOUT = 600000;
 
   useEffect(() => {
     if (isExecuting) {
@@ -43,25 +51,52 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const addLog = useCallback((log: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setExecutionLogs(prev => [...prev, `[${timestamp}] ${log}`]);
+    console.log(`🔵 BROWSER LOG - ${log}`);
+  }, []);
+
   const executeWithGemini = useCallback(async () => {
     console.log('🚀🚀🚀 GEMINI BROWSER - executeWithGemini called');
     console.log('🚀🚀🚀 GEMINI BROWSER - Task instruction:', taskInstruction);
+    console.log('🚀🚀🚀 GEMINI BROWSER - Chat ID:', chatId);
+    console.log('🚀🚀🚀 GEMINI BROWSER - Task ID:', taskId);
     
     setIsExecuting(true);
     setTaskStatus('running');
     setSessionTime(0);
+    setExecutionLogs([]);
     
-    console.log('🚀🚀🚀 GEMINI BROWSER - Displaying multi-agent workflow progress');
+    addLog('🎯 Browser automation initiated');
+    addLog(`📋 Task: ${taskInstruction}`);
+    addLog('🔗 Linking to multi-agent workflow system');
     
-    try {
-      console.log('🚀🚀🚀 GEMINI BROWSER - Multi-agent workflow is executing in chat panel');
-      console.log('🚀🚀🚀 GEMINI BROWSER - Browser is showing live progress view');
-      setTaskStatus('running');
-    } catch (error) {
-      console.error('🚀🚀🚀 GEMINI BROWSER - Error:', error);
-      setTaskStatus('failed');
+    if (chatId) {
+      addLog(`✅ Connected to chat: ${chatId}`);
+    } else {
+      addLog('⚠️ No chat ID provided');
     }
-  }, [taskInstruction]);
+    
+    if (taskId) {
+      addLog(`✅ Tracking task: ${taskId}`);
+    } else {
+      addLog('⚠️ No task ID provided');
+    }
+    
+    addLog('⏳ Waiting for multi-agent workflow to complete');
+    addLog('💡 Check the workflow card in the chat panel for detailed progress');
+    
+    timeoutRef.current = setTimeout(() => {
+      console.error('🚀🚀🚀 GEMINI BROWSER - EXECUTION TIMEOUT REACHED');
+      addLog('⚠️ TIMEOUT: Execution exceeded 10 minutes');
+      addLog('⚠️ Check backend logs for potential issues');
+      setTaskStatus('failed');
+      setIsExecuting(false);
+    }, EXECUTION_TIMEOUT);
+    
+    console.log('🚀🚀🚀 GEMINI BROWSER - Timeout set for', EXECUTION_TIMEOUT / 1000, 'seconds');
+  }, [taskInstruction, chatId, taskId, addLog, EXECUTION_TIMEOUT]);
 
   const handleStop = useCallback(() => {
     setIsExecuting(false);
@@ -84,7 +119,78 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
     } else {
       console.warn('🌐🌐🌐 GEMINI BROWSER - No task instruction provided');
     }
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        console.log('🌐 GEMINI BROWSER - Timeout cleared on unmount');
+      }
+      if (sessionTimerRef.current) {
+        clearInterval(sessionTimerRef.current);
+      }
+    };
   }, [taskInstruction, executeWithGemini]);
+
+  useEffect(() => {
+    if (!chatId) {
+      console.warn('🌐 GEMINI BROWSER - No chatId, cannot listen to workflow updates');
+      return;
+    }
+
+    console.log('🌐 GEMINI BROWSER - Setting up workflow listener for chat:', chatId);
+    
+    const handleWorkflowUpdate = (event: CustomEvent) => {
+      const { stage, agent_type, status, message } = event.detail;
+      console.log('📡 BROWSER - Workflow update received:', event.detail);
+      
+      if (stage) {
+        setWorkflowStage(stage);
+        addLog(`🔄 Stage: ${stage}`);
+      }
+      
+      if (agent_type && status) {
+        addLog(`⚙️ ${agent_type}: ${status}`);
+      }
+      
+      if (message) {
+        addLog(`💬 ${message}`);
+      }
+    };
+
+    const handleTaskComplete = (event: CustomEvent) => {
+      console.log('✅ BROWSER - Task completed:', event.detail);
+      addLog('✅ Task execution completed successfully!');
+      setTaskStatus('completed');
+      setIsExecuting(false);
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+
+    const handleTaskError = (event: CustomEvent) => {
+      console.error('❌ BROWSER - Task failed:', event.detail);
+      addLog(`❌ Task failed: ${event.detail.error || 'Unknown error'}`);
+      setTaskStatus('failed');
+      setIsExecuting(false);
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+
+    window.addEventListener('workflow:update', handleWorkflowUpdate as EventListener);
+    window.addEventListener('workflow:completed', handleTaskComplete as EventListener);
+    window.addEventListener('workflow:error', handleTaskError as EventListener);
+
+    return () => {
+      window.removeEventListener('workflow:update', handleWorkflowUpdate as EventListener);
+      window.removeEventListener('workflow:completed', handleTaskComplete as EventListener);
+      window.removeEventListener('workflow:error', handleTaskError as EventListener);
+    };
+  }, [chatId, addLog]);
 
   return (
     <div className="h-full w-full flex flex-col bg-white">
@@ -164,11 +270,26 @@ const KariosBrowser: React.FC<GeminiBrowserProps> = ({
                         title="Browser View"
                       />
                     ) : (
-                      <div className="text-center p-8">
+                      <div className="text-center p-8 h-full flex flex-col">
                         <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto mb-4" />
                         <p className="text-gray-800 font-semibold text-lg mb-2">Multi-Agent Workflow Running</p>
-                        <p className="text-gray-600 max-w-md mx-auto">Your task is being executed by the AI multi-agent system. Check the workflow card in the chat panel on the left for live progress updates.</p>
-                        <p className="text-gray-500 text-sm mt-4">Task: "{taskInstruction}"</p>
+                        <p className="text-gray-600 max-w-md mx-auto mb-4">Current Stage: <strong>{workflowStage}</strong></p>
+                        <p className="text-gray-500 text-sm mb-6">Task: "{taskInstruction}"</p>
+                        
+                        <div className="flex-1 max-w-2xl mx-auto w-full overflow-hidden">
+                          <div className="bg-gray-100 rounded-lg p-4 h-full">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">📊 Execution Log</h3>
+                            <div className="bg-black rounded p-3 text-left overflow-y-auto h-[calc(100%-2rem)] font-mono text-xs">
+                              {executionLogs.length > 0 ? (
+                                executionLogs.map((log, idx) => (
+                                  <div key={idx} className="text-green-400 mb-1">{log}</div>
+                                ))
+                              ) : (
+                                <div className="text-gray-500">Waiting for execution logs...</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

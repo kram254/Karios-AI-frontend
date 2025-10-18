@@ -171,8 +171,8 @@ export const CanvasLayout: React.FC<CanvasLayoutProps> = ({
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
-              transform: `translateX(${isResizing ? '0' : '0'})`,
-              transition: isResizing ? 'none' : 'transform 0.3s ease-out'
+              transform: `translateX(${isDragging ? '0' : '0'})`,
+              transition: isDragging ? 'none' : 'transform 0.3s ease-out'
             }}
           >
             {artifactContent}

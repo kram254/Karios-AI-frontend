@@ -216,6 +216,10 @@ class MultiAgentWebSocketService {
       case 'test_message':
         console.log('🔥 DEBUG WS TEST - Test message received:', data.message);
         break;
+      
+      case 'gemini_browser_start':
+        console.log('🌟 MULTI-AGENT WS - Gemini browser start signal received:', data);
+        break;
         
       default:
         console.error('🔥 DEBUG WS HANDLE - Unknown message type:', data.type, 'Full message:', data);

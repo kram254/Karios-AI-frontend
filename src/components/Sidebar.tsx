@@ -32,6 +32,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     
     try {
       setCreatingChat(true);
+      
+      window.dispatchEvent(new CustomEvent('chat:reset-browser-state'));
+      
       const newChat = await createNewChat();
       if (newChat) {
         navigate('/chat');
@@ -48,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleChatSelect = (chat: any) => {
+    window.dispatchEvent(new CustomEvent('chat:reset-browser-state'));
     setCurrentChat(chat);
     navigate('/chat');
   };

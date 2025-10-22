@@ -99,9 +99,26 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [showKariosBrowser, setShowKariosBrowser] = useState(false);
   const [kariosBrowserTask, setKariosBrowserTask] = useState<string>('');
   const [nextLevelCapabilities, setNextLevelCapabilities] = useState<any>(null);
+  const [chatWorkflowStates, setChatWorkflowStates] = useState<Record<string, {
+    workflows: Record<string, any>;
+    activeTaskId: string | null;
+    showBrowser: boolean;
+    browserTask: string;
+    automationActive: boolean;
+    pendingTask: string | null;
+  }>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastTaskIdRef = useRef<string | null>(null);
+  const currentChatRef = useRef(currentChat);
+  const workflowStateRef = useRef({
+    showKariosBrowser,
+    activeWorkflowTaskId,
+    automationActive,
+    multiAgentWorkflows,
+    kariosBrowserTask,
+    pendingAutomationTask
+  });
 
   const {
     activeArtifact,
@@ -116,6 +133,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     chatScrollRef,
     artifactScrollRef
   } = useArtifactSystem(currentChat?.id || '');
+
+  useEffect(() => {
+    currentChatRef.current = currentChat;
+    workflowStateRef.current = {
+      showKariosBrowser,
+      activeWorkflowTaskId,
+      automationActive,
+      multiAgentWorkflows,
+      kariosBrowserTask,
+      pendingAutomationTask
+    };
+  }, [currentChat, showKariosBrowser, activeWorkflowTaskId, automationActive, multiAgentWorkflows, kariosBrowserTask, pendingAutomationTask]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -174,18 +203,57 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
       console.log('🏥 QUEUE HEALTH AT CONNECTION:', workflowMessageQueue.getHealthCheck());
       
-      console.log('🔄 CHAT SWITCH - Resetting browser automation state');
-      setShowKariosBrowser(false);
-      setKariosBrowserTask('');
-      setPendingAutomationTask(null);
-      setAutomationActive(false);
-      setActiveWorkflowTaskId(null);
+      const previousChatId = Object.keys(chatWorkflowStates).find(id => 
+        chatWorkflowStates[id].showBrowser || chatWorkflowStates[id].activeTaskId
+      );
+      
+      if (previousChatId && previousChatId !== currentChat.id) {
+        console.log('💾 CHAT SWITCH - Preserving workflow state for chat:', previousChatId);
+        setChatWorkflowStates(prev => ({
+          ...prev,
+          [previousChatId]: {
+            workflows: multiAgentWorkflows,
+            activeTaskId: activeWorkflowTaskId,
+            showBrowser: showKariosBrowser,
+            browserTask: kariosBrowserTask,
+            automationActive: automationActive,
+            pendingTask: pendingAutomationTask
+          }
+        }));
+      }
+      
+      const savedState = chatWorkflowStates[currentChat.id];
+      if (savedState) {
+        console.log('♻️ CHAT SWITCH - Restoring workflow state for chat:', currentChat.id);
+        setMultiAgentWorkflows(savedState.workflows || {});
+        setActiveWorkflowTaskId(savedState.activeTaskId);
+        setShowKariosBrowser(savedState.showBrowser);
+        setKariosBrowserTask(savedState.browserTask || '');
+        setAutomationActive(savedState.automationActive);
+        setPendingAutomationTask(savedState.pendingTask);
+        console.log('✅ CHAT SWITCH - Workflow state restored');
+      } else {
+        console.log('🔄 CHAT SWITCH - New chat, resetting UI state only');
+        setShowKariosBrowser(false);
+        setKariosBrowserTask('');
+        setPendingAutomationTask(null);
+        setAutomationActive(false);
+        setActiveWorkflowTaskId(null);
+        console.log('✅ CHAT SWITCH - UI state reset for new chat');
+      }
+      
       setIsProcessing(false);
       setAvatarState('idle');
       setAvatarMessage('');
-      console.log('✅ CHAT SWITCH - Browser state reset complete, UI should show normal chat');
       
-      multiAgentWebSocketService.disconnect();
+      if (previousChatId && chatWorkflowStates[previousChatId]?.activeTaskId) {
+        console.log('🔄 CHAT SWITCH - Workflow continues running server-side for previous chat:', previousChatId);
+      }
+      
+      if (multiAgentWebSocketService['chatId'] !== currentChat.id) {
+        console.log('🔄 CHAT SWITCH - Connecting to new chat WebSocket');
+        multiAgentWebSocketService.disconnect();
+      }
       
       const callbacks = {
         onAgentStatus: (data: MultiAgentWSMessage) => {
@@ -530,6 +598,38 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   }, []);
 
   useEffect(() => {
+    const handleResetBrowserState = () => {
+      console.log('🔄 RESET EVENT - Received chat:reset-browser-state event');
+      
+      const currentState = workflowStateRef.current;
+      const chat = currentChatRef.current;
+      
+      if (chat?.id && (currentState.showKariosBrowser || currentState.activeWorkflowTaskId || currentState.automationActive)) {
+        console.log('💾 RESET EVENT - Preserving workflow state for current chat before reset');
+        setChatWorkflowStates(prev => ({
+          ...prev,
+          [chat.id]: {
+            workflows: currentState.multiAgentWorkflows,
+            activeTaskId: currentState.activeWorkflowTaskId,
+            showBrowser: currentState.showKariosBrowser,
+            browserTask: currentState.kariosBrowserTask,
+            automationActive: currentState.automationActive,
+            pendingTask: currentState.pendingAutomationTask
+          }
+        }));
+      }
+      
+      setShowKariosBrowser(false);
+      setKariosBrowserTask('');
+      setPendingAutomationTask(null);
+      setAutomationActive(false);
+      setActiveWorkflowTaskId(null);
+      setIsProcessing(false);
+      setAvatarState('idle');
+      setAvatarMessage('');
+      console.log('✅ RESET EVENT - UI reset, workflows preserved in background');
+    };
+
     const handleKariosBrowserTrigger = (event: CustomEvent) => {
       const { instruction, strategy } = event.detail;
       if (strategy === 'gemini_computer_use' || strategy === 'gemini') {
@@ -546,10 +646,13 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       }
     };
 
+    window.addEventListener('chat:reset-browser-state', handleResetBrowserState);
+
     window.addEventListener('gemini:browser:open', handleKariosBrowserTrigger as EventListener);
     window.addEventListener('automation:gemini:start', handleAutomationShow as EventListener);
 
     return () => {
+      window.removeEventListener('chat:reset-browser-state', handleResetBrowserState);
       window.removeEventListener('gemini:browser:open', handleKariosBrowserTrigger as EventListener);
       window.removeEventListener('automation:gemini:start', handleAutomationShow as EventListener);
     };

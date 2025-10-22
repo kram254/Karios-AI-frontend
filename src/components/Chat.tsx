@@ -174,6 +174,17 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
       console.log('🏥 QUEUE HEALTH AT CONNECTION:', workflowMessageQueue.getHealthCheck());
       
+      console.log('🔄 CHAT SWITCH - Resetting browser automation state');
+      setShowKariosBrowser(false);
+      setKariosBrowserTask('');
+      setPendingAutomationTask(null);
+      setAutomationActive(false);
+      setActiveWorkflowTaskId(null);
+      setIsProcessing(false);
+      setAvatarState('idle');
+      setAvatarMessage('');
+      console.log('✅ CHAT SWITCH - Browser state reset complete, UI should show normal chat');
+      
       multiAgentWebSocketService.disconnect();
       
       const callbacks = {

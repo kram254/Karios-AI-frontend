@@ -3,6 +3,7 @@ import { WorkflowCanvas } from './WorkflowCanvas';
 import { Brain, Play, CheckCircle, AlertCircle, Clock, ChevronDown, ChevronRight, Edit2, Save, X, FileText, ClipboardList, Code, BarChart3, FileCheck, Box, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ExecutionOutputModal, ReviewScoreModal, FormattedOutputModal } from './WorkflowOutputModals';
+import { BrowserStatusMarquee } from './BrowserStatusMarquee';
 
 interface EnhancedWorkflowProps {
   taskId: string;
@@ -15,6 +16,8 @@ interface EnhancedWorkflowProps {
   onClarificationResponse?: (taskId: string, response: string) => void;
   theme?: 'light' | 'dark';
   compact?: boolean;
+  browserHeadlessMode?: boolean;
+  browserCurrentAction?: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -29,7 +32,9 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   clarificationRequest,
   onClarificationResponse,
   theme = 'dark',
-  compact = false
+  compact = false,
+  browserHeadlessMode = false,
+  browserCurrentAction = ''
 }) => {
   const [isCanvasMode, setIsCanvasMode] = useState(false);
   const [phases, setPhases] = useState<any[]>([]);
@@ -266,6 +271,15 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
           </div>
         </div>
       </div>
+      
+      {browserHeadlessMode && browserCurrentAction && (
+        <div className="px-6 py-4 border-b border-[#00F3FF]/20">
+          <BrowserStatusMarquee 
+            currentAction={browserCurrentAction}
+            isActive={true}
+          />
+        </div>
+      )}
       
       {agentUpdates.length > 0 && (
         <div className="p-6 border-b border-[#00F3FF]/20">

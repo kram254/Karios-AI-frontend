@@ -102,7 +102,17 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [workflowUpdateCounter, setWorkflowUpdateCounter] = useState<number>(0);
   const [showKariosBrowser, setShowKariosBrowser] = useState(false);
   const [kariosBrowserTask, setKariosBrowserTask] = useState<string>('');
+  const [browserHeadlessMode, setBrowserHeadlessMode] = useState(false);
+  const [browserCurrentAction, setBrowserCurrentAction] = useState<string>('');
   const [nextLevelCapabilities, setNextLevelCapabilities] = useState<any>(null);
+  
+  useEffect(() => {
+    if (browserHeadlessMode && showKariosBrowser) {
+      console.log('🔧 HEADLESS MODE DETECTED - Collapsing browser UI, returning to full chat view');
+      setShowKariosBrowser(false);
+      window.dispatchEvent(new CustomEvent('browser-automation:sidebar-collapse', { detail: { collapse: false } }));
+    }
+  }, [browserHeadlessMode, showKariosBrowser]);
   const [chatWorkflowStates, setChatWorkflowStates] = useState<Record<string, {
     workflows: Record<string, any>;
     activeTaskId: string | null;
@@ -408,6 +418,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               if (data.agent_type === 'PROMPT_REFINER' && data.status === 'completed') {
                 console.log('🎯🎯🎯 FRONTEND STORING UPDATE:', newUpdate);
                 console.log('🎯🎯🎯 FRONTEND - Update has data.prp_data?', !!newUpdate.data?.prp_data);
+              }
+              
+              if (data.agent_type === 'TASK_EXECUTOR' && data.data) {
+                if (data.data.headless !== undefined) {
+                  setBrowserHeadlessMode(data.data.headless);
+                  console.log('🔧 BROWSER MODE:', data.data.headless ? 'HEADLESS' : 'HEADED');
+                }
+                if (data.data.current_action || data.message) {
+                  const action = data.data.current_action || data.message || '';
+                  setBrowserCurrentAction(action);
+                  console.log('🎬 BROWSER ACTION:', action);
+                }
               }
               
               window.dispatchEvent(new CustomEvent('workflow:update', {
@@ -1634,7 +1656,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
 
   const chatMainContent = (
     <div className="flex h-full bg-[#0A0A0A]">
-      <div className={`flex flex-col transition-all duration-300 ease-out ${showKariosBrowser ? 'w-96 border-r border-gray-800' : 'flex-1'}`}>
+      <div className={`flex flex-col transition-all duration-300 ease-out ${showKariosBrowser && !browserHeadlessMode ? 'flex-1 border-r border-gray-800' : 'flex-1'}`}>
         {/* Chat Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2A2A]">
           <h2 className="text-xl font-semibold text-white">{currentChat.title || "New Chat"}</h2>
@@ -1938,7 +1960,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                                   reviewData={workflowData?.reviewData}
                                   clarificationRequest={normalizedClarificationRequest}
                                   onClarificationResponse={handleClarificationResponse}
-                                  compact={showKariosBrowser}
+                                  compact={showKariosBrowser && !browserHeadlessMode}
+                                  browserHeadlessMode={browserHeadlessMode}
+                                  browserCurrentAction={browserCurrentAction}
                                 />
                               </div>
                             );
@@ -2275,7 +2299,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                     reviewData={workflow?.reviewData}
                     clarificationRequest={normalizedClarificationRequest}
                     onClarificationResponse={handleClarificationResponse}
-                    compact={showKariosBrowser}
+                    compact={showKariosBrowser && !browserHeadlessMode}
+                    browserHeadlessMode={browserHeadlessMode}
+                    browserCurrentAction={browserCurrentAction}
                   />
                 </div>
               );
@@ -2308,8 +2334,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       </div>
 
       {/* Input Form - Using updated chat.css classes */}
-      <div className="chat-input-wrapper">
-        <form onSubmit={handleSubmit} className="w-full max-w-4xl">
+      <div className="chat-input-wrapper" style={showKariosBrowser && !browserHeadlessMode ? {maxWidth: '100%', padding: '0 1rem'} : {}}>
+        <form onSubmit={handleSubmit} className="w-full" style={showKariosBrowser && !browserHeadlessMode ? {maxWidth: '100%'} : {maxWidth: '64rem'}}>
           <div className={uploadedImages.length > 0 ? "chat-input-container-expanded neon-input" : "chat-input-container neon-input"}>
             <button 
               type="button" 
@@ -2681,7 +2707,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       
       </div>
       
-      {showKariosBrowser && kariosBrowserTask && (
+      {showKariosBrowser && kariosBrowserTask && !browserHeadlessMode && (
         <div className="flex-1 transition-all duration-300 ease-out">
           <KariosBrowser
             taskInstruction={kariosBrowserTask}
@@ -2692,6 +2718,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
               setShowKariosBrowser(false);
               setKariosBrowserTask('');
               setAutomationActive(false);
+              setBrowserHeadlessMode(false);
               window.dispatchEvent(new CustomEvent('browser-automation:sidebar-collapse', { detail: { collapse: false } }));
             }}
             onMinimize={() => {

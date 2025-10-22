@@ -40,6 +40,10 @@ class MultiAgentWebSocketMultiService {
   private activeChatId: string | null = null;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  
+  get chatId(): string | null {
+    return this.activeChatId;
+  }
 
   constructor() {
     console.log('📡 MULTI-AGENT WS MULTI - Service initialized');
@@ -307,6 +311,30 @@ class MultiAgentWebSocketMultiService {
 
   getActiveConnections(): number {
     return this.connections.size;
+  }
+  
+  sendClarificationResponse(taskId: string, response: string) {
+    const chatId = this.activeChatId;
+    if (!chatId) {
+      console.error('📡 WS MULTI - No active chat for clarification response');
+      return;
+    }
+    
+    const connection = this.connections.get(chatId);
+    if (!connection || connection.ws.readyState !== WebSocket.OPEN) {
+      console.error('📡 WS MULTI - No open connection for clarification response');
+      return;
+    }
+    
+    const message = {
+      type: 'clarification_response',
+      task_id: taskId,
+      response: response,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('📡 WS MULTI - Sending clarification response:', message);
+    connection.ws.send(JSON.stringify(message));
   }
 }
 

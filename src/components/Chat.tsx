@@ -22,6 +22,7 @@ import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/mul
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
 import { nextLevelAutomationService } from "../services/nextLevelAutomation";
+import { workflowStateSyncService } from "../services/workflowStateSync.service";
 import "../styles/chat.css";
 import "../styles/artifact.css";
 import { useArtifactSystem } from "../hooks/useArtifactSystem";
@@ -144,6 +145,20 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       kariosBrowserTask,
       pendingAutomationTask
     };
+    
+    if (currentChat?.id && activeWorkflowTaskId) {
+      workflowStateSyncService.saveWorkflowState(currentChat.id, {
+        chatId: currentChat.id,
+        taskId: activeWorkflowTaskId,
+        status: automationActive ? 'active' : 'paused',
+        workflows: multiAgentWorkflows,
+        showBrowser: showKariosBrowser,
+        browserTask: kariosBrowserTask,
+        automationActive,
+        pendingTask: pendingAutomationTask,
+        lastUpdate: Date.now()
+      });
+    }
   }, [currentChat, showKariosBrowser, activeWorkflowTaskId, automationActive, multiAgentWorkflows, kariosBrowserTask, pendingAutomationTask]);
 
   const scrollToBottom = () => {

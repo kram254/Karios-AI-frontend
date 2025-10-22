@@ -1,3 +1,5 @@
+import { websocketStateManager } from './websocketStateManager.service';
+
 interface MultiAgentWSMessage {
   type: string;
   chatId: string;
@@ -71,6 +73,7 @@ class MultiAgentWebSocketService {
         console.log('📡 MULTI-AGENT WS - Connected successfully');
         this.reconnectAttempts = 0;
         this.manualDisconnect = false;
+        websocketStateManager.markConnected(chatId);
         this.startPingInterval();
       };
       
@@ -91,6 +94,10 @@ class MultiAgentWebSocketService {
         this.stopPingInterval();
         this.ws = null;
         
+        if (chatId) {
+          websocketStateManager.markDisconnected(chatId);
+        }
+        
         this.callbacksList.forEach(callbacks => {
           if (callbacks.onClose) {
             callbacks.onClose(event);
@@ -98,6 +105,9 @@ class MultiAgentWebSocketService {
         });
         
         if (!this.manualDisconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
+          if (chatId) {
+            websocketStateManager.incrementReconnectCount(chatId);
+          }
           this.scheduleReconnect();
         }
       };
@@ -249,6 +259,9 @@ class MultiAgentWebSocketService {
           type: 'ping',
           timestamp: new Date().toISOString()
         }));
+        if (this.chatId) {
+          websocketStateManager.updateHeartbeat(this.chatId);
+        }
       }
     }, 30000); // Ping every 30 seconds
   }

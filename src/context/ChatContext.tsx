@@ -18,6 +18,7 @@ import { Agent } from '../types/agent';
 import { useLanguage } from './LanguageContext';
 import { checkApiEndpoint } from '../utils/apiUtils';
 import { filterDisclaimerMessages } from '../utils/messageFilters';
+import { stateManager } from '../services/stateManager.service';
 
 interface Attachment {
   id?: string;
@@ -111,12 +112,32 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     loadChats();
+    
+    const savedInternetChatIds = stateManager.load<string[]>({
+      key: 'internet_enabled_chats',
+      version: 1
+    });
+    if (savedInternetChatIds) {
+      setInternetEnabledChatIds(new Set(savedInternetChatIds));
+    }
+    
+    const savedCurrentChatId = stateManager.load<string>({
+      key: 'current_chat_id',
+      version: 1
+    });
+    if (savedCurrentChatId) {
+      console.log('[ChatContext] Restoring last active chat:', savedCurrentChatId);
+    }
   }, []);
   
   // Update internet search state when current chat changes
   useEffect(() => {
     if (currentChat?.id) {
-      // Uniformly enforce internet search context based on chat_type
+      stateManager.save(
+        { key: 'current_chat_id', version: 1 },
+        currentChat.id
+      );
+      
       if (currentChat.chat_type === 'internet_search') {
         if (!internetEnabledChatIds.has(currentChat.id)) {
           setInternetEnabledChatIds(prev => new Set(prev).add(currentChat.id));
@@ -125,11 +146,17 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setInternetSearchEnabled(true);
         }
       } else {
-        // For non-internet-search chats, allow toggling freely
         setInternetSearchEnabled(false);
       }
     }
   }, [currentChat?.id, currentChat?.chat_type, internetEnabledChatIds]);
+  
+  useEffect(() => {
+    stateManager.save(
+      { key: 'internet_enabled_chats', version: 1 },
+      Array.from(internetEnabledChatIds)
+    );
+  }, [internetEnabledChatIds]);
 
   // Modified toggleInternetSearch to prevent disabling for locked chats
   const toggleInternetSearch = (newState?: boolean) => {

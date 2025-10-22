@@ -18,7 +18,7 @@ import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
 import { WorkflowDebugPanel } from './WorkflowDebugPanel';
 import KariosBrowser from './GeminiBrowser';
-import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket";
+import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket.multi";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
 import { nextLevelAutomationService } from "../services/nextLevelAutomation";
@@ -604,8 +604,13 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       console.log('✅ CHAT TRANSITION - Complete for chat:', currentChat.id.slice(0, 8));
       
       return () => {
-        console.log('📡 CHAT - Disconnecting WebSocket for chat:', currentChat.id);
-        multiAgentWebSocketService.disconnect();
+        const hasWorkflow = activeWorkflowTaskId && Object.keys(multiAgentWorkflows).length > 0;
+        if (hasWorkflow) {
+          console.log('📡 CHAT - Keeping WebSocket alive for active workflow in chat:', currentChat.id.slice(0, 8));
+        } else {
+          console.log('📡 CHAT - Disconnecting WebSocket for chat:', currentChat.id.slice(0, 8));
+          multiAgentWebSocketService.disconnectChat(currentChat.id);
+        }
       };
     }
   }, [currentChat?.id]);

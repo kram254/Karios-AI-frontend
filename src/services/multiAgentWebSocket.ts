@@ -48,7 +48,7 @@ class MultiAgentWebSocketService {
         console.log('🔥 DEBUG WS - Replaced callbacks for same chat, total handlers:', this.callbacksList.length);
         return;
       }
-      this.disconnect();
+      console.log('🔄 WS - Keeping previous connection alive for background workflows');
     }
     this.chatId = chatId;
     this.callbacksList = [callbacks];

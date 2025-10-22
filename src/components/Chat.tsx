@@ -23,6 +23,9 @@ import { workflowMessageQueue } from "../services/workflowMessageQueue";
 import { useThrottle } from "../hooks/useThrottle";
 import { nextLevelAutomationService } from "../services/nextLevelAutomation";
 import { workflowStateSyncService } from "../services/workflowStateSync.service";
+import { chatIsolationService } from "../services/chatIsolation.service";
+import { stateIntegrityMonitor } from "../services/stateIntegrityMonitor.service";
+import { globalStateCoordinator } from "../services/globalStateCoordinator.service";
 import "../styles/chat.css";
 import "../styles/artifact.css";
 import { useArtifactSystem } from "../hooks/useArtifactSystem";
@@ -146,7 +149,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       pendingAutomationTask
     };
     
-    if (currentChat?.id && activeWorkflowTaskId) {
+    if (currentChat?.id && activeWorkflowTaskId && Object.keys(multiAgentWorkflows).length > 0) {
       workflowStateSyncService.saveWorkflowState(currentChat.id, {
         chatId: currentChat.id,
         taskId: activeWorkflowTaskId,
@@ -215,58 +218,122 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   // Multi-agent WebSocket connection effect with reconnection handling
   useEffect(() => {
     if (currentChat?.id) {
-      console.log('📡 CHAT - Connecting to multi-agent WebSocket for chat:', currentChat.id);
-      console.log('🏥 QUEUE HEALTH AT CONNECTION:', workflowMessageQueue.getHealthCheck());
+      const previousChatId = currentChatRef.current?.id;
+      const canTransition = chatIsolationService.startTransition(previousChatId || null, currentChat.id);
       
-      const previousChatId = Object.keys(chatWorkflowStates).find(id => 
-        chatWorkflowStates[id].showBrowser || chatWorkflowStates[id].activeTaskId
-      );
-      
-      if (previousChatId && previousChatId !== currentChat.id) {
-        console.log('💾 CHAT SWITCH - Preserving workflow state for chat:', previousChatId);
-        setChatWorkflowStates(prev => ({
-          ...prev,
-          [previousChatId]: {
-            workflows: multiAgentWorkflows,
-            activeTaskId: activeWorkflowTaskId,
-            showBrowser: showKariosBrowser,
-            browserTask: kariosBrowserTask,
-            automationActive: automationActive,
-            pendingTask: pendingAutomationTask
-          }
-        }));
+      if (!canTransition) {
+        console.warn('🚫 CHAT TRANSITION - Blocked: transition already in progress');
+        return;
       }
       
-      const savedState = chatWorkflowStates[currentChat.id];
-      if (savedState) {
-        console.log('♻️ CHAT SWITCH - Restoring workflow state for chat:', currentChat.id);
-        setMultiAgentWorkflows(savedState.workflows || {});
-        setActiveWorkflowTaskId(savedState.activeTaskId);
-        setShowKariosBrowser(savedState.showBrowser);
-        setKariosBrowserTask(savedState.browserTask || '');
-        setAutomationActive(savedState.automationActive);
-        setPendingAutomationTask(savedState.pendingTask);
-        console.log('✅ CHAT SWITCH - Workflow state restored');
+      console.log('📡 CHAT TRANSITION - Starting transition to chat:', currentChat.id);
+      console.log('🏥 QUEUE HEALTH AT CONNECTION:', workflowMessageQueue.getHealthCheck());
+      
+      const hasActiveWorkflow = activeWorkflowTaskId && Object.keys(multiAgentWorkflows).length > 0;
+      
+      if (previousChatId && previousChatId !== currentChat.id && hasActiveWorkflow) {
+        console.log('💾 CHAT TRANSITION - Preserving active workflow state for chat:', previousChatId);
+        const frozenState = {
+          workflows: { ...multiAgentWorkflows },
+          activeTaskId: activeWorkflowTaskId,
+          showBrowser: showKariosBrowser,
+          browserTask: kariosBrowserTask,
+          automationActive: automationActive,
+          pendingTask: pendingAutomationTask,
+          messageInput: message,
+          uploadedImages: [...uploadedImages]
+        };
+        
+        setChatWorkflowStates(prev => ({
+          ...prev,
+          [previousChatId]: frozenState
+        }));
+        
+        if (activeWorkflowTaskId) {
+          workflowStateSyncService.saveWorkflowState(previousChatId, {
+            chatId: previousChatId,
+            taskId: activeWorkflowTaskId,
+            status: automationActive ? 'active' : 'paused',
+            workflows: multiAgentWorkflows,
+            showBrowser: showKariosBrowser,
+            browserTask: kariosBrowserTask,
+            automationActive,
+            pendingTask: pendingAutomationTask,
+            lastUpdate: Date.now()
+          });
+        }
+        
+        chatIsolationService.snapshotState(previousChatId, frozenState);
+        console.log('✅ CHAT TRANSITION - Previous chat state preserved and persisted');
+      }
+      
+      const memoryState = chatWorkflowStates[currentChat.id];
+      const persistedState = workflowStateSyncService.getWorkflowState(currentChat.id);
+      const isolationSnapshot = chatIsolationService.getSnapshot(currentChat.id);
+      const savedState = memoryState || isolationSnapshot || persistedState;
+      
+      if (savedState && savedState.activeTaskId && Object.keys(savedState.workflows || {}).length > 0) {
+        const isValidState = chatIsolationService.validateStateIntegrity(currentChat.id, savedState);
+        
+        if (!isValidState) {
+          console.error('❌ CHAT TRANSITION - Invalid state detected, clearing');
+          workflowStateSyncService.clearWorkflowState(currentChat.id);
+          chatIsolationService.clearSnapshot(currentChat.id);
+        } else {
+          console.log('♻️ CHAT TRANSITION - Restoring workflow state for chat:', currentChat.id);
+          const stateSource = memoryState ? 'memory' : isolationSnapshot ? 'snapshot' : 'localStorage';
+          console.log('♻️ State source:', stateSource);
+          
+          setMultiAgentWorkflows(savedState.workflows || {});
+          setActiveWorkflowTaskId(savedState.activeTaskId || null);
+          setShowKariosBrowser(savedState.showBrowser || false);
+          setKariosBrowserTask(savedState.browserTask || '');
+          setAutomationActive(savedState.automationActive || false);
+          setPendingAutomationTask(savedState.pendingTask || null);
+          setMessage(savedState.messageInput || '');
+          setUploadedImages(savedState.uploadedImages || []);
+          
+          console.log('✅ CHAT TRANSITION - Workflow state restored:', {
+            taskId: savedState.activeTaskId,
+            workflowCount: Object.keys(savedState.workflows || {}).length
+          });
+        }
       } else {
-        console.log('🔄 CHAT SWITCH - New chat, resetting UI state only');
+        console.log('🆕 CHAT TRANSITION - Clean slate for chat:', currentChat.id);
+        
+        setMultiAgentWorkflows({});
+        setActiveWorkflowTaskId(null);
         setShowKariosBrowser(false);
         setKariosBrowserTask('');
         setPendingAutomationTask(null);
         setAutomationActive(false);
-        setActiveWorkflowTaskId(null);
-        console.log('✅ CHAT SWITCH - UI state reset for new chat');
+        setMessage('');
+        setUploadedImages([]);
+        
+        workflowStateSyncService.clearWorkflowState(currentChat.id);
+        setChatWorkflowStates(prev => {
+          const updated = { ...prev };
+          delete updated[currentChat.id];
+          return updated;
+        });
+        
+        console.log('✅ CHAT TRANSITION - All state cleared for clean start');
       }
       
       setIsProcessing(false);
       setAvatarState('idle');
       setAvatarMessage('');
       
-      if (previousChatId && chatWorkflowStates[previousChatId]?.activeTaskId) {
-        console.log('🔄 CHAT SWITCH - Workflow continues running server-side for previous chat:', previousChatId);
+      if (previousChatId && previousChatId !== currentChat.id) {
+        const prevState = chatWorkflowStates[previousChatId];
+        if (prevState?.activeTaskId) {
+          console.log('🔄 BACKGROUND WORKFLOW - Task', prevState.activeTaskId.slice(0, 8), 'continues server-side for chat:', previousChatId.slice(0, 8));
+        }
       }
       
-      if (multiAgentWebSocketService['chatId'] !== currentChat.id) {
-        console.log('🔄 CHAT SWITCH - Connecting to new chat WebSocket');
+      const currentWsChat = multiAgentWebSocketService['chatId'];
+      if (currentWsChat !== currentChat.id) {
+        console.log('🔌 WEBSOCKET TRANSITION - Switching from', currentWsChat?.slice(0, 8) || 'none', 'to', currentChat.id.slice(0, 8));
         multiAgentWebSocketService.disconnect();
       }
       
@@ -524,6 +591,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       });
       multiAgentWebSocketService.connect(currentChat.id, callbacks);
       
+      chatIsolationService.endTransition();
+      globalStateCoordinator.emitEvent({
+        type: 'chat:switch',
+        chatId: currentChat.id,
+        timestamp: Date.now(),
+        metadata: {
+          previousChatId,
+          hadWorkflow: hasActiveWorkflow
+        }
+      });
+      console.log('✅ CHAT TRANSITION - Complete for chat:', currentChat.id.slice(0, 8));
+      
       return () => {
         console.log('📡 CHAT - Disconnecting WebSocket for chat:', currentChat.id);
         multiAgentWebSocketService.disconnect();
@@ -610,6 +689,18 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       setNextLevelCapabilities(capabilities);
     };
     checkCapabilities();
+    
+    console.log('[Chat] Running initial state integrity check');
+    stateIntegrityMonitor.runIntegrityCheck();
+    
+    const healthInterval = setInterval(() => {
+      const report = stateIntegrityMonitor.getReport();
+      if (report.health < 80) {
+        console.warn('[Chat] State health degraded:', report.health, '%');
+      }
+    }, 5 * 60 * 1000);
+    
+    return () => clearInterval(healthInterval);
   }, []);
 
   useEffect(() => {
@@ -619,19 +710,37 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
       const currentState = workflowStateRef.current;
       const chat = currentChatRef.current;
       
-      if (chat?.id && (currentState.showKariosBrowser || currentState.activeWorkflowTaskId || currentState.automationActive)) {
+      const hasWorkflowData = currentState.activeWorkflowTaskId && 
+                              Object.keys(currentState.multiAgentWorkflows).length > 0;
+      
+      if (chat?.id && hasWorkflowData && (currentState.showKariosBrowser || currentState.automationActive)) {
         console.log('💾 RESET EVENT - Preserving workflow state for current chat before reset');
+        
+        const frozenState = {
+          workflows: { ...currentState.multiAgentWorkflows },
+          activeTaskId: currentState.activeWorkflowTaskId,
+          showBrowser: currentState.showKariosBrowser,
+          browserTask: currentState.kariosBrowserTask,
+          automationActive: currentState.automationActive,
+          pendingTask: currentState.pendingAutomationTask
+        };
+        
         setChatWorkflowStates(prev => ({
           ...prev,
-          [chat.id]: {
-            workflows: currentState.multiAgentWorkflows,
-            activeTaskId: currentState.activeWorkflowTaskId,
-            showBrowser: currentState.showKariosBrowser,
-            browserTask: currentState.kariosBrowserTask,
-            automationActive: currentState.automationActive,
-            pendingTask: currentState.pendingAutomationTask
-          }
+          [chat.id]: frozenState
         }));
+        
+        workflowStateSyncService.saveWorkflowState(chat.id, {
+          chatId: chat.id,
+          taskId: currentState.activeWorkflowTaskId,
+          status: currentState.automationActive ? 'active' : 'paused',
+          workflows: currentState.multiAgentWorkflows,
+          showBrowser: currentState.showKariosBrowser,
+          browserTask: currentState.kariosBrowserTask,
+          automationActive: currentState.automationActive,
+          pendingTask: currentState.pendingAutomationTask,
+          lastUpdate: Date.now()
+        });
       }
       
       setShowKariosBrowser(false);

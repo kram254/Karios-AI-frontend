@@ -9,37 +9,48 @@ export const BrowserStatusMarquee: React.FC<BrowserStatusMarqueeProps> = ({
   currentAction,
   isActive
 }) => {
-  const [displayText, setDisplayText] = useState('');
+  const [statusLines, setStatusLines] = useState<string[]>([
+    'Initializing...',
+    'Headless Browser Mode',
+    'Waiting for task'
+  ]);
 
   useEffect(() => {
     if (!currentAction) {
-      setDisplayText('Initializing browser automation...');
       return;
     }
 
     const actionLower = currentAction.toLowerCase();
+    let statusText = '';
     
     if (actionLower.includes('navigat')) {
-      setDisplayText(`🌐 Navigating • ${currentAction}`);
+      statusText = `Navigating to URL`;
     } else if (actionLower.includes('click')) {
-      setDisplayText(`🖱️ Clicking • ${currentAction}`);
+      statusText = `Clicking element`;
     } else if (actionLower.includes('type') || actionLower.includes('fill') || actionLower.includes('enter')) {
-      setDisplayText(`⌨️ Typing • ${currentAction}`);
+      statusText = `Typing text`;
     } else if (actionLower.includes('search')) {
-      setDisplayText(`🔍 Searching • ${currentAction}`);
+      statusText = `Searching page`;
     } else if (actionLower.includes('scrol')) {
-      setDisplayText(`📜 Scrolling • ${currentAction}`);
+      statusText = `Scrolling page`;
     } else if (actionLower.includes('wait')) {
-      setDisplayText(`⏳ Waiting • ${currentAction}`);
+      statusText = `Waiting for load`;
     } else if (actionLower.includes('extract') || actionLower.includes('scrap')) {
-      setDisplayText(`📊 Extracting data • ${currentAction}`);
+      statusText = `Extracting data`;
     } else if (actionLower.includes('screenshot')) {
-      setDisplayText(`📸 Capturing • ${currentAction}`);
+      statusText = `Capturing screenshot`;
     } else if (actionLower.includes('complet')) {
-      setDisplayText(`✅ Completed • ${currentAction}`);
+      statusText = `Task completed`;
     } else {
-      setDisplayText(`⚡ ${currentAction}`);
+      statusText = currentAction.substring(0, 50);
     }
+
+    setStatusLines(prev => {
+      const newLines = [...prev];
+      newLines.shift();
+      newLines.push(statusText);
+      return newLines;
+    });
   }, [currentAction]);
 
   if (!isActive) {
@@ -48,28 +59,18 @@ export const BrowserStatusMarquee: React.FC<BrowserStatusMarqueeProps> = ({
 
   return (
     <div className="browser-status-marquee">
-      <div className="marquee-container">
-        <div className="marquee-line marquee-line-1">
-          <div className="marquee-content">
-            {displayText}
+      <div className="marquee-vertical">
+        {statusLines.map((line, index) => (
+          <div key={`${line}-${index}`} className="marquee-line-vertical">
+            {line}
           </div>
-          <div className="marquee-content" aria-hidden="true">
-            {displayText}
-          </div>
-        </div>
-        <div className="marquee-line marquee-line-2">
-          <div className="marquee-content-reverse">
-            Headless Browser Mode • Real-time Automation
-          </div>
-          <div className="marquee-content-reverse" aria-hidden="true">
-            Headless Browser Mode • Real-time Automation
-          </div>
-        </div>
+        ))}
       </div>
       
       <style>{`
         .browser-status-marquee {
           width: 100%;
+          height: 60px;
           overflow: hidden;
           background: linear-gradient(135deg, 
             rgba(0, 0, 0, 0.95) 0%, 
@@ -78,90 +79,78 @@ export const BrowserStatusMarquee: React.FC<BrowserStatusMarqueeProps> = ({
           );
           border: 1px solid rgba(100, 100, 100, 0.3);
           border-radius: 6px;
-          padding: 8px 0;
           margin: 8px 0;
           position: relative;
+          display: flex;
+          align-items: center;
+          animation: pulse-border 2s ease-in-out infinite;
         }
 
-        .browser-status-marquee::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 1px;
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            rgba(200, 200, 200, 0.3) 50%, 
-            transparent 100%
-          );
+        @keyframes pulse-border {
+          0%, 100% {
+            border-color: rgba(100, 100, 100, 0.3);
+          }
+          50% {
+            border-color: rgba(150, 150, 150, 0.5);
+          }
         }
 
-        .browser-status-marquee::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 1px;
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            rgba(100, 100, 100, 0.3) 50%, 
-            transparent 100%
-          );
-        }
-
-        .marquee-container {
+        .marquee-vertical {
+          width: 100%;
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          animation: scroll-up 3s ease-in-out infinite;
         }
 
-        .marquee-line {
+        .marquee-line-vertical {
+          height: 20px;
           display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 400;
+          color: rgba(200, 200, 200, 0.9);
+          white-space: nowrap;
           overflow: hidden;
-          position: relative;
+          text-overflow: ellipsis;
+          padding: 0 12px;
+          animation: blink-text 1.5s ease-in-out infinite;
         }
 
-        .marquee-line-1 .marquee-content {
-          font-size: 13px;
+        .marquee-line-vertical:nth-child(2) {
           font-weight: 500;
           color: #fff;
-          white-space: nowrap;
-          padding-right: 50px;
-          animation: scroll-left 15s linear infinite;
+          font-size: 13px;
         }
 
-        .marquee-line-2 .marquee-content-reverse {
-          font-size: 11px;
-          font-weight: 400;
-          color: rgba(180, 180, 180, 0.8);
-          white-space: nowrap;
-          padding-right: 50px;
-          animation: scroll-right 20s linear infinite;
-        }
-
-        @keyframes scroll-left {
+        @keyframes scroll-up {
           0% {
-            transform: translateX(0%);
+            transform: translateY(0);
+          }
+          33% {
+            transform: translateY(0);
+          }
+          40% {
+            transform: translateY(-20px);
+          }
+          73% {
+            transform: translateY(-20px);
+          }
+          80% {
+            transform: translateY(-40px);
           }
           100% {
-            transform: translateX(-50%);
+            transform: translateY(-40px);
           }
         }
 
-        @keyframes scroll-right {
-          0% {
-            transform: translateX(-50%);
+        @keyframes blink-text {
+          0%, 100% {
+            opacity: 0.7;
           }
-          100% {
-            transform: translateX(0%);
+          50% {
+            opacity: 1;
           }
-        }
-
-        .marquee-line:hover .marquee-content,
-        .marquee-line:hover .marquee-content-reverse {
-          animation-play-state: paused;
         }
       `}</style>
     </div>

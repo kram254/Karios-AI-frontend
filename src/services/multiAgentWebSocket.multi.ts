@@ -132,7 +132,7 @@ class MultiAgentWebSocketMultiService {
       
     } catch (error) {
       console.error('📡 WS MULTI - Connection failed:', error);
-      websocketStateManager.markError(chatId, String(error));
+      websocketStateManager.markDisconnected(chatId);
     }
   }
 

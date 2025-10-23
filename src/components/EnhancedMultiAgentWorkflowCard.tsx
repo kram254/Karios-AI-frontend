@@ -226,10 +226,30 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   };
 
   const getStatusIcon = (stage: string) => {
-    if (stage.includes('Completed')) return <CheckCircle className="w-5 h-5 text-green-500" />;
-    if (stage.includes('Processing')) return <Clock className="w-5 h-5 text-blue-500 animate-spin" />;
-    if (stage.includes('Error')) return <AlertCircle className="w-5 h-5 text-red-500" />;
-    return <Play className="w-5 h-5 text-gray-500" />;
+    if (stage.includes('Completed')) {
+      return (
+        <div className="w-5 h-5 rounded-full border-2 border-green-500 flex items-center justify-center" style={{boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'}}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6L5 9L10 3" stroke="rgb(34, 197, 94)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      );
+    }
+    if (stage.includes('Processing')) {
+      return (
+        <div className="w-5 h-5 rounded-full border-2 border-[#00F3FF] flex items-center justify-center animate-pulse" style={{boxShadow: '0 0 8px rgba(0, 243, 255, 0.4)'}}>
+          <div className="w-2 h-2 rounded-full bg-[#00F3FF]"></div>
+        </div>
+      );
+    }
+    if (stage.includes('Error')) {
+      return (
+        <div className="w-5 h-5 rounded-full border-2 border-red-500 flex items-center justify-center" style={{boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)'}}>
+          <div className="w-2 h-2 rounded-full bg-red-500"></div>
+        </div>
+      );
+    }
+    return <div className="w-5 h-5 rounded-full border-2 border-gray-500"></div>;
   };
 
   return (
@@ -369,11 +389,17 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                         <ChevronDown className={theme === 'dark' ? "w-4 h-4 text-gray-400 flex-shrink-0" : "w-4 h-4 text-gray-600 flex-shrink-0"} />
                       )}
                       {allCompleted ? (
-                        <CheckCircle className={theme === 'dark' ? "w-5 h-5 text-green-500 flex-shrink-0" : "w-5 h-5 text-green-600 flex-shrink-0"} />
+                        <div className="w-5 h-5 flex-shrink-0 rounded-full border-2 border-green-500 flex items-center justify-center" style={{boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'}}>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6L5 9L10 3" stroke="rgb(34, 197, 94)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
                       ) : hasStarted ? (
-                        <Clock className={theme === 'dark' ? "w-5 h-5 text-[#00F3FF] animate-spin flex-shrink-0" : "w-5 h-5 text-blue-600 animate-spin flex-shrink-0"} />
+                        <div className="w-5 h-5 flex-shrink-0 rounded-full border-2 border-[#00F3FF] flex items-center justify-center animate-pulse" style={{boxShadow: '0 0 8px rgba(0, 243, 255, 0.4)'}}>
+                          <div className="w-2 h-2 rounded-full bg-[#00F3FF]"></div>
+                        </div>
                       ) : (
-                        <Play className={theme === 'dark' ? "w-5 h-5 text-gray-500 flex-shrink-0" : "w-5 h-5 text-gray-600 flex-shrink-0"} />
+                        <div className="w-5 h-5 flex-shrink-0 rounded-full border-2 border-gray-500"></div>
                       )}
                       <div className="flex-1">
                         <span className={`font-semibold text-sm ${
@@ -484,12 +510,19 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                               : "flex items-start gap-3 p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                             }
                           >
-                            <div className={theme === 'dark'
-                              ? "flex-shrink-0 text-xs font-bold text-[#00F3FF] bg-[#00F3FF]/20 w-7 h-7 rounded-full flex items-center justify-center"
-                              : "flex-shrink-0 text-xs font-bold text-blue-600 bg-blue-100 w-7 h-7 rounded-full flex items-center justify-center"
-                            }>
-                              {update.originalIndex + 1}
-                            </div>
+                            {isCompleted ? (
+                              <div className="w-6 h-6 flex-shrink-0 rounded-full border-2 border-green-500 flex items-center justify-center" style={{boxShadow: '0 0 6px rgba(34, 197, 94, 0.3)'}}>
+                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                  <path d="M2 5L4 7L8 3" stroke="rgb(34, 197, 94)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </div>
+                            ) : isRunning ? (
+                              <div className="w-6 h-6 flex-shrink-0 rounded-full border-2 border-[#00F3FF] flex items-center justify-center animate-pulse" style={{boxShadow: '0 0 6px rgba(0, 243, 255, 0.3)'}}>
+                                <div className="w-2 h-2 rounded-full bg-[#00F3FF]"></div>
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 flex-shrink-0 rounded-full border-2 border-gray-500"></div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${

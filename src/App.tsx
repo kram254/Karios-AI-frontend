@@ -19,6 +19,7 @@ import { UserManagement } from './pages/UserManagement';
 import { UserProfile } from './pages/UserProfile';
 import { Login } from './pages/Login';
 import AutonomousTasksPage from './pages/AutonomousTasksPage';
+import BuilderStudio from './pages/BuilderStudio';
 import { PrivateRoute } from './components/auth/PrivateRoute';
 import { useAuth } from './context/AuthContext';
 import { UserRole } from './types/user';
@@ -214,6 +215,9 @@ function App() {
                       <Chat isTaskMode={isTaskMode} />
                     </>
                   } />
+                  
+                  {/* Builder Studio - Unified agent/workflow/automation builder */}
+                  <Route path="/builder" element={<BuilderStudio />} />
                   
                   {/* Automation Workspace - Lindy-like Canvas UI */}
                   <Route path="/automation-workspace" element={<AutomationWorkspace />} />

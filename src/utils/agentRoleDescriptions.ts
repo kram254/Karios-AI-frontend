@@ -10,35 +10,59 @@ export const AGENT_ROLE_DESCRIPTIONS: Record<AgentRole, {
   icon: string;
   specialties: string[];
 }> = {
-  [AgentRole.CUSTOMER_SUPPORT]: {
-    title: 'Customer Support',
-    description: 'Empathetic problem-solver focused on customer satisfaction',
-    icon: '🎧',
-    specialties: ['Issue Resolution', 'Product Knowledge', 'Customer Relations']
+  [AgentRole.WEB_SCRAPING]: {
+    title: 'Web Scraping',
+    description: 'Extract and structure data from websites with intelligent parsing',
+    icon: '🕷️',
+    specialties: ['Data Extraction', 'Content Parsing', 'API Integration']
   },
-  [AgentRole.SALES_ASSISTANT]: {
-    title: 'Sales Assistant',
-    description: 'Consultative advisor focused on understanding needs and creating value',
-    icon: '💼',
-    specialties: ['Needs Assessment', 'Solution Selling', 'Relationship Building']
+  [AgentRole.WEB_AUTOMATION]: {
+    title: 'Web Automation',
+    description: 'Automate browser interactions and workflows with precision',
+    icon: '🤖',
+    specialties: ['Browser Control', 'Form Filling', 'Workflow Execution']
   },
-  [AgentRole.TECHNICAL_SUPPORT]: {
-    title: 'Technical Support',
-    description: 'Expert troubleshooter with systematic problem-solving approach',
-    icon: '🔧',
-    specialties: ['System Diagnostics', 'Integration Support', 'Performance Optimization']
+  [AgentRole.TASK_AUTOMATION]: {
+    title: 'Task Automation',
+    description: 'Orchestrate complex multi-step tasks and processes',
+    icon: '⚡',
+    specialties: ['Process Orchestration', 'Task Scheduling', 'Workflow Management']
   },
-  [AgentRole.CONSULTING]: {
-    title: 'Consulting Services',
-    description: 'Strategic advisor providing implementation expertise and guidance',
+  [AgentRole.DEEP_RESEARCH]: {
+    title: 'Deep Research',
+    description: 'Comprehensive information gathering and analysis across sources',
+    icon: '🔍',
+    specialties: ['Information Synthesis', 'Source Verification', 'Competitive Analysis']
+  },
+  [AgentRole.CONTENT_CREATION]: {
+    title: 'Content Creation',
+    description: 'Generate high-quality content tailored to your needs',
+    icon: '✍️',
+    specialties: ['Article Writing', 'Documentation', 'Creative Copywriting']
+  },
+  [AgentRole.DATA_ANALYSIS]: {
+    title: 'Data Analysis',
+    description: 'Process and analyze data to extract actionable insights',
     icon: '📊',
-    specialties: ['Strategic Planning', 'Process Optimization', 'Change Management']
+    specialties: ['Data Processing', 'Pattern Recognition', 'Report Generation']
   },
-  [AgentRole.SALES_SERVICES]: {
-    title: 'Sales Services',
-    description: 'Account growth specialist focused on expansion and optimization',
-    icon: '📈',
-    specialties: ['Account Growth', 'Usage Optimization', 'Expansion Planning']
+  [AgentRole.EMAIL_AUTOMATION]: {
+    title: 'Email Automation',
+    description: 'Manage and automate email communications efficiently',
+    icon: '📧',
+    specialties: ['Email Campaigns', 'Response Automation', 'SMTP Integration']
+  },
+  [AgentRole.DOCUMENT_PROCESSING]: {
+    title: 'Document Processing',
+    description: 'Analyze, extract, and transform document content',
+    icon: '📄',
+    specialties: ['PDF Extraction', 'OCR Processing', 'Document Classification']
+  },
+  [AgentRole.TESTING_QA]: {
+    title: 'Testing & QA',
+    description: 'Automated testing and quality assurance for web applications',
+    icon: '✅',
+    specialties: ['Automated Testing', 'Bug Detection', 'Performance Monitoring']
   },
   [AgentRole.CUSTOM]: {
     title: 'Custom Role',

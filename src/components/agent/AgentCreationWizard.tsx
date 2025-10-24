@@ -69,7 +69,7 @@ export default function AgentCreationWizard({
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState<Partial<Agent>>(initialData || {
         actions: [],
-        ai_role: AgentRole.CUSTOMER_SUPPORT, 
+        ai_role: AgentRole.WEB_SCRAPING, 
         language: 'en',
         mode: AgentMode.TEXT,
         response_style: 0.5,
@@ -94,7 +94,7 @@ export default function AgentCreationWizard({
             // Reset form data to initial state
             setFormData(initialData || {
                 actions: [],
-                ai_role: AgentRole.CUSTOMER_SUPPORT, 
+                ai_role: AgentRole.WEB_SCRAPING, 
                 language: 'en',
                 mode: AgentMode.TEXT,
                 response_style: 0.5,
@@ -245,18 +245,20 @@ export default function AgentCreationWizard({
     
     // Function to generate response examples based on role, style, and length settings
     const renderResponseExample = (): React.ReactNode => {
-        // Default examples for each role
         const roleExamples: Record<AgentRole, string> = {
-            [AgentRole.CUSTOMER_SUPPORT]: "I understand your concern with the product delivery. Let me help resolve this issue for you right away. Could you please provide your order number so I can track the status?",
-            [AgentRole.SALES_ASSISTANT]: "Based on your needs, I'd recommend our Premium package. It includes all the features you mentioned plus our enhanced support option. Would you like to see a quick demo?",
-            [AgentRole.TECHNICAL_SUPPORT]: "It looks like the error you're experiencing is related to your network configuration. Let's try a few troubleshooting steps to resolve this issue.",
-            [AgentRole.CONSULTING]: "After analyzing your current processes, I've identified three key areas for improvement that would increase efficiency by approximately 25%. Let's discuss each one in detail.",
-            [AgentRole.SALES_SERVICES]: "I noticed your team is primarily using our basic features. Upgrading to our Business tier would give you access to advanced analytics that could help with your reporting needs.",
+            [AgentRole.WEB_SCRAPING]: "I've successfully extracted product data from the target website. Found 245 items with pricing, descriptions, and images. The data has been structured into a clean CSV format with all fields validated.",
+            [AgentRole.WEB_AUTOMATION]: "I've completed the workflow automation. Successfully navigated to the login page, filled the credentials, submitted the form, and extracted the dashboard data. All 5 steps executed without errors.",
+            [AgentRole.TASK_AUTOMATION]: "The multi-step task has been orchestrated successfully. I've scheduled 3 parallel processes, monitored their execution, and consolidated the results. All dependencies resolved correctly with 100% completion rate.",
+            [AgentRole.DEEP_RESEARCH]: "I've conducted comprehensive research across 15 sources. The findings show that 73% of enterprises are adopting this technology, with primary benefits in efficiency and cost reduction. All sources have been verified and cross-referenced.",
+            [AgentRole.CONTENT_CREATION]: "I've generated the article content you requested. The 1,200-word piece covers all key points with SEO optimization, engaging headlines, and a clear call-to-action. It's ready for publication.",
+            [AgentRole.DATA_ANALYSIS]: "Analysis complete. I've processed 10,000 records and identified 3 significant patterns. Revenue trends show 23% growth in Q4, with the highest engagement from the 25-34 age demographic. Visualizations attached.",
+            [AgentRole.EMAIL_AUTOMATION]: "Email campaign configured successfully. I've set up 5 templates with personalization tokens, configured SMTP settings, and scheduled delivery for 2,500 recipients. Open rate tracking is enabled.",
+            [AgentRole.DOCUMENT_PROCESSING]: "Processed 150 PDF documents successfully. Extracted text from all pages using OCR, classified documents into 4 categories, and converted them to searchable format. Accuracy rate: 98.5%.",
+            [AgentRole.TESTING_QA]: "Automated testing complete. Executed 47 test cases across all user workflows. Found 3 minor UI issues and 1 performance bottleneck. All critical paths passed successfully. Detailed report generated.",
             [AgentRole.CUSTOM]: formData.custom_role ? `As a ${formData.custom_role}, I can provide specialized assistance tailored to your specific needs in this area.` : "I'm your custom assistant and I'll adapt my responses to your specific requirements and expertise needs."
         };
         
-        // Get base example for the selected role
-        let example = formData.ai_role ? roleExamples[formData.ai_role] : roleExamples[AgentRole.CUSTOMER_SUPPORT];
+        let example = formData.ai_role ? roleExamples[formData.ai_role] : roleExamples[AgentRole.WEB_SCRAPING];
         
         // Adjust for formality based on response style
         const style = formData.response_style || 0.5;
@@ -831,6 +833,110 @@ export default function AgentCreationWizard({
                                                     </Box>
                                                   )) : null
                                             }
+                                        </Box>
+                                        
+                                        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(0, 243, 255, 0.2)' }}>
+                                            <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 1 }}>
+                                                Recommended Actions:
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                                {formData.ai_role === AgentRole.WEB_SCRAPING && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                            🌐 SEARCH_INTERNET
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.WEB_AUTOMATION && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            🌐 SEARCH_INTERNET
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.TASK_AUTOMATION && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📧 SEND_MAIL
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            🌐 SEARCH_INTERNET
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.DEEP_RESEARCH && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            🌐 SEARCH_INTERNET
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            🔗 Send Link
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.CONTENT_CREATION && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            🌐 SEARCH_INTERNET
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.DATA_ANALYSIS && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📧 SEND_MAIL
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.EMAIL_AUTOMATION && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📧 SEND_MAIL
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.DOCUMENT_PROCESSING && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📧 SEND_MAIL
+                                                        </Box>
+                                                    </>
+                                                )}
+                                                {formData.ai_role === AgentRole.TESTING_QA && (
+                                                    <>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            🌐 SEARCH_INTERNET
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📎 Send File
+                                                        </Box>
+                                                        <Box sx={{ bgcolor: '#333', color: '#FFF', borderRadius: '12px', px: 1.25, py: 0.4, fontSize: '0.75rem' }}>
+                                                            📧 SEND_MAIL
+                                                        </Box>
+                                                    </>
+                                                )}
+                                            </Box>
                                         </Box>
                                     </Box>
                                 )}

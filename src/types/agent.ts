@@ -8,11 +8,15 @@ export enum AgentStatus {
 }
 
 export enum AgentRole {
-    CUSTOMER_SUPPORT = 'customer_support',
-    TECHNICAL_SUPPORT = 'technical_support',
-    SALES_SERVICES = 'sales_services',
-    CONSULTING = 'consulting',
-    SALES_ASSISTANT = 'sales_assistant',
+    WEB_SCRAPING = 'web_scraping',
+    WEB_AUTOMATION = 'web_automation',
+    TASK_AUTOMATION = 'task_automation',
+    DEEP_RESEARCH = 'deep_research',
+    CONTENT_CREATION = 'content_creation',
+    DATA_ANALYSIS = 'data_analysis',
+    EMAIL_AUTOMATION = 'email_automation',
+    DOCUMENT_PROCESSING = 'document_processing',
+    TESTING_QA = 'testing_qa',
     CUSTOM = 'custom'
 }
 

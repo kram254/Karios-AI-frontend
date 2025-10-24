@@ -575,6 +575,9 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
         onTaskCompleted: async (data: MultiAgentWSMessage) => {
           console.log('✅ CHAT - Task completed event received:', data.task_id);
           
+          setBrowserCurrentAction('');
+          console.log('🛑 BROWSER ACTION CLEARED - Marquee stopped');
+          
           window.dispatchEvent(new CustomEvent('workflow:completed', {
             detail: {
               task_id: data.task_id,

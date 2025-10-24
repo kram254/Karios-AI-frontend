@@ -59,11 +59,15 @@ const languageFlags: Record<string, string> = {
 
 // Role descriptions
 const roleDescriptions: Record<AgentRole, string> = {
-    [AgentRole.CUSTOMER_SUPPORT]: 'Provides customer service and helps solve user issues with a focus on satisfaction and resolution.',
-    [AgentRole.TECHNICAL_SUPPORT]: 'Assists with technical troubleshooting and guidance on complex technical matters.',
-    [AgentRole.SALES_SERVICES]: 'Assists with product recommendations and sales inquiries, focusing on conversion and value presentation.',
-    [AgentRole.CONSULTING]: 'Provides expert advice and consulting services with deep domain expertise.',
-    [AgentRole.SALES_ASSISTANT]: 'Specializes in sales assistance, product demonstrations, and closing deals effectively.',
+    [AgentRole.WEB_SCRAPING]: 'Extract and structure data from websites with intelligent parsing and multi-page navigation.',
+    [AgentRole.WEB_AUTOMATION]: 'Automate browser interactions and workflows with precision using Selenium and Playwright.',
+    [AgentRole.TASK_AUTOMATION]: 'Orchestrate complex multi-step tasks and processes with scheduling and monitoring.',
+    [AgentRole.DEEP_RESEARCH]: 'Comprehensive information gathering and analysis across multiple sources with verification.',
+    [AgentRole.CONTENT_CREATION]: 'Generate high-quality content including articles, documentation, and marketing copy.',
+    [AgentRole.DATA_ANALYSIS]: 'Process and analyze data to extract actionable insights with visualization support.',
+    [AgentRole.EMAIL_AUTOMATION]: 'Manage and automate email communications with SMTP integration and campaign tracking.',
+    [AgentRole.DOCUMENT_PROCESSING]: 'Analyze, extract, and transform document content with OCR and format conversion.',
+    [AgentRole.TESTING_QA]: 'Automated testing and quality assurance for web applications with comprehensive coverage.',
     [AgentRole.CUSTOM]: 'Custom agent role with specialized functionality based on your description.'
 };
 
@@ -101,7 +105,7 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
     const [description, setDescription] = useState('');
     
     // Role settings
-    const [role, setRole] = useState<AgentRole>(AgentRole.CUSTOMER_SUPPORT);
+    const [role, setRole] = useState<AgentRole>(AgentRole.WEB_SCRAPING);
     const [roleDescription, setRoleDescription] = useState<string>('');
     const [mode, setMode] = useState<AgentMode>(AgentMode.TEXT);
     
@@ -122,7 +126,7 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
             setDescription(agent.description || '');
             
             // Role settings
-            setRole(agent.ai_role || AgentRole.CUSTOMER_SUPPORT);
+            setRole(agent.ai_role || AgentRole.WEB_SCRAPING);
             setRoleDescription(agent.role_description || '');
             setMode(agent.mode || AgentMode.TEXT);
             
@@ -338,11 +342,15 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                                 }
                             }}
                         >
-                            <MenuItem value={AgentRole.CUSTOMER_SUPPORT}>Customer Support</MenuItem>
-                            <MenuItem value={AgentRole.TECHNICAL_SUPPORT}>Technical Support</MenuItem>
-                            <MenuItem value={AgentRole.SALES_SERVICES}>Sales Services</MenuItem>
-                            <MenuItem value={AgentRole.SALES_ASSISTANT}>Sales Assistant</MenuItem>
-                            <MenuItem value={AgentRole.CONSULTING}>Consulting</MenuItem>
+                            <MenuItem value={AgentRole.WEB_SCRAPING}>Web Scraping</MenuItem>
+                            <MenuItem value={AgentRole.WEB_AUTOMATION}>Web Automation</MenuItem>
+                            <MenuItem value={AgentRole.TASK_AUTOMATION}>Task Automation</MenuItem>
+                            <MenuItem value={AgentRole.DEEP_RESEARCH}>Deep Research</MenuItem>
+                            <MenuItem value={AgentRole.CONTENT_CREATION}>Content Creation</MenuItem>
+                            <MenuItem value={AgentRole.DATA_ANALYSIS}>Data Analysis</MenuItem>
+                            <MenuItem value={AgentRole.EMAIL_AUTOMATION}>Email Automation</MenuItem>
+                            <MenuItem value={AgentRole.DOCUMENT_PROCESSING}>Document Processing</MenuItem>
+                            <MenuItem value={AgentRole.TESTING_QA}>Testing & QA</MenuItem>
                             <MenuItem value={AgentRole.CUSTOM}>Custom...</MenuItem>
                         </Select>
                     </FormControl>

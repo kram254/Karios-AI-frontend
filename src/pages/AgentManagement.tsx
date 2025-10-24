@@ -460,7 +460,7 @@ export const AgentManagement: React.FC = () => {
             
             const response = await agentService.createAgent({ 
                 name: newAgentData.name, 
-                ai_role: newAgentData.ai_role || AgentRole.CUSTOMER_SUPPORT,
+                ai_role: newAgentData.ai_role || AgentRole.WEB_SCRAPING,
                 response_style: typeof newAgentData.response_style === 'number' ? 
                     Math.max(0, Math.min(1, newAgentData.response_style)) : 0.5,
                 response_length: typeof newAgentData.response_length === 'number' ? 
@@ -496,10 +496,15 @@ export const AgentManagement: React.FC = () => {
     // Helper functions for displaying role information
     const getRoleDescription = (role: AgentRole) => {
         const descriptions: Record<string, string> = {
-            [AgentRole.CUSTOMER_SUPPORT]: 'Assists customers with questions and issues',
-            [AgentRole.TECHNICAL_SUPPORT]: 'Provides technical guidance and troubleshooting',
-            [AgentRole.SALES_SERVICES]: 'Helps customers with purchasing decisions',
-            [AgentRole.CONSULTING]: 'Offers expert advice and solutions tailored to specific customer needs'
+            [AgentRole.WEB_SCRAPING]: 'Extract and structure data from websites',
+            [AgentRole.WEB_AUTOMATION]: 'Automate browser interactions and workflows',
+            [AgentRole.TASK_AUTOMATION]: 'Orchestrate complex multi-step tasks',
+            [AgentRole.DEEP_RESEARCH]: 'Comprehensive information gathering and analysis',
+            [AgentRole.CONTENT_CREATION]: 'Generate high-quality content',
+            [AgentRole.DATA_ANALYSIS]: 'Process and analyze data for insights',
+            [AgentRole.EMAIL_AUTOMATION]: 'Manage and automate email communications',
+            [AgentRole.DOCUMENT_PROCESSING]: 'Analyze and transform document content',
+            [AgentRole.TESTING_QA]: 'Automated testing and quality assurance'
         };
         return descriptions[role] || 'Custom role';
     };
@@ -594,7 +599,7 @@ export const AgentManagement: React.FC = () => {
                 initialData={{
                     name: '',
                     description: '',
-                    ai_role: AgentRole.CUSTOMER_SUPPORT,
+                    ai_role: AgentRole.WEB_SCRAPING,
                     mode: AgentMode.TEXT,
                     language: 'en',
                     response_style: 0.5,

@@ -70,14 +70,26 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
 
   const getAgentRoleLabel = (role: AgentRole) => {
     switch (role) {
-      case AgentRole.CUSTOMER_SUPPORT:
-        return 'Customer Support';
-      case AgentRole.TECHNICAL_SUPPORT:
-        return 'Technical Support';
-      case AgentRole.SALES_SERVICES:
-        return 'Sales Services';
-      case AgentRole.CONSULTING:
-        return 'Consulting';
+      case AgentRole.WEB_SCRAPING:
+        return 'Web Scraping';
+      case AgentRole.WEB_AUTOMATION:
+        return 'Web Automation';
+      case AgentRole.TASK_AUTOMATION:
+        return 'Task Automation';
+      case AgentRole.DEEP_RESEARCH:
+        return 'Deep Research';
+      case AgentRole.CONTENT_CREATION:
+        return 'Content Creation';
+      case AgentRole.DATA_ANALYSIS:
+        return 'Data Analysis';
+      case AgentRole.EMAIL_AUTOMATION:
+        return 'Email Automation';
+      case AgentRole.DOCUMENT_PROCESSING:
+        return 'Document Processing';
+      case AgentRole.TESTING_QA:
+        return 'Testing & QA';
+      case AgentRole.CUSTOM:
+        return 'Custom';
       default:
         return role;
     }

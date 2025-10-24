@@ -32,7 +32,7 @@ export const agentService = {
         // Ensure we have the required fields for the backend
         const payload = {
             name: agentData.name || 'New Agent',
-            ai_role: agentData.ai_role || AgentRole.CUSTOMER_SUPPORT,
+            ai_role: agentData.ai_role || AgentRole.WEB_SCRAPING,
             language: agentData.language || 'en',
             mode: agentData.mode || AgentMode.TEXT,
             response_style: typeof agentData.response_style === 'number' ? 

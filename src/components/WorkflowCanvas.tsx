@@ -3,8 +3,7 @@ import { PhaseCard } from './PhaseCard';
 import { Maximize2, Minimize2, Move, Upload, Check, Plus, Settings, Trash2, Link2, Download, UploadCloud, RotateCcw, Copy, ZoomIn, ZoomOut, Grid, ShieldCheck, Play, Workflow, Layers, Eye } from 'lucide-react';
 import { TemplateSelector } from './workflow/TemplateSelector';
 import { ExecutionViewer } from './workflow/ExecutionViewer';
-import { cleanupOrphanedEdges, removeDuplicateEdges, autoLayoutNodes } from '../utils/edgeCleanup';
-import { validateWorkflow } from '../utils/workflowValidation';
+import { autoLayoutNodes } from '../utils/edgeCleanup';
 import { Workflow as WorkflowType } from '../types/workflow.types';
 
 interface WorkflowCanvasProps {
@@ -19,10 +18,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   onToggleCanvas
 }) => {
   const [draggedItem, setDraggedItem] = useState<number | null>(null);
-  const [positions, setPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
   const API_BASE_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
-  const ENABLE_VISUAL = true;
   const [publishing, setPublishing] = useState(false);
   const [publishedWorkflowId, setPublishedWorkflowId] = useState<string | null>(null);
   const [nodes, setNodes] = useState<any[]>([]);
@@ -56,6 +53,20 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       const layout: any = {};
       initNodes.forEach((n, i) => { const col = i % 4; const row = Math.floor(i / 4); layout[n.id] = { x: 40 + col * 320, y: 40 + row * 260 }; });
       setNodePositions(layout);
+      setTimeout(() => {
+        if (canvasRef.current && initNodes.length > 0) {
+          const positions = Object.values(layout);
+          const minX = Math.min(...positions.map((p: any) => p.x));
+          const maxX = Math.max(...positions.map((p: any) => p.x));
+          const minY = Math.min(...positions.map((p: any) => p.y));
+          const maxY = Math.max(...positions.map((p: any) => p.y));
+          const centerX = (minX + maxX) / 2;
+          const centerY = (minY + maxY) / 2;
+          const canvasWidth = canvasRef.current.clientWidth;
+          const canvasHeight = canvasRef.current.clientHeight;
+          setPan({ x: canvasWidth / 2 - centerX - 160, y: canvasHeight / 2 - centerY - 100 });
+        }
+      }, 100);
     }
   }, [phases]);
 
@@ -81,13 +92,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         ...prev,
         [nodeDraggedId]: { x: snapToGrid ? Math.round(wx / 20) * 20 : wx, y: snapToGrid ? Math.round(wy / 20) * 20 : wy }
       }));
-      return;
     }
-    if (draggedItem === null) return;
-    setPositions(prev => ({
-      ...prev,
-      [draggedItem]: { x, y }
-    }));
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -318,9 +323,27 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   };
 
   const resetLayout = () => {
-    const grid: any = {};
-    nodes.forEach((n, i) => { const col = i % 4; const row = Math.floor(i / 4); grid[n.id] = { x: 40 + col * 320, y: 40 + row * 260 }; });
-    setNodePositions(grid);
+    const layout: any = {};
+    nodes.forEach((n, i) => { const col = i % 4; const row = Math.floor(i / 4); layout[n.id] = { x: 40 + col * 320, y: 40 + row * 260 }; });
+    setNodePositions(layout);
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  const centerView = () => {
+    if (nodes.length === 0) return;
+    const positions = Object.values(nodePositions);
+    if (positions.length === 0) return;
+    const minX = Math.min(...positions.map(p => p.x));
+    const maxX = Math.max(...positions.map(p => p.x));
+    const minY = Math.min(...positions.map(p => p.y));
+    const maxY = Math.max(...positions.map(p => p.y));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const canvasWidth = canvasRef.current?.clientWidth || 1000;
+    const canvasHeight = canvasRef.current?.clientHeight || 600;
+    setPan({ x: canvasWidth / 2 - centerX, y: canvasHeight / 2 - centerY });
+    setZoom(1);
   };
 
   const openEditor = (id: string) => {
@@ -430,6 +453,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   <Plus className="w-4 h-4" />
                   Add Nodes
                 </h3>
+                <div className="mb-3 p-2 bg-gray-800 rounded text-xs text-gray-400">
+                  Drag nodes or use buttons below
+                </div>
                 <div className="space-y-2">
                   <button onClick={() => handleAddNode('phase')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 flex items-center gap-2 transition-all text-sm">
                     <div className="w-8 h-8 rounded bg-purple-400 flex items-center justify-center">
@@ -506,6 +532,10 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     <Link2 className="w-4 h-4" />
                     {connectMode ? 'Connecting...' : 'Connect Nodes'}
                   </button>
+                  <button onClick={centerView} className="w-full px-3 py-2 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-2 transition-all text-sm">
+                    <Eye className="w-4 h-4" />
+                    Center View
+                  </button>
                   <button onClick={resetLayout} className="w-full px-3 py-2 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-2 transition-all text-sm">
                     <RotateCcw className="w-4 h-4" />
                     Reset Layout
@@ -535,14 +565,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           </div>
           <div
           ref={canvasRef}
-          className="relative flex-1 overflow-auto bg-gray-950"
+          className="relative flex-1 overflow-hidden bg-gray-900"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onWheel={handleWheel}
-          style={{ backgroundImage: 'radial-gradient(circle, #1f2937 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+          style={{ backgroundImage: 'radial-gradient(circle, #374151 1px, transparent 1px)', backgroundSize: '20px 20px' }}
         >
           <>
               <div className="relative p-8" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 3000, height: 2000 }}>
@@ -555,7 +585,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                       const y1 = (s.y || 0) + 50;
                       const x2 = (t.x || 0) + 150;
                       const y2 = (t.y || 0) + 50;
-                      const cx = (x1 + x2) / 2;
                       return (
                         <g key={i}>
                           <defs>

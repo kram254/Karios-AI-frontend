@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Paper, IconButton, Typography, Chip, LinearProgress } from '@mui/material';
+import { Box, Paper, IconButton, Typography, Chip, LinearProgress, Button } from '@mui/material';
 import { PlayArrow, Pause, Stop, Visibility, Settings, CheckCircle, Error } from '@mui/icons-material';
 
 interface AutomationCanvasProps {
@@ -20,15 +20,24 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
   const [progress, setProgress] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const sessionId = useRef(`session_${Date.now()}`);
+  const [sessionInitialized, setSessionInitialized] = useState(false);
+  const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
 
   useEffect(() => {
-    initializeWebSocket();
     return () => {
       if (wsRef.current) {
-        wsRef.current.close();
+        try {
+          wsRef.current.close();
+        } catch (e) {}
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (sessionInitialized && automationSessionId) {
+      initializeWebSocket();
+    }
+  }, [sessionInitialized, automationSessionId]);
 
   const initializeWebSocket = () => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -40,51 +49,95 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
     }
     
     const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
-    const wsUrl = `${BACKEND_URL.replace('http', 'ws')}/api/web-automation/ws/automation/${sessionId.current}`;
+    const sessionIdToUse = automationSessionId || sessionId.current;
+    const wsUrl = `${BACKEND_URL.replace('http', 'ws')}/api/web-automation/ws/automation/${sessionIdToUse}`;
     
     try {
       wsRef.current = new WebSocket(wsUrl);
       
       wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'task_created') {
-          setTask(data.payload.task);
-          if (onTaskUpdate) onTaskUpdate(data.payload.task);
-        } else if (data.type === 'plan_created') {
-          setSteps(data.payload.steps);
-          addLog(`Plan created with ${data.payload.steps.length} steps`);
-        } else if (data.type === 'step_started') {
-          setCurrentStep(data.payload.stepIndex);
-          setIsRunning(true);
-          addLog(`Starting step ${data.payload.stepIndex + 1}: ${data.payload.step.description}`);
-        } else if (data.type === 'step_completed') {
-          const completedSteps = data.payload.stepIndex + 1;
-          setProgress((completedSteps / steps.length) * 100);
-          addLog(`✓ Completed step ${completedSteps}: ${data.payload.step.description}`);
-        } else if (data.type === 'screenshot_taken') {
-          setScreenshot(data.payload.screenshot);
-        } else if (data.type === 'status_updated') {
-          if (data.payload.status === 'completed') {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'session_started') {
+            addLog('✓ Browser session started');
+            setSessionInitialized(true);
+          } else if (data.type === 'task_created') {
+            setTask(data.payload?.task || data.payload);
+            if (onTaskUpdate) onTaskUpdate(data.payload?.task || data.payload);
+          } else if (data.type === 'plan_created') {
+            const stepsData = data.payload?.steps || [];
+            setSteps(stepsData);
+            addLog(`Plan created with ${stepsData.length} steps`);
+          } else if (data.type === 'execution_started') {
+            setIsRunning(true);
+            addLog('Starting workflow execution...');
+          } else if (data.type === 'step_started' || data.type === 'workflow_step_started') {
+            const stepIndex = data.payload?.stepIndex ?? data.payload?.step_index ?? 0;
+            const stepDesc = data.payload?.step?.description || data.payload?.description || 'Executing step';
+            setCurrentStep(stepIndex);
+            setIsRunning(true);
+            addLog(`Starting step ${stepIndex + 1}: ${stepDesc}`);
+          } else if (data.type === 'step_completed' || data.type === 'workflow_step_completed') {
+            const stepIndex = data.payload?.stepIndex ?? data.payload?.step_index ?? 0;
+            const stepDesc = data.payload?.step?.description || data.payload?.description || 'Step';
+            const completedSteps = stepIndex + 1;
+            if (steps.length > 0) {
+              setProgress((completedSteps / steps.length) * 100);
+            }
+            addLog(`✓ Completed step ${completedSteps}: ${stepDesc}`);
+          } else if (data.type === 'screenshot_taken' || data.type === 'screenshot') {
+            const screenshotData = data.payload?.screenshot || data.screenshot || data.payload?.image;
+            if (screenshotData) {
+              setScreenshot(screenshotData);
+              addLog('📸 Screenshot captured');
+            }
+          } else if (data.type === 'status_updated' || data.type === 'workflow_completed') {
+            const status = data.payload?.status || data.status;
+            if (status === 'completed' || data.type === 'workflow_completed') {
+              setIsRunning(false);
+              setProgress(100);
+              addLog('🎉 Task completed successfully!');
+            } else if (status === 'failed') {
+              setIsRunning(false);
+              addLog('❌ Task failed');
+            }
+          } else if (data.type === 'workflow_status_update') {
+            const message = data.payload?.message || data.message || '';
+            if (message) {
+              addLog(message);
+            }
+          } else if (data.type === 'error' || data.type === 'workflow_error') {
+            const errorMsg = data.payload?.error || data.error || 'An error occurred';
+            addLog(`❌ Error: ${errorMsg}`);
             setIsRunning(false);
-            addLog('🎉 Task completed successfully!');
-          } else if (data.payload.status === 'failed') {
-            setIsRunning(false);
-            addLog('❌ Task failed');
           }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e);
         }
       };
       
       wsRef.current.onopen = () => {
         addLog('Connected to automation server');
+        if (!sessionInitialized) {
+          setTimeout(() => {
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({ type: 'ping' }));
+            }
+          }, 1000);
+        }
       };
       
       wsRef.current.onerror = (error) => {
-        addLog('Connection error');
+        addLog('⚠️ Connection error');
+      };
+
+      wsRef.current.onclose = () => {
+        addLog('Connection closed');
       };
       
     } catch (error) {
-      addLog('Failed to connect to automation server');
+      addLog('❌ Failed to connect to automation server');
     }
   };
 
@@ -111,14 +164,16 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
   };
 
   const handleStop = async () => {
-    if (!taskId) return;
+    if (!taskId && !automationSessionId) return;
     
     try {
       const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
       
-      await fetch(`${BACKEND_URL}/api/web-automation/task/${taskId}/pause`, {
-        method: 'POST'
-      });
+      if (taskId) {
+        await fetch(`${BACKEND_URL}/api/web-automation/task/${taskId}/pause`, {
+          method: 'POST'
+        });
+      }
       
       setIsRunning(false);
       addLog('Task stopped');
@@ -126,6 +181,36 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
       addLog('Failed to stop task');
     }
   };
+
+  const handleStartSession = () => {
+    const newSessionId = `session_${Date.now()}`;
+    setAutomationSessionId(newSessionId);
+    setSessionInitialized(true);
+    addLog('Initializing browser session...');
+    
+    window.dispatchEvent(new CustomEvent('automation:start', {
+      detail: { sessionId: newSessionId }
+    }));
+  };
+
+  useEffect(() => {
+    const handleAutomationEvent = (e: any) => {
+      const { sessionId: eventSessionId } = e.detail || {};
+      if (eventSessionId) {
+        setAutomationSessionId(eventSessionId);
+        setSessionInitialized(true);
+        addLog('Browser session connected');
+      }
+    };
+
+    window.addEventListener('automation:session-started', handleAutomationEvent as EventListener);
+    window.addEventListener('automation:start', handleAutomationEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('automation:session-started', handleAutomationEvent as EventListener);
+      window.removeEventListener('automation:start', handleAutomationEvent as EventListener);
+    };
+  }, []);
 
   return (
     <Box sx={{ 
@@ -173,10 +258,35 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
         }}>
           {screenshot ? (
             <img 
-              src={`data:image/png;base64,${screenshot}`}
+              src={screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`}
               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               alt="Browser view"
             />
+          ) : !sessionInitialized ? (
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%',
+              gap: 2
+            }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem' }}>
+                Start an automation session
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleStartSession}
+                startIcon={<PlayArrow />}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  px: 4,
+                  py: 1.5
+                }}
+              >
+                Start Session
+              </Button>
+            </Box>
           ) : (
             <Box sx={{ 
               display: 'flex', 
@@ -185,7 +295,7 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
               height: '100%',
               color: 'rgba(255,255,255,0.5)'
             }}>
-              <Typography>Browser view will appear here</Typography>
+              <Typography>Waiting for automation to begin...</Typography>
             </Box>
           )}
         </Box>

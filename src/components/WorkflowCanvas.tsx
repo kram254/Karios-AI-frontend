@@ -17,7 +17,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [positions, setPositions] = useState<{ [key: number]: { x: number; y: number } }>({});
   const canvasRef = useRef<HTMLDivElement>(null);
   const API_BASE_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
-  const ENABLE_VISUAL = ((import.meta as any).env.VITE_ENABLE_VISUAL_AGENT_BUILDER_ADVANCED || 'false') === 'true';
+  const ENABLE_VISUAL = true;
   const [publishing, setPublishing] = useState(false);
   const [publishedWorkflowId, setPublishedWorkflowId] = useState<string | null>(null);
   const [nodes, setNodes] = useState<any[]>([]);
@@ -40,16 +40,17 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [issues, setIssues] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!ENABLE_VISUAL) return;
-    const initNodes = (phases || []).map((p, i) => ({ id: `phase_${i + 1}`, type: 'phase', title: p.title, subtitle: p.subtitle || '', items: p.items || [], data: {} }));
-    const initEdges = initNodes.slice(0, -1).map((n, i) => ({ from: n.id, to: initNodes[i + 1].id }));
-    setNodes(initNodes);
-    setEdges(initEdges);
-    setNodeCounter(initNodes.length);
-    const layout: any = {};
-    initNodes.forEach((n, i) => { const col = i % 4; const row = Math.floor(i / 4); layout[n.id] = { x: 40 + col * 320, y: 40 + row * 260 }; });
-    setNodePositions(layout);
-  }, [phases, ENABLE_VISUAL]);
+    if (phases && phases.length > 0) {
+      const initNodes = phases.map((p, i) => ({ id: `phase_${i + 1}`, type: 'phase', title: p.title, subtitle: p.subtitle || '', items: p.items || [], data: {} }));
+      const initEdges = initNodes.slice(0, -1).map((n, i) => ({ from: n.id, to: initNodes[i + 1].id }));
+      setNodes(initNodes);
+      setEdges(initEdges);
+      setNodeCounter(initNodes.length);
+      const layout: any = {};
+      initNodes.forEach((n, i) => { const col = i % 4; const row = Math.floor(i / 4); layout[n.id] = { x: 40 + col * 320, y: 40 + row * 260 }; });
+      setNodePositions(layout);
+    }
+  }, [phases]);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedItem(index);
@@ -87,19 +88,18 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   };
 
   const compileDSL = () => {
-    if (ENABLE_VISUAL && nodes.length > 0) {
+    if (nodes.length > 0) {
       const outNodes = nodes.map(n => ({ id: n.id, type: n.type, title: n.title, subtitle: n.subtitle || '', items: n.items || [], data: n.data || {} }));
       const outEdges = edges.map(e => ({ from: e.from, to: e.to }));
-      return { nodes: outNodes, edges: outEdges } as any;
+      return { nodes: outNodes, edges: outEdges, name: workflowName } as any;
     }
     const fbNodes = (phases || []).map((phase, index) => ({ id: `phase_${index + 1}`, type: 'phase', title: phase.title, subtitle: phase.subtitle || '', items: phase.items || [] }));
     const fbEdges: { from: string; to: string }[] = [];
     for (let i = 0; i < fbNodes.length - 1; i++) fbEdges.push({ from: fbNodes[i].id, to: fbNodes[i + 1].id });
-    return { nodes: fbNodes, edges: fbEdges } as any;
+    return { nodes: fbNodes, edges: fbEdges, name: workflowName } as any;
   };
 
   const handlePublish = async () => {
-    if (!ENABLE_VISUAL) return;
     try {
       setPublishing(true);
       const dsl = compileDSL();
@@ -108,24 +108,31 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dsl, name: workflowName })
       });
-      const data = await res.json();
-      if (data && data.workflow_id) {
-        setPublishedWorkflowId(data.workflow_id);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.workflow_id) {
+          setPublishedWorkflowId(data.workflow_id);
+        }
       }
     } catch (e) {
+      console.error('Failed to publish workflow:', e);
     } finally {
       setPublishing(false);
     }
   };
 
   const handleRun = async () => {
-    if (!ENABLE_VISUAL) return;
+    if (nodes.length === 0) {
+      setIssues([{ type: 'no_nodes', message: 'No nodes to execute' }]);
+      return;
+    }
+
     const ids = new Set(nodes.map(n => n.id));
     const indeg: any = {}; const outdeg: any = {};
     nodes.forEach(n => { indeg[n.id] = 0; outdeg[n.id] = 0; });
     const errs: any[] = [];
     edges.forEach(e => { if (!ids.has(e.from) || !ids.has(e.to)) errs.push({ type: 'invalid_edge', from: e.from, to: e.to }); else { outdeg[e.from] = (outdeg[e.from] || 0) + 1; indeg[e.to] = (indeg[e.to] || 0) + 1; } });
-    nodes.forEach(n => { if ((indeg[n.id] || 0) === 0 && (outdeg[n.id] || 0) === 0) errs.push({ type: 'isolated', id: n.id }); });
+    nodes.forEach(n => { if ((indeg[n.id] || 0) === 0 && (outdeg[n.id] || 0) === 0 && nodes.length > 1) errs.push({ type: 'isolated', id: n.id }); });
     const color: any = {}; nodes.forEach(n => color[n.id] = 0);
     let hasCycle = false;
     const adj: any = {}; nodes.forEach(n => adj[n.id] = []);
@@ -135,9 +142,15 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (hasCycle) errs.push({ type: 'cycle' });
     setIssues(errs);
     if (errs.length > 0) return;
-    try { await handlePublish(); } catch {}
-    try { window.dispatchEvent(new Event('automation:show')); } catch {}
-    try { window.dispatchEvent(new Event('automation:start')); } catch {}
+    
+    try { 
+      await handlePublish();
+      window.dispatchEvent(new CustomEvent('automation:show'));
+      const sessionId = `workflow_${Date.now()}`;
+      window.dispatchEvent(new CustomEvent('automation:start', { detail: { sessionId } }));
+    } catch (e) {
+      console.error('Failed to run workflow:', e);
+    }
   };
 
   useEffect(() => {
@@ -218,13 +231,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   };
 
   const handleAddNode = (type: string) => {
-    if (!ENABLE_VISUAL) return;
     const id = `${type}_${nodeCounter + 1}`;
-    const title = type;
+    const titleMap: any = {
+      phase: 'New Phase',
+      tool: 'Tool Node',
+      condition: 'Condition Node',
+      guardrail: 'Guardrail Node',
+      loop: 'Loop Node'
+    };
+    const title = titleMap[type] || type;
     const newNode: any = { id, type, title, subtitle: '', items: [], data: {} };
     setNodes(prev => [...prev, newNode]);
     setNodeCounter(prev => prev + 1);
-    setNodePositions(prev => ({ ...prev, [id]: { x: 80 + Object.keys(prev).length * 40, y: 80 + Object.keys(prev).length * 20 } }));
+    const existingCount = Object.keys(nodePositions).length;
+    const col = existingCount % 4;
+    const row = Math.floor(existingCount / 4);
+    setNodePositions(prev => ({ ...prev, [id]: { x: 40 + col * 320, y: 40 + row * 260 } }));
   };
 
   const handleDuplicateNode = (id: string) => {
@@ -313,8 +335,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         <div className="flex items-center justify-between p-4 bg-white border-b">
           <h2 className="text-xl font-semibold">Workflow Canvas</h2>
           <div className="flex items-center gap-2">
-            {ENABLE_VISUAL && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 <button onClick={() => handleAddNode('phase')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Phase</button>
                 <button onClick={() => handleAddNode('tool')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Tool</button>
                 <button onClick={() => handleAddNode('condition')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Condition</button>
@@ -326,9 +347,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><UploadCloud className="w-4 h-4" />Import</button>
                 <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={onFileChange} />
               </div>
-            )}
-            {ENABLE_VISUAL && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 <input value={workflowName} onChange={e => setWorkflowName(e.target.value)} placeholder="Workflow name" className="px-3 py-2 rounded-md border text-sm" />
                 <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="px-2 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800"><ZoomOut className="w-4 h-4" /></button>
                 <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="px-2 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800"><ZoomIn className="w-4 h-4" /></button>
@@ -336,8 +355,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 <button onClick={copyDSL} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800">Copy DSL</button>
                 <button onClick={validateGraph} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Validate</button>
               </div>
-            )}
-            {ENABLE_VISUAL && (
+            <div className="flex items-center gap-2">
               <button
                 onClick={handleRun}
                 className="flex items-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
@@ -345,8 +363,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 <Play className="w-4 h-4" />
                 Run
               </button>
-            )}
-            {ENABLE_VISUAL && (
+            </div>
               <button
                 onClick={handlePublish}
                 disabled={publishing}
@@ -355,7 +372,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 {publishedWorkflowId ? <Check className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
                 {publishedWorkflowId ? `Published ${publishedWorkflowId.slice(0,8)}...` : 'Publish'}
               </button>
-            )}
             <button
               onClick={onToggleCanvas}
               className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors"
@@ -376,8 +392,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           onMouseUp={handleCanvasMouseUp}
           onWheel={handleWheel}
         >
-          {ENABLE_VISUAL ? (
-            <>
+          <>
               <div className="relative" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 3000, height: 2000 }}>
                 {edges.length > 0 && (
                   <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -462,33 +477,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 </div>
               )}
             </>
-          ) : (
-            phases.map((phase, index) => (
-              <div
-                key={index}
-                draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragEnd={handleDragEnd}
-                className="absolute cursor-move max-w-md"
-                style={{
-                  left: positions[index]?.x || index * 320 + 20,
-                  top: positions[index]?.y || Math.floor(index / 3) * 300 + 20,
-                }}
-              >
-                <div className="bg-white shadow-lg rounded-lg p-2">
-                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-t-md">
-                    <Move className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Drag to reposition</span>
-                  </div>
-                  <PhaseCard phase={phase} />
-                </div>
-              </div>
-            ))
-          )}
         </div>
 
-        {ENABLE_VISUAL && (
-          <div className={`fixed inset-0 z-50 ${showEditor ? '' : 'hidden'}`}>
+        <div className={`fixed inset-0 z-50 ${showEditor ? '' : 'hidden'}`}>
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowEditor(false)}></div>
             <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
               <div className="p-4 border-b flex items-center justify-between">
@@ -529,7 +520,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               </div>
             </div>
           </div>
-        )}
       </div>
     );
   }
@@ -539,8 +529,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Workflow Progress</h2>
         <div className="flex items-center gap-2">
-          {ENABLE_VISUAL && (
-            <button
+          <button
               onClick={handlePublish}
               disabled={publishing}
               className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors ${publishing ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
@@ -548,7 +537,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               {publishedWorkflowId ? <Check className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
               {publishedWorkflowId ? `Published ${publishedWorkflowId.slice(0,8)}...` : 'Publish'}
             </button>
-          )}
           <button
             onClick={onToggleCanvas}
             className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors"

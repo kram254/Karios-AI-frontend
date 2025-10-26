@@ -17,7 +17,6 @@ import AgentConfigDashboard from './components/dashboard/AgentConfigDashboard';
 import { KnowledgeManagement } from './pages/KnowledgeManagement';
 import { UserManagement } from './pages/UserManagement';
 import { UserProfile } from './pages/UserProfile';
-import { Login } from './pages/Login';
 import AutonomousTasksPage from './pages/AutonomousTasksPage';
 import BuilderStudio from './pages/BuilderStudio';
 import { PrivateRoute } from './components/auth/PrivateRoute';
@@ -87,7 +86,7 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTaskMode, setIsTaskMode] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { currentChat } = useChat();
   const location = useLocation();
 
@@ -128,10 +127,6 @@ function App() {
   };
 
   // Check if user has permission to access route
-  const canAccessRoute = (requiredRoles: UserRole[]) => {
-    if (!user) return false;
-    return requiredRoles.includes(user.role);
-  };
 
   // Commented out login requirement to allow direct access to all features
   // if (!isAuthenticated && location.pathname !== '/login') {
@@ -266,6 +261,7 @@ function App() {
               onClose={() => setIsSettingsOpen(false)}
             />
           )}
+          <WebAutomationIntegration />
         </div>
         <ProductionDebugConsole />
       </ThemeProvider>

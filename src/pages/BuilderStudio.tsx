@@ -35,7 +35,7 @@ export default function BuilderStudio() {
   const [currentTab, setCurrentTab] = useState(0);
   const [showAgentWizard, setShowAgentWizard] = useState(false);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
   };
 
@@ -143,11 +143,31 @@ export default function BuilderStudio() {
         </TabPanel>
 
         <TabPanel value={currentTab} index={1}>
-          <Box sx={{ height: '100%', bgcolor: '#0A0A0A' }}>
+          <Box sx={{ height: '100%', bgcolor: '#0A0A0A', position: 'relative' }}>
             <WorkflowCanvas 
               phases={[]}
               isCanvasMode={true}
+              onToggleCanvas={() => {}}
             />
+            {currentTab === 1 && (
+              <Box sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+                pointerEvents: 'none',
+                opacity: 0.3,
+                zIndex: 0
+              }}>
+                <Typography variant="h5" sx={{ color: 'white', mb: 1 }}>
+                  Drag and drop nodes to build your workflow
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#888' }}>
+                  Use the toolbar above to add nodes, connect them, and create automation flows
+                </Typography>
+              </Box>
+            )}
           </Box>
         </TabPanel>
 

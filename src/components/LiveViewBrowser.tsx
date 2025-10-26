@@ -6,9 +6,7 @@ import {
   Button,
   Alert,
   Chip,
-  LinearProgress,
-  Menu,
-  MenuItem
+  LinearProgress
 } from '@mui/material';
 import {
   Fullscreen,
@@ -18,9 +16,7 @@ import {
   VisibilityOff,
   PlayArrow,
   Stop,
-  Screenshot,
-  Settings,
-  Pause
+  Screenshot
 } from '@mui/icons-material';
 import { sandboxService, type SandboxSession, type ExecutionResult } from '../services/sandboxService';
 
@@ -43,14 +39,13 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [isRecording, setIsRecording] = useState(false);
+  const [isRecording] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<'idle' | 'connecting' | 'active' | 'connected' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [currentSession, setCurrentSession] = useState<SandboxSession | null>(null);
   const [automationType] = useState<string>('hybrid');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null);
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [, setExecutionResult] = useState<ExecutionResult | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -59,8 +54,7 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
       setSessionStatus('connecting');
       setConnectionError(null);
     } else if (!liveViewUrl && sessionId) {
-      setSessionStatus('error');
-      setConnectionError('Live View URL not available');
+      setSessionStatus('active');
     } else {
       setSessionStatus('idle');
     }
@@ -76,6 +70,7 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
     try {
       setIsCreatingSession(true);
       setConnectionError(null);
+      setSessionStatus('connecting');
       
       const session = await sandboxService.createSession({
         automation_type: automationType,
@@ -83,18 +78,28 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
         proxy_enabled: false
       });
 
-      setCurrentSession(session);
-      setSessionStatus('active');
-      
-      if (onSessionUpdate && session.live_view_url) {
-        onSessionUpdate(session.session_id, session.live_view_url);
+      if (session && session.session_id) {
+        setCurrentSession(session);
+        setSessionStatus('active');
+        
+        if (onSessionUpdate) {
+          onSessionUpdate(session.session_id, session.live_view_url || '');
+        }
+        
+        window.dispatchEvent(new CustomEvent('automation:session-started', {
+          detail: { sessionId: session.session_id, liveViewUrl: session.live_view_url }
+        }));
+      } else {
+        throw new Error('Invalid session response');
       }
       
     } catch (error) {
+      console.error('Session creation error:', error);
       setSessionStatus('error');
-      setConnectionError(error instanceof Error ? error.message : 'Failed to create session');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create session';
+      setConnectionError(errorMessage);
       if (onError) {
-        onError(error instanceof Error ? error.message : 'Failed to create session');
+        onError(errorMessage);
       }
     } finally {
       setIsCreatingSession(false);
@@ -109,20 +114,30 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
       setCurrentSession(null);
       setSessionStatus('idle');
       setExecutionResult(null);
+      setConnectionError(null);
       
       if (onSessionUpdate) {
         onSessionUpdate('', '');
       }
+
+      window.dispatchEvent(new CustomEvent('automation:session-ended', {
+        detail: { sessionId: currentSession.session_id }
+      }));
       
     } catch (error) {
       console.error('Failed to terminate session:', error);
+      setConnectionError('Failed to terminate session');
     }
   };
 
   const handleTestWorkflow = async () => {
-    if (!currentSession) return;
+    if (!currentSession) {
+      setConnectionError('No active session');
+      return;
+    }
     
     try {
+      setConnectionError(null);
       const testSteps = sandboxService.createWorkflowFromGoal('Take a screenshot of the current page');
       
       const result = await sandboxService.executeWorkflow({
@@ -131,12 +146,21 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
         execution_strategy: 'adaptive'
       });
       
-      setExecutionResult(result);
+      if (result) {
+        setExecutionResult(result);
+        if (result.screenshots && result.screenshots.length > 0) {
+          window.dispatchEvent(new CustomEvent('automation:screenshot', {
+            detail: { screenshot: result.screenshots[0].screenshot }
+          }));
+        }
+      }
       
     } catch (error) {
       console.error('Failed to execute test workflow:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to execute test workflow';
+      setConnectionError(errorMessage);
       if (onError) {
-        onError(error instanceof Error ? error.message : 'Failed to execute test workflow');
+        onError(errorMessage);
       }
     }
   };
@@ -170,13 +194,6 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
     setIsVisible(!isVisible);
   };
 
-  const handleRecordingToggle = () => {
-    setIsRecording(!isRecording);
-    if (onSessionUpdate && sessionId) {
-      onSessionUpdate(sessionId, liveViewUrl || '');
-    }
-  };
-
   const handleTakeScreenshot = async () => {
     if (!currentSession) return;
     try {
@@ -186,13 +203,6 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
     }
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
-  };
 
   const handleIframeLoad = () => {
     setConnectionError(null);
@@ -484,41 +494,6 @@ export const LiveViewBrowser: React.FC<LiveViewBrowserProps> = ({
         </Box>
       )}
 
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            bgcolor: 'rgba(26,26,26,0.95)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            '& .MuiMenuItem-root': {
-              color: 'rgba(255,255,255,0.8)',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.05)'
-              }
-            }
-          }
-        }}
-      >
-        <MenuItem onClick={handleMenuClose}>
-          <Settings fontSize="small" sx={{ mr: 1 }} />
-          Session Settings
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <PlayArrow fontSize="small" sx={{ mr: 1 }} />
-          Resume Automation
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <Pause fontSize="small" sx={{ mr: 1 }} />
-          Pause Automation
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <Stop fontSize="small" sx={{ mr: 1 }} />
-          Stop Session
-        </MenuItem>
-      </Menu>
 
       <style>
         {`

@@ -703,7 +703,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 </div>
               )}
             </>
-        </div>
+          </div>
         </div>
 
         <div className={`fixed inset-0 z-50 ${showEditor ? '' : 'hidden'}`}>
@@ -758,21 +758,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             </div>
           </div>
         
-        <TemplateSelector
-          isOpen={showTemplateSelector}
-          onClose={() => setShowTemplateSelector(false)}
-          onSelectTemplate={loadTemplate}
-        />
-        
-        {currentExecution && (
-          <ExecutionViewer
-            executionId={currentExecution.id}
-            workflowName={currentExecution.name}
-            onClose={() => setCurrentExecution(null)}
+          <TemplateSelector
+            isOpen={showTemplateSelector}
+            onClose={() => setShowTemplateSelector(false)}
+            onSelectTemplate={loadTemplate}
           />
-        )}
+          
+          {currentExecution && (
+            <ExecutionViewer
+              executionId={currentExecution.id}
+              workflowName={currentExecution.name}
+              onClose={() => setCurrentExecution(null)}
+            />
+          )}
+        </div>
       </div>
-  );
+    );
   }
 
   return (

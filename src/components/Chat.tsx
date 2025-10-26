@@ -16,7 +16,6 @@ import WebAutomationIntegration from "./WebAutomationIntegration";
 import PlanContainer from "./PlanContainer";
 import TaskMessage from "./tasks/TaskMessage";
 import { EnhancedMultiAgentWorkflowCard } from './EnhancedMultiAgentWorkflowCard';
-import { WorkflowDebugPanel } from './WorkflowDebugPanel';
 import KariosBrowser from './GeminiBrowser';
 import multiAgentWebSocketService, { MultiAgentWSMessage } from "../services/multiAgentWebSocket.multi";
 import { workflowMessageQueue } from "../services/workflowMessageQueue";
@@ -2702,9 +2701,6 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
           isVisible={true}
         />
         
-        {activeWorkflowTaskId && (
-          <WorkflowDebugPanel taskId={activeWorkflowTaskId} />
-        )}
         
       </div>
       

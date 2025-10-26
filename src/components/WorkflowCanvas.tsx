@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PhaseCard } from './PhaseCard';
-import { Maximize2, Minimize2, Move, Upload, Check, Plus, Settings, Trash2, Link2, Download, UploadCloud, RotateCcw, Copy, ZoomIn, ZoomOut, Grid, ShieldCheck, Play } from 'lucide-react';
+import { Maximize2, Minimize2, Move, Upload, Check, Plus, Settings, Trash2, Link2, Download, UploadCloud, RotateCcw, Copy, ZoomIn, ZoomOut, Grid, ShieldCheck, Play, Workflow, Layers, Eye } from 'lucide-react';
+import { TemplateSelector } from './workflow/TemplateSelector';
+import { ExecutionViewer } from './workflow/ExecutionViewer';
+import { cleanupOrphanedEdges, removeDuplicateEdges, autoLayoutNodes } from '../utils/edgeCleanup';
+import { validateWorkflow } from '../utils/workflowValidation';
+import { Workflow as WorkflowType } from '../types/workflow.types';
 
 interface WorkflowCanvasProps {
   phases: any[];
@@ -38,6 +43,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const panStartRef = useRef<{ x: number; y: number } | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [issues, setIssues] = useState<any[]>([]);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [currentExecution, setCurrentExecution] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (phases && phases.length > 0) {
@@ -187,6 +194,38 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     panStartRef.current = null;
   };
 
+  const loadTemplate = (template: WorkflowType) => {
+    setNodes(template.nodes.map(n => ({ ...n, title: n.data.label, subtitle: '', items: [], data: n.data || {} })));
+    setEdges(template.edges.map(e => ({ from: e.source || e.from || '', to: e.target || e.to || '' })));
+    setWorkflowName(template.name);
+    const positions = autoLayoutNodes(template.nodes);
+    const posObj: any = {};
+    positions.forEach((pos, id) => { posObj[id] = pos; });
+    setNodePositions(posObj);
+    setShowTemplateSelector(false);
+  };
+
+  const handleRunExecution = async () => {
+    const workflow = {
+      id: publishedWorkflowId || `temp_${Date.now()}`,
+      name: workflowName,
+      nodes,
+      edges: edges.map(e => ({ source: e.from, target: e.to, id: `${e.from}-${e.to}` }))
+    };
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/workflows/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflowId: workflow.id, inputVariables: {} })
+      });
+      const execution = await response.json();
+      setCurrentExecution({ id: execution.id, name: workflowName });
+    } catch (error) {
+      console.error('Failed to execute workflow:', error);
+    }
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey) {
       e.preventDefault();
@@ -332,70 +371,183 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   if (isCanvasMode) {
     return (
       <div className="fixed inset-0 bg-gray-100 z-50">
-        <div className="flex items-center justify-between p-4 bg-white border-b">
-          <h2 className="text-xl font-semibold">Workflow Canvas</h2>
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Workflow className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Workflow Builder</h2>
+              <p className="text-xs text-gray-400">Design your automation workflow</p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowTemplateSelector(true)} className="px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors"><Layers className="w-4 h-4" />Templates</button>
             <div className="flex items-center gap-2">
-                <button onClick={() => handleAddNode('phase')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Phase</button>
-                <button onClick={() => handleAddNode('tool')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Tool</button>
-                <button onClick={() => handleAddNode('condition')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Condition</button>
-                <button onClick={() => handleAddNode('guardrail')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Guardrail</button>
-                <button onClick={() => handleAddNode('loop')} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Plus className="w-4 h-4" />Add Loop</button>
-                <button onClick={() => setConnectMode(v => !v)} className={`px-3 py-2 rounded-md flex items-center gap-2 ${connectMode ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}><Link2 className="w-4 h-4" />{connectMode ? 'Connecting' : 'Connect'}</button>
-                <button onClick={resetLayout} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><RotateCcw className="w-4 h-4" />Reset</button>
-                <button onClick={exportDSL} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><Download className="w-4 h-4" />Export</button>
-                <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><UploadCloud className="w-4 h-4" />Import</button>
+                <button onClick={exportDSL} className="px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors"><Download className="w-4 h-4" />Export</button>
+                <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors"><UploadCloud className="w-4 h-4" />Import</button>
                 <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={onFileChange} />
               </div>
             <div className="flex items-center gap-2">
-                <input value={workflowName} onChange={e => setWorkflowName(e.target.value)} placeholder="Workflow name" className="px-3 py-2 rounded-md border text-sm" />
-                <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="px-2 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800"><ZoomOut className="w-4 h-4" /></button>
-                <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="px-2 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800"><ZoomIn className="w-4 h-4" /></button>
-                <button onClick={() => setSnapToGrid(s => !s)} className={`px-3 py-2 rounded-md flex items-center gap-2 ${snapToGrid ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}><Grid className="w-4 h-4" />{snapToGrid ? 'Snap' : 'Free'}</button>
-                <button onClick={copyDSL} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800">Copy DSL</button>
-                <button onClick={validateGraph} className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Validate</button>
+                <input value={workflowName} onChange={e => setWorkflowName(e.target.value)} placeholder="Workflow name" className="px-3 py-2 rounded-md bg-gray-800 border border-gray-600 text-white placeholder-gray-400 text-sm focus:border-indigo-500 focus:outline-none" />
+                <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="px-2 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors"><ZoomOut className="w-4 h-4" /></button>
+                <span className="text-xs text-gray-400">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="px-2 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors"><ZoomIn className="w-4 h-4" /></button>
+                <button onClick={() => setSnapToGrid(s => !s)} className={`px-3 py-2 rounded-md flex items-center gap-2 transition-colors ${snapToGrid ? 'bg-indigo-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'}`}><Grid className="w-4 h-4" />{snapToGrid ? 'Snap' : 'Free'}</button>
+                <button onClick={validateGraph} className="px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors"><ShieldCheck className="w-4 h-4" />Validate</button>
               </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRun}
-                className="flex items-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                className="flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600 transition-all shadow-lg shadow-green-500/50"
               >
                 <Play className="w-4 h-4" />
                 Run
               </button>
-            </div>
               <button
                 onClick={handlePublish}
                 disabled={publishing}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${publishing ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all shadow-lg ${publishing ? 'bg-gray-600 text-gray-400' : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-blue-500/50'}`}
               >
                 {publishedWorkflowId ? <Check className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-                {publishedWorkflowId ? `Published ${publishedWorkflowId.slice(0,8)}...` : 'Publish'}
+                {publishedWorkflowId ? 'Published' : 'Publish'}
               </button>
             <button
               onClick={onToggleCanvas}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
             >
               <Minimize2 className="w-4 h-4" />
-              Exit Canvas
+              Exit
             </button>
           </div>
         </div>
         
-        <div
+        <div className="flex h-full">
+          <div className="w-64 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Nodes
+                </h3>
+                <div className="space-y-2">
+                  <button onClick={() => handleAddNode('phase')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-purple-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">P</span>
+                    </div>
+                    Phase Node
+                  </button>
+                  <button onClick={() => handleAddNode('tool')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-blue-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">T</span>
+                    </div>
+                    Tool Node
+                  </button>
+                  <button onClick={() => handleAddNode('condition')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-yellow-600 to-yellow-500 text-white hover:from-yellow-700 hover:to-yellow-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-yellow-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">C</span>
+                    </div>
+                    Condition
+                  </button>
+                  <button onClick={() => handleAddNode('guardrail')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-700 hover:to-red-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-red-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">G</span>
+                    </div>
+                    Guardrail
+                  </button>
+                  <button onClick={() => handleAddNode('loop')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-green-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">L</span>
+                    </div>
+                    Loop Node
+                  </button>
+                  <button onClick={() => handleAddNode('agent')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-cyan-600 to-cyan-500 text-white hover:from-cyan-700 hover:to-cyan-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-cyan-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">A</span>
+                    </div>
+                    Agent Node
+                  </button>
+                  <button onClick={() => handleAddNode('mcp')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-orange-600 to-orange-500 text-white hover:from-orange-700 hover:to-orange-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-orange-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">M</span>
+                    </div>
+                    MCP Tools
+                  </button>
+                  <button onClick={() => handleAddNode('transform')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-pink-600 to-pink-500 text-white hover:from-pink-700 hover:to-pink-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-pink-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">T</span>
+                    </div>
+                    Transform
+                  </button>
+                  <button onClick={() => handleAddNode('user-approval')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-700 hover:to-teal-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-teal-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">U</span>
+                    </div>
+                    User Approval
+                  </button>
+                  <button onClick={() => handleAddNode('set-state')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:from-amber-700 hover:to-amber-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-amber-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">S</span>
+                    </div>
+                    Set State
+                  </button>
+                  <button onClick={() => handleAddNode('note')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-slate-600 to-slate-500 text-white hover:from-slate-700 hover:to-slate-600 flex items-center gap-2 transition-all text-sm">
+                    <div className="w-8 h-8 rounded bg-slate-400 flex items-center justify-center">
+                      <span className="text-xs font-bold">N</span>
+                    </div>
+                    Note
+                  </button>
+                </div>
+              </div>
+              <div className="border-t border-gray-700 pt-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-3">Canvas Tools</h3>
+                <div className="space-y-2">
+                  <button onClick={() => setConnectMode(v => !v)} className={`w-full px-3 py-2 rounded-md flex items-center gap-2 transition-all text-sm ${connectMode ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                    <Link2 className="w-4 h-4" />
+                    {connectMode ? 'Connecting...' : 'Connect Nodes'}
+                  </button>
+                  <button onClick={resetLayout} className="w-full px-3 py-2 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-2 transition-all text-sm">
+                    <RotateCcw className="w-4 h-4" />
+                    Reset Layout
+                  </button>
+                </div>
+              </div>
+              {nodes.length > 0 && (
+                <div className="border-t border-gray-700 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-2">Workflow Stats</h3>
+                  <div className="space-y-1 text-xs text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Nodes:</span>
+                      <span className="text-white font-semibold">{nodes.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Connections:</span>
+                      <span className="text-white font-semibold">{edges.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Issues:</span>
+                      <span className={issues.length > 0 ? 'text-red-400 font-semibold' : 'text-green-400 font-semibold'}>{issues.length}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div
           ref={canvasRef}
-          className="relative w-full h-full overflow-auto p-8"
+          className="relative flex-1 overflow-auto bg-gray-950"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onWheel={handleWheel}
+          style={{ backgroundImage: 'radial-gradient(circle, #1f2937 1px, transparent 1px)', backgroundSize: '20px 20px' }}
         >
           <>
-              <div className="relative" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 3000, height: 2000 }}>
+              <div className="relative p-8" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 3000, height: 2000 }}>
                 {edges.length > 0 && (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 0 6px rgba(99, 102, 241, 0.3))' }}>
                     {edges.map((e, i) => {
                       const s = nodePositions[e.from] || { x: i * 10 + 100, y: i * 10 + 100 };
                       const t = nodePositions[e.to] || { x: i * 10 + 420, y: i * 10 + 160 };
@@ -406,52 +558,126 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                       const cx = (x1 + x2) / 2;
                       return (
                         <g key={i}>
-                          <path d={`M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`} stroke="#6366f1" strokeWidth="2" fill="none" />
+                          <defs>
+                            <linearGradient id={`grad-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" style={{ stopColor: '#6366f1', stopOpacity: 1 }} />
+                              <stop offset="100%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
+                            </linearGradient>
+                            <marker id={`arrow-${i}`} markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                              <path d="M0,0 L0,6 L9,3 z" fill="url(#grad-${i})" />
+                            </marker>
+                          </defs>
+                          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="url(#grad-${i})" strokeWidth="3" markerEnd={`url(#arrow-${i})`} strokeLinecap="round" />
                         </g>
                       );
                     })}
                   </svg>
                 )}
-                {nodes.map((node, index) => (
+                {nodes.map((node, index) => {
+                  const getNodeColor = (type: string) => {
+                    switch(type) {
+                      case 'phase': return 'from-purple-500 to-purple-600';
+                      case 'tool': return 'from-blue-500 to-blue-600';
+                      case 'condition': return 'from-yellow-500 to-yellow-600';
+                      case 'guardrail': return 'from-red-500 to-red-600';
+                      case 'loop': return 'from-green-500 to-green-600';
+                      case 'agent': return 'from-cyan-500 to-cyan-600';
+                      case 'mcp': return 'from-orange-500 to-orange-600';
+                      case 'transform': return 'from-pink-500 to-pink-600';
+                      case 'user-approval': return 'from-teal-500 to-teal-600';
+                      case 'set-state': return 'from-amber-500 to-amber-600';
+                      case 'note': return 'from-slate-500 to-slate-600';
+                      case 'if-else': return 'from-yellow-500 to-yellow-600';
+                      case 'while': return 'from-green-500 to-green-600';
+                      case 'start': return 'from-emerald-500 to-emerald-600';
+                      case 'end': return 'from-rose-500 to-rose-600';
+                      default: return 'from-gray-500 to-gray-600';
+                    }
+                  };
+                  const getNodeIcon = (type: string) => {
+                    switch(type) {
+                      case 'phase': return 'P';
+                      case 'tool': return 'T';
+                      case 'condition': return 'C';
+                      case 'guardrail': return 'G';
+                      case 'loop': return 'L';
+                      case 'agent': return 'A';
+                      case 'mcp': return 'M';
+                      case 'transform': return 'T';
+                      case 'user-approval': return 'U';
+                      case 'set-state': return 'S';
+                      case 'note': return 'N';
+                      case 'if-else': return '?';
+                      case 'while': return 'W';
+                      case 'start': return '▶';
+                      case 'end': return '■';
+                      default: return '?';
+                    }
+                  };
+                  return (
                   <div
                     key={node.id}
                     draggable
                     onDragStart={(e) => handleNodeDragStart(e, node.id)}
                     onDragEnd={() => setNodeDraggedId(null)}
                     onClick={() => setSelectedNodeId(node.id)}
-                    className={`absolute max-w-md ${selectedNodeId === node.id ? 'ring-2 ring-indigo-500 rounded-lg' : ''}`}
+                    className={`absolute w-80 cursor-move transition-all ${selectedNodeId === node.id ? 'ring-4 ring-indigo-400 shadow-2xl scale-105' : 'hover:shadow-xl'}`}
                     style={{
                       left: nodePositions[node.id]?.x || index * 320 + 20,
                       top: nodePositions[node.id]?.y || Math.floor(index / 3) * 260 + 20,
                     }}
                   >
-                    <div className="bg-white shadow-lg rounded-lg">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-t-md">
+                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 shadow-2xl rounded-xl border border-gray-700 overflow-hidden">
+                      <div className={`flex items-center justify-between p-3 bg-gradient-to-r ${getNodeColor(node.type)}`}>
                         <div className="flex items-center gap-2">
-                          <Move className="w-4 h-4 text-gray-400" />
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">{node.type}</span>
+                          <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center backdrop-blur">
+                            <span className="text-xs font-bold text-white">{getNodeIcon(node.type)}</span>
+                          </div>
+                          <Move className="w-4 h-4 text-white/80" />
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white font-semibold">{node.type}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => openEditor(node.id)} className="p-1 rounded hover:bg-gray-200 text-gray-700"><Settings className="w-4 h-4" /></button>
-                          <button onClick={() => handleDuplicateNode(node.id)} className="p-1 rounded hover:bg-gray-200 text-gray-700"><Copy className="w-4 h-4" /></button>
-                          <button onClick={() => beginConnect(node.id)} className={`p-1 rounded ${connectMode ? 'bg-indigo-600 text-white' : 'hover:bg-gray-200 text-gray-700'}`}><Link2 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteNode(node.id)} className="p-1 rounded hover:bg-red-100 text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); openEditor(node.id); }} className="p-1.5 rounded hover:bg-white/20 text-white transition-colors"><Settings className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDuplicateNode(node.id); }} className="p-1.5 rounded hover:bg-white/20 text-white transition-colors"><Copy className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); beginConnect(node.id); }} className={`p-1.5 rounded transition-colors ${connectMode ? 'bg-white text-indigo-600' : 'hover:bg-white/20 text-white'}`}><Link2 className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteNode(node.id); }} className="p-1.5 rounded hover:bg-red-500 text-white transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-                      <div className="p-2">
+                      <div className="p-4 bg-gray-800">
                         {node.type === 'phase' ? (
-                          <PhaseCard phase={{ title: node.title, subtitle: node.subtitle, items: node.items }} />
+                          <div className="space-y-2">
+                            <div className="text-base font-bold text-white">{node.title}</div>
+                            {node.subtitle && <div className="text-sm text-gray-400">{node.subtitle}</div>}
+                            {node.items && node.items.length > 0 && (
+                              <div className="mt-3 space-y-1">
+                                {node.items.slice(0, 3).map((item: any, idx: number) => (
+                                  <div key={idx} className="text-xs text-gray-300 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                                    {item.title || item}
+                                  </div>
+                                ))}
+                                {node.items.length > 3 && (
+                                  <div className="text-xs text-gray-500 italic">+{node.items.length - 3} more</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <div className="p-3">
-                            <div className="text-sm font-semibold text-gray-800">{node.title}</div>
-                            <div className="text-xs text-gray-500">{node.subtitle}</div>
-                            <div className="mt-2 text-xs text-gray-600">{JSON.stringify(node.data)}</div>
+                          <div className="space-y-2">
+                            <div className="text-base font-bold text-white">{node.title}</div>
+                            {node.subtitle && <div className="text-sm text-gray-400">{node.subtitle}</div>}
+                            {node.data && Object.keys(node.data).length > 0 && (
+                              <div className="mt-2 p-2 bg-gray-900 rounded text-xs text-gray-300 font-mono">
+                                {JSON.stringify(node.data, null, 2).slice(0, 100)}{JSON.stringify(node.data).length > 100 ? '...' : ''}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               {edges.length > 0 && (
                 <div className="absolute bottom-4 right-4 bg-white border rounded-md shadow p-2 max-w-md">
@@ -478,6 +704,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               )}
             </>
         </div>
+        </div>
 
         <div className={`fixed inset-0 z-50 ${showEditor ? '' : 'hidden'}`}>
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowEditor(false)}></div>
@@ -503,6 +730,16 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                     <option value="condition">condition</option>
                     <option value="guardrail">guardrail</option>
                     <option value="loop">loop</option>
+                    <option value="agent">agent</option>
+                    <option value="mcp">mcp</option>
+                    <option value="transform">transform</option>
+                    <option value="user-approval">user-approval</option>
+                    <option value="set-state">set-state</option>
+                    <option value="note">note</option>
+                    <option value="if-else">if-else</option>
+                    <option value="while">while</option>
+                    <option value="start">start</option>
+                    <option value="end">end</option>
                   </select>
                 </div>
                 <div>
@@ -520,8 +757,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               </div>
             </div>
           </div>
+        
+        <TemplateSelector
+          isOpen={showTemplateSelector}
+          onClose={() => setShowTemplateSelector(false)}
+          onSelectTemplate={loadTemplate}
+        />
+        
+        {currentExecution && (
+          <ExecutionViewer
+            executionId={currentExecution.id}
+            workflowName={currentExecution.name}
+            onClose={() => setCurrentExecution(null)}
+          />
+        )}
       </div>
-    );
+  );
   }
 
   return (

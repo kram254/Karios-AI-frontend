@@ -448,7 +448,134 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         </div>
         
         <div className="flex h-full overflow-hidden">
-          <div className="w-72 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto flex flex-col order-1">
+          <div
+          ref={canvasRef}
+          className={`relative flex-1 overflow-hidden ${canvasBackground === 'plain' ? 'bg-gray-950' : 'bg-gray-900'}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onWheel={handleWheel}
+          style={{
+            backgroundImage: canvasBackground === 'dots' 
+              ? 'radial-gradient(circle, #374151 1.5px, transparent 1.5px)' 
+              : canvasBackground === 'grid'
+              ? 'linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px)'
+              : 'none',
+            backgroundSize: canvasBackground === 'dots' ? '24px 24px' : canvasBackground === 'grid' ? '24px 24px' : 'auto',
+            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`
+          }}
+        >
+          <>
+              <div className="relative p-8" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 10000, height: 10000 }}>
+                {edges.length > 0 && (
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 0 6px rgba(99, 102, 241, 0.3))' }}>
+                    {edges.map((e, i) => {
+                      const s = nodePositions[e.from] || { x: i * 10 + 100, y: i * 10 + 100 };
+                      const t = nodePositions[e.to] || { x: i * 10 + 420, y: i * 10 + 160 };
+                      const x1 = (s.x || 0) + 150;
+                      const y1 = (s.y || 0) + 50;
+                      const x2 = (t.x || 0) + 150;
+                      const y2 = (t.y || 0) + 50;
+                      return (
+                        <g key={i}>
+                          <defs>
+                            <marker id={`arrowhead-${i}`} markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                              <polygon points="0 0, 10 3, 0 6" fill="#6366f1" />
+                            </marker>
+                          </defs>
+                          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#6366f1" strokeWidth="2" markerEnd={`url(#arrowhead-${i})`} />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                )}
+                {nodes.map(n => (
+                  <div key={n.id} draggable onDragStart={(e) => handleNodeDragStart(e, n.id)} onClick={() => openEditor(n.id)} style={{ position: 'absolute', left: (nodePositions[n.id]?.x || 0) + 'px', top: (nodePositions[n.id]?.y || 0) + 'px', cursor: 'grab' }} className={`w-80 rounded-lg shadow-lg transition-all ${selectedNodeId === n.id ? 'ring-2 ring-indigo-500' : ''}`}>
+                    <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">{n.type.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-white">{n.title}</div>
+                            {n.subtitle && <div className="text-xs text-indigo-100">{n.subtitle}</div>}
+                          </div>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteNode(n.id); }} className="text-white hover:bg-white/20 p-1 rounded"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-800">
+                      {n.type === 'phase' ? (
+                        <div className="space-y-2">
+                          <div className="text-base font-bold text-white">{n.title}</div>
+                          {n.subtitle && <div className="text-sm text-gray-400">{n.subtitle}</div>}
+                          {n.items && n.items.length > 0 && (
+                            <div className="mt-3 space-y-1">
+                              {n.items.slice(0, 3).map((item: any, idx: number) => (
+                                <div key={idx} className="text-xs text-gray-300 flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                                  {item.title || item}
+                                </div>
+                              ))}
+                              {n.items.length > 3 && (
+                                <div className="text-xs text-gray-500 italic">+{n.items.length - 3} more</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="text-base font-bold text-white">{n.title}</div>
+                          {n.subtitle && <div className="text-sm text-gray-400">{n.subtitle}</div>}
+                          {n.data && Object.keys(n.data).length > 0 && (
+                            <div className="mt-2 p-2 bg-gray-900 rounded text-xs text-gray-300 font-mono">
+                              {JSON.stringify(n.data, null, 2).slice(0, 100)}{JSON.stringify(n.data).length > 100 ? '...' : ''}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {edges.length > 0 && (
+                <div className="absolute bottom-4 right-4 bg-white border rounded-md shadow p-2 max-w-md">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">Edges</div>
+                  <div className="flex flex-wrap gap-2">
+                    {edges.map((e, i) => (
+                      <div key={i} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 rounded">
+                        <span>{e.from} → {e.to}</span>
+                        <button onClick={() => removeEdge(i)} className="ml-1 text-red-600">×</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {issues.length > 0 && (
+                <div className="absolute bottom-4 left-4 bg-white border rounded-md shadow p-2 max-w-md">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">Issues</div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {issues.map((it, idx) => (
+                      <div key={idx} className="text-xs text-gray-700">{JSON.stringify(it)}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="absolute top-4 left-4 bg-gray-800/90 backdrop-blur border border-gray-700 rounded-lg shadow-lg px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-gray-400">Zoom:</div>
+                  <div className="text-sm font-semibold text-white">{Math.round(zoom * 100)}%</div>
+                  <div className="h-4 w-px bg-gray-700"></div>
+                  <div className="text-xs text-gray-400">Background:</div>
+                  <div className="text-sm font-semibold text-white capitalize">{canvasBackground}</div>
+                </div>
+              </div>
+            </>
+          </div>
+          <div className="w-72 flex-shrink-0 bg-gray-900 border-l border-gray-700 p-4 overflow-y-auto flex flex-col">
             <div className="flex flex-col h-full space-y-4">
               <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
                 <div>
@@ -611,193 +738,6 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               )}
               </div>
             </div>
-          </div>
-          <div
-          ref={canvasRef}
-          className={`relative flex-1 overflow-hidden order-2 ${canvasBackground === 'plain' ? 'bg-gray-950' : 'bg-gray-900'}`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onWheel={handleWheel}
-          style={{
-            backgroundImage: canvasBackground === 'dots' 
-              ? 'radial-gradient(circle, #374151 1.5px, transparent 1.5px)' 
-              : canvasBackground === 'grid'
-              ? 'linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px)'
-              : 'none',
-            backgroundSize: canvasBackground === 'dots' ? '24px 24px' : canvasBackground === 'grid' ? '24px 24px' : 'auto',
-            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`
-          }}
-        >
-          <>
-              <div className="relative p-8" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 10000, height: 10000 }}>
-                {edges.length > 0 && (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 0 6px rgba(99, 102, 241, 0.3))' }}>
-                    {edges.map((e, i) => {
-                      const s = nodePositions[e.from] || { x: i * 10 + 100, y: i * 10 + 100 };
-                      const t = nodePositions[e.to] || { x: i * 10 + 420, y: i * 10 + 160 };
-                      const x1 = (s.x || 0) + 150;
-                      const y1 = (s.y || 0) + 50;
-                      const x2 = (t.x || 0) + 150;
-                      const y2 = (t.y || 0) + 50;
-                      return (
-                        <g key={i}>
-                          <defs>
-                            <linearGradient id={`grad-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" style={{ stopColor: '#6366f1', stopOpacity: 1 }} />
-                              <stop offset="100%" style={{ stopColor: '#8b5cf6', stopOpacity: 1 }} />
-                            </linearGradient>
-                            <marker id={`arrow-${i}`} markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
-                              <path d="M0,0 L0,6 L9,3 z" fill="url(#grad-${i})" />
-                            </marker>
-                          </defs>
-                          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="url(#grad-${i})" strokeWidth="3" markerEnd={`url(#arrow-${i})`} strokeLinecap="round" />
-                        </g>
-                      );
-                    })}
-                  </svg>
-                )}
-                {nodes.map((node, index) => {
-                  const getNodeColor = (type: string) => {
-                    switch(type) {
-                      case 'phase': return 'from-purple-500 to-purple-600';
-                      case 'tool': return 'from-blue-500 to-blue-600';
-                      case 'condition': return 'from-yellow-500 to-yellow-600';
-                      case 'guardrail': return 'from-red-500 to-red-600';
-                      case 'loop': return 'from-green-500 to-green-600';
-                      case 'agent': return 'from-cyan-500 to-cyan-600';
-                      case 'mcp': return 'from-orange-500 to-orange-600';
-                      case 'transform': return 'from-pink-500 to-pink-600';
-                      case 'user-approval': return 'from-teal-500 to-teal-600';
-                      case 'set-state': return 'from-amber-500 to-amber-600';
-                      case 'note': return 'from-slate-500 to-slate-600';
-                      case 'if-else': return 'from-yellow-500 to-yellow-600';
-                      case 'while': return 'from-green-500 to-green-600';
-                      case 'start': return 'from-emerald-500 to-emerald-600';
-                      case 'end': return 'from-rose-500 to-rose-600';
-                      default: return 'from-gray-500 to-gray-600';
-                    }
-                  };
-                  const getNodeIcon = (type: string) => {
-                    switch(type) {
-                      case 'phase': return 'P';
-                      case 'tool': return 'T';
-                      case 'condition': return 'C';
-                      case 'guardrail': return 'G';
-                      case 'loop': return 'L';
-                      case 'agent': return 'A';
-                      case 'mcp': return 'M';
-                      case 'transform': return 'T';
-                      case 'user-approval': return 'U';
-                      case 'set-state': return 'S';
-                      case 'note': return 'N';
-                      case 'if-else': return '?';
-                      case 'while': return 'W';
-                      case 'start': return '▶';
-                      case 'end': return '■';
-                      default: return '?';
-                    }
-                  };
-                  return (
-                  <div
-                    key={node.id}
-                    draggable
-                    onDragStart={(e) => handleNodeDragStart(e, node.id)}
-                    onDragEnd={() => setNodeDraggedId(null)}
-                    onClick={() => setSelectedNodeId(node.id)}
-                    className={`absolute w-80 cursor-move transition-all ${selectedNodeId === node.id ? 'ring-4 ring-indigo-400 shadow-2xl scale-105' : 'hover:shadow-xl'}`}
-                    style={{
-                      left: nodePositions[node.id]?.x || index * 320 + 20,
-                      top: nodePositions[node.id]?.y || Math.floor(index / 3) * 260 + 20,
-                    }}
-                  >
-                    <div className="bg-gradient-to-br from-gray-800 to-gray-900 shadow-2xl rounded-xl border border-gray-700 overflow-hidden">
-                      <div className={`flex items-center justify-between p-3 bg-gradient-to-r ${getNodeColor(node.type)}`}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center backdrop-blur">
-                            <span className="text-xs font-bold text-white">{getNodeIcon(node.type)}</span>
-                          </div>
-                          <Move className="w-4 h-4 text-white/80" />
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white font-semibold">{node.type}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button onClick={(e) => { e.stopPropagation(); openEditor(node.id); }} className="p-1.5 rounded hover:bg-white/20 text-white transition-colors"><Settings className="w-4 h-4" /></button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDuplicateNode(node.id); }} className="p-1.5 rounded hover:bg-white/20 text-white transition-colors"><Copy className="w-4 h-4" /></button>
-                          <button onClick={(e) => { e.stopPropagation(); beginConnect(node.id); }} className={`p-1.5 rounded transition-colors ${connectMode ? 'bg-white text-indigo-600' : 'hover:bg-white/20 text-white'}`}><Link2 className="w-4 h-4" /></button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDeleteNode(node.id); }} className="p-1.5 rounded hover:bg-red-500 text-white transition-colors"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-gray-800">
-                        {node.type === 'phase' ? (
-                          <div className="space-y-2">
-                            <div className="text-base font-bold text-white">{node.title}</div>
-                            {node.subtitle && <div className="text-sm text-gray-400">{node.subtitle}</div>}
-                            {node.items && node.items.length > 0 && (
-                              <div className="mt-3 space-y-1">
-                                {node.items.slice(0, 3).map((item: any, idx: number) => (
-                                  <div key={idx} className="text-xs text-gray-300 flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-                                    {item.title || item}
-                                  </div>
-                                ))}
-                                {node.items.length > 3 && (
-                                  <div className="text-xs text-gray-500 italic">+{node.items.length - 3} more</div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="text-base font-bold text-white">{node.title}</div>
-                            {node.subtitle && <div className="text-sm text-gray-400">{node.subtitle}</div>}
-                            {node.data && Object.keys(node.data).length > 0 && (
-                              <div className="mt-2 p-2 bg-gray-900 rounded text-xs text-gray-300 font-mono">
-                                {JSON.stringify(node.data, null, 2).slice(0, 100)}{JSON.stringify(node.data).length > 100 ? '...' : ''}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-              {edges.length > 0 && (
-                <div className="absolute bottom-4 right-4 bg-white border rounded-md shadow p-2 max-w-md">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">Edges</div>
-                  <div className="flex flex-wrap gap-2">
-                    {edges.map((e, i) => (
-                      <div key={i} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 rounded">
-                        <span>{e.from} → {e.to}</span>
-                        <button onClick={() => removeEdge(i)} className="ml-1 text-red-600">×</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {issues.length > 0 && (
-                <div className="absolute bottom-4 left-4 bg-white border rounded-md shadow p-2 max-w-md">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">Issues</div>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {issues.map((it, idx) => (
-                      <div key={idx} className="text-xs text-gray-700">{JSON.stringify(it)}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="absolute top-4 left-4 bg-gray-800/90 backdrop-blur border border-gray-700 rounded-lg shadow-lg px-3 py-2">
-                <div className="flex items-center gap-3">
-                  <div className="text-xs text-gray-400">Zoom:</div>
-                  <div className="text-sm font-semibold text-white">{Math.round(zoom * 100)}%</div>
-                  <div className="h-4 w-px bg-gray-700"></div>
-                  <div className="text-xs text-gray-400">Background:</div>
-                  <div className="text-sm font-semibold text-white capitalize">{canvasBackground}</div>
-                </div>
-              </div>
-            </>
           </div>
         </div>
 

@@ -299,17 +299,46 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       case 'execution_started':
         setCurrentStepIndex(0);
         setExecutionProgress(10);
+        setSession(prev => {
+          const next = { ...prev, status: 'running' as const };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
         break;
         
       case 'workflow_completed':
+        console.log('🎯 WORKFLOW_COMPLETED - Received workflow completion event:', data);
         setCurrentStepIndex(data.total_steps || workflowSteps.length);
         setExecutionProgress(100);
+        setSession(prev => {
+          const next = {
+            ...prev,
+            status: 'completed' as const,
+            results: (data.results ?? data.result ?? prev.results),
+            score: (typeof data.score === 'number' ? data.score : (data.results?.score ?? data.result?.score ?? prev.score))
+          };
+          if (onSessionUpdate) onSessionUpdate(next);
+          return next;
+        });
+        
+        const score = (typeof data.score === 'number' ? data.score : (data.results?.score ?? data.result?.score ?? 0));
+        console.log('🎯 WORKFLOW_COMPLETED - Score received:', score);
+        
         setActionOverlay({
-          type: data.overall_success ? 'success' : 'warning',
-          message: `Workflow completed: ${data.successful_steps}/${data.total_steps} steps (${data.success_rate?.toFixed(1)}%)`,
+          type: data.overall_success !== false ? 'success' : 'warning',
+          message: `Workflow completed: ${data.successful_steps || 0}/${data.total_steps || 0} steps (${data.success_rate?.toFixed(1) || score}%)`,
           stepType: 'complete'
         });
         setTimeout(() => setActionOverlay(null), 3000);
+        
+        if (score >= 92) {
+          console.log('🎯 WORKFLOW_COMPLETED - High score detected, auto-minimizing window');
+          if (onClose) {
+            setTimeout(() => {
+              onClose();
+            }, 2000);
+          }
+        }
         break;
         
       case 'status_update':
@@ -421,15 +450,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         updateActionStatus(data.actionId, 'completed');
         break;
         
-      case 'execution_started':
-        setSession(prev => {
-          const next = { ...prev, status: 'running' as const };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
-        });
-        setExecutionProgress(0);
-        break;
-        
       case 'pong':
         console.log('WebSocket heartbeat pong received');
         break;
@@ -491,33 +511,6 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         break;
       case 'quality_improvement_completed':
         console.log('✅ QUALITY_IMPROVEMENT_COMPLETED:', data);
-        // keep running state; finalization handled by workflow_completed
-        break;
-      case 'workflow_completed':
-        console.log('🎯 WORKFLOW_COMPLETED - Received workflow completion event:', data);
-        setSession(prev => {
-          const next = {
-            ...prev,
-            status: 'completed' as const,
-            results: (data.results ?? data.result ?? prev.results),
-            score: (typeof data.score === 'number' ? data.score : (data.results?.score ?? data.result?.score ?? prev.score))
-          };
-          if (onSessionUpdate) onSessionUpdate(next);
-          return next;
-        });
-        setExecutionProgress(100);
-        
-        const score = (typeof data.score === 'number' ? data.score : (data.results?.score ?? data.result?.score ?? 0));
-        console.log('🎯 WORKFLOW_COMPLETED - Score received:', score);
-        
-        if (score >= 92) {
-          console.log('🎯 WORKFLOW_COMPLETED - High score detected, auto-minimizing window');
-          if (onClose) {
-            setTimeout(() => {
-              onClose();
-            }, 2000);
-          }
-        }
         break;
       default:
         console.log('ℹ️ Unrecognized WebSocket message type in Browser:', data?.type, data);

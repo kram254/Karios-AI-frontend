@@ -464,7 +464,10 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               ? 'linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px)'
               : 'none',
             backgroundSize: canvasBackground === 'dots' ? '24px 24px' : canvasBackground === 'grid' ? '24px 24px' : 'auto',
-            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`
+            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`,
+            outline: 'none',
+            border: 'none',
+            boxShadow: 'none'
           }}
         >
           <>

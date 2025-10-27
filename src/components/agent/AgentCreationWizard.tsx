@@ -87,7 +87,7 @@ export default function AgentCreationWizard({
 
     // Function to handle opening the modal
     useEffect(() => {
-        console.log('📋 LOG: Modal open state:', open);
+        console.log('📋 LOG: AgentCreationWizard - Modal open state:', open);
         // Reset the wizard to step 1 whenever it's opened
         if (open) {
             setCurrentStep(1);
@@ -190,7 +190,7 @@ export default function AgentCreationWizard({
     
     // Automatically generate and set system prompt when relevant fields change
     useEffect(() => {
-        console.log('📋 LOG: Generated system prompt for role:', formData.ai_role);
+        console.log('📋 LOG: AgentCreationWizard - Generated system prompt for role:', formData.ai_role);
         // Only generate if we have the necessary data
         if (formData.ai_role) {
             const systemPrompt = generateSystemPrompt(

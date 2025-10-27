@@ -46,7 +46,7 @@ class StateIntegrityMonitor {
   }
 
   runIntegrityCheck(): void {
-    console.log('📋 LOG: [IntegrityMonitor] 🔍 Running integrity check...');
+    console.log('[IntegrityMonitor] 🔍 Running integrity check...');
     this.issues = [];
 
     this.checkOrphanedWorkflows();
@@ -55,10 +55,10 @@ class StateIntegrityMonitor {
     this.checkStateCrossReference();
 
     if (this.issues.length > 0) {
-      console.warn('📋 LOG: [IntegrityMonitor] ⚠️ Found', this.issues.length, 'integrity issues');
+      console.warn('[IntegrityMonitor] ⚠️ Found', this.issues.length, 'integrity issues');
       this.autoFixIssues();
     } else {
-      console.log('✅ LOG: [IntegrityMonitor] ✅ All checks passed');
+      console.log('[IntegrityMonitor] ✅ All checks passed');
     }
   }
 

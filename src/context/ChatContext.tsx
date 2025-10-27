@@ -43,11 +43,16 @@ interface Chat {
   id: string;
   title: string;
   messages: Message[];
-  created_at?: string; // For backend compatibility
-  updated_at?: string; // For backend compatibility
-  agent_id?: string; // Add agent_id to Chat interface
-  language?: string; // Add language property to Chat interface
-  chat_type?: string; // Add chat_type for context engineering
+  created_at?: string;
+  updated_at?: string;
+  agent_id?: string;
+  language?: string;
+  chat_type?: string;
+  is_multi_agent_task?: boolean;
+  task_id?: string;
+  requires_clarification?: boolean;
+  clarification_request?: string;
+  workflow_stage?: string;
 }
 
 export interface SearchResult {
@@ -175,7 +180,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(true);
       console.log('📋 LOG: Calling getChats API endpoint: /api/chat/chats');
       const response = await chatService.getChats();
-      console.log('📋 LOG: Chats loaded:', response.data);
+      console.log('📋 LOG: Chats loaded successfully:', response.data);
       setChats(response.data);
       
       // Don't automatically set the first chat as current to allow welcome screen to show

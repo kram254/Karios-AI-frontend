@@ -173,8 +173,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loadChats = async () => {
     try {
       setLoading(true);
+      console.log('📋 LOG: Calling getChats API endpoint: /api/chat/chats');
       const response = await chatService.getChats();
-      console.log('Chats loaded:', response.data);
+      console.log('📋 LOG: Chats loaded:', response.data);
       setChats(response.data);
       
       // Don't automatically set the first chat as current to allow welcome screen to show

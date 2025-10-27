@@ -42,6 +42,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [issues, setIssues] = useState<any[]>([]);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [currentExecution, setCurrentExecution] = useState<{ id: string; name: string } | null>(null);
+  const [canvasBackground, setCanvasBackground] = useState<'grid' | 'dots' | 'plain'>('dots');
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (phases && phases.length > 0) {
@@ -445,17 +447,15 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           </div>
         </div>
         
-        <div className="flex h-full">
-          <div className="w-64 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Nodes
-                </h3>
-                <div className="mb-3 p-2 bg-gray-800 rounded text-xs text-gray-400">
-                  Drag nodes or use buttons below
-                </div>
+        <div className="flex h-full overflow-hidden">
+          <div className="w-72 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto flex flex-col">
+            <div className="flex flex-col h-full space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Nodes
+                  </h3>
                 <div className="space-y-2">
                   <button onClick={() => handleAddNode('phase')} className="w-full px-3 py-2 rounded-md bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 flex items-center gap-2 transition-all text-sm">
                     <div className="w-8 h-8 rounded bg-purple-400 flex items-center justify-center">
@@ -525,8 +525,13 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   </button>
                 </div>
               </div>
-              <div className="border-t border-gray-700 pt-4">
-                <h3 className="text-sm font-semibold text-gray-300 mb-3">Canvas Tools</h3>
+              <div className="border-t border-gray-700 pt-4 mt-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center justify-between">
+                  <span>Canvas Tools</span>
+                  <button onClick={() => setShowSettings(!showSettings)} className="p-1 rounded hover:bg-gray-800 transition-colors">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </h3>
                 <div className="space-y-2">
                   <button onClick={() => setConnectMode(v => !v)} className={`w-full px-3 py-2 rounded-md flex items-center gap-2 transition-all text-sm ${connectMode ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     <Link2 className="w-4 h-4" />
@@ -561,21 +566,73 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   </div>
                 </div>
               )}
+              {showSettings && (
+                <div className="border-t border-gray-700 pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Canvas Settings</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Background Style</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button onClick={() => setCanvasBackground('dots')} className={`px-2 py-1.5 rounded text-xs ${canvasBackground === 'dots' ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Dots</button>
+                        <button onClick={() => setCanvasBackground('grid')} className={`px-2 py-1.5 rounded text-xs ${canvasBackground === 'grid' ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Grid</button>
+                        <button onClick={() => setCanvasBackground('plain')} className={`px-2 py-1.5 rounded text-xs ${canvasBackground === 'plain' ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>Plain</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Zoom: {Math.round(zoom * 100)}%</label>
+                      <div className="flex gap-2">
+                        <button onClick={() => setZoom(Math.max(0.25, zoom - 0.25))} className="flex-1 px-2 py-1.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700"><ZoomOut className="w-3 h-3 mx-auto" /></button>
+                        <button onClick={() => setZoom(1)} className="flex-1 px-2 py-1.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700">100%</button>
+                        <button onClick={() => setZoom(Math.min(3, zoom + 0.25))} className="flex-1 px-2 py-1.5 rounded text-xs bg-gray-800 text-gray-300 hover:bg-gray-700"><ZoomIn className="w-3 h-3 mx-auto" /></button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 flex items-center justify-between">
+                        <span>Snap to Grid</span>
+                        <button onClick={() => setSnapToGrid(!snapToGrid)} className={`w-10 h-5 rounded-full transition-colors ${snapToGrid ? 'bg-indigo-600' : 'bg-gray-700'} relative`}>
+                          <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${snapToGrid ? 'transform translate-x-5' : ''}`}></div>
+                        </button>
+                      </label>
+                    </div>
+                    <div className="pt-2 border-t border-gray-700 mt-2">
+                      <div className="text-xs text-gray-500 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-400">Ctrl</kbd>
+                          <span>+ Scroll to zoom</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-400">Shift</kbd>
+                          <span>+ Drag to pan</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </div>
             </div>
           </div>
           <div
           ref={canvasRef}
-          className="relative flex-1 overflow-hidden bg-gray-900"
+          className={`relative flex-1 overflow-hidden ${canvasBackground === 'plain' ? 'bg-gray-950' : 'bg-gray-900'}`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onWheel={handleWheel}
-          style={{ backgroundImage: 'radial-gradient(circle, #374151 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+          style={{
+            backgroundImage: canvasBackground === 'dots' 
+              ? 'radial-gradient(circle, #374151 1.5px, transparent 1.5px)' 
+              : canvasBackground === 'grid'
+              ? 'linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px)'
+              : 'none',
+            backgroundSize: canvasBackground === 'dots' ? '24px 24px' : canvasBackground === 'grid' ? '24px 24px' : 'auto',
+            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`
+          }}
         >
           <>
-              <div className="relative p-8" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 3000, height: 2000 }}>
+              <div className="relative p-8" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: 10000, height: 10000 }}>
                 {edges.length > 0 && (
                   <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ filter: 'drop-shadow(0 0 6px rgba(99, 102, 241, 0.3))' }}>
                     {edges.map((e, i) => {
@@ -731,6 +788,15 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   </div>
                 </div>
               )}
+              <div className="absolute top-4 left-4 bg-gray-800/90 backdrop-blur border border-gray-700 rounded-lg shadow-lg px-3 py-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-gray-400">Zoom:</div>
+                  <div className="text-sm font-semibold text-white">{Math.round(zoom * 100)}%</div>
+                  <div className="h-4 w-px bg-gray-700"></div>
+                  <div className="text-xs text-gray-400">Background:</div>
+                  <div className="text-sm font-semibold text-white capitalize">{canvasBackground}</div>
+                </div>
+              </div>
             </>
           </div>
         </div>

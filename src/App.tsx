@@ -261,7 +261,7 @@ function App() {
               onClose={() => setIsSettingsOpen(false)}
             />
           )}
-          <WebAutomationIntegration />
+          <WebAutomationIntegration showButton={false} />
         </div>
         <ProductionDebugConsole />
       </ThemeProvider>

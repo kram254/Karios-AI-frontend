@@ -7,11 +7,13 @@ import PlanContainer from './PlanContainer';
 interface WebAutomationIntegrationProps {
   onAutomationResult?: (result: any) => void;
   isVisible?: boolean;
+  showButton?: boolean;
 }
 
 export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> = ({
   onAutomationResult,
-  isVisible = false
+  isVisible = false,
+  showButton = true
 }) => {
   const BACKEND_URL: string = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
   const HEARTBEAT_INTERVAL_SEC: number = (() => {
@@ -769,10 +771,11 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
   return (
     <>
-      <Button
-        type="button"
-        startIcon={<Web />}
-        onClick={async () => {
+      {showButton && (
+        <Button
+          type="button"
+          startIcon={<Web />}
+          onClick={async () => {
           console.log('WebAutomation button clicked', { isAutomationActive, isOpen, currentSession });
           try { await fetch(`${BACKEND_URL}/api/web-automation/enable`, { method: 'POST' }); } catch {}
           if (!isAutomationActive) {
@@ -812,6 +815,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           />
         )}
       </Button>
+      )}
 
       <Dialog
         open={isOpen}

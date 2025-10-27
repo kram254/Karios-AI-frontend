@@ -448,7 +448,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         </div>
         
         <div className="flex h-full overflow-hidden">
-          <div className="w-72 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto flex flex-col">
+          <div className="w-72 flex-shrink-0 bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto flex flex-col order-1">
             <div className="flex flex-col h-full space-y-4">
               <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
                 <div>
@@ -614,7 +614,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           </div>
           <div
           ref={canvasRef}
-          className={`relative flex-1 overflow-hidden ${canvasBackground === 'plain' ? 'bg-gray-950' : 'bg-gray-900'}`}
+          className={`relative flex-1 overflow-hidden order-2 ${canvasBackground === 'plain' ? 'bg-gray-950' : 'bg-gray-900'}`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onMouseDown={handleCanvasMouseDown}

@@ -87,7 +87,7 @@ export default function AgentCreationWizard({
 
     // Function to handle opening the modal
     useEffect(() => {
-        console.log('📋 LOG: AgentCreationWizard - Modal open state:', open);
+        console.log('Modal open state:', open);
         // Reset the wizard to step 1 whenever it's opened
         if (open) {
             setCurrentStep(1);
@@ -130,10 +130,6 @@ export default function AgentCreationWizard({
     
     // Function to handle submit
     const handleSubmit = () => {
-        console.log('📋 LOG: AgentCreationWizard - handleSubmit called');
-        console.log('📋 LOG: AgentCreationWizard - currentStep:', currentStep);
-        console.log('📋 LOG: AgentCreationWizard - formData:', formData);
-        console.log('📋 LOG: AgentCreationWizard - selectedKnowledgeIds:', selectedKnowledgeIds);
         setIsLoading(true);
         
         // Create a valid config object with all required fields from the AgentConfig interface
@@ -166,7 +162,6 @@ export default function AgentCreationWizard({
     // Function to go to the next step
     const nextStep = () => {
         if (currentStep < STEPS.length) {
-            console.log('📋 LOG: AgentCreationWizard - Moving to next step from', currentStep);
             setCurrentStep(currentStep + 1);
         }
     };
@@ -174,7 +169,6 @@ export default function AgentCreationWizard({
     // Function to go to the previous step
     const prevStep = () => {
         if (currentStep > 1) {
-            console.log('📋 LOG: AgentCreationWizard - Moving to previous step from', currentStep);
             setCurrentStep(currentStep - 1);
         }
     };
@@ -190,7 +184,6 @@ export default function AgentCreationWizard({
     
     // Automatically generate and set system prompt when relevant fields change
     useEffect(() => {
-        console.log('📋 LOG: AgentCreationWizard - Generated system prompt for role:', formData.ai_role);
         // Only generate if we have the necessary data
         if (formData.ai_role) {
             const systemPrompt = generateSystemPrompt(

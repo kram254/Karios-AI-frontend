@@ -395,7 +395,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   if (isCanvasMode) {
     return (
-      <div className="fixed inset-0 bg-gray-100 z-50">
+      <div className="flex flex-col h-full w-full bg-gray-100">
         <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -464,10 +464,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               ? 'linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px)'
               : 'none',
             backgroundSize: canvasBackground === 'dots' ? '24px 24px' : canvasBackground === 'grid' ? '24px 24px' : 'auto',
-            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`,
-            outline: 'none',
-            border: 'none',
-            boxShadow: 'none'
+            backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`
           }}
         >
           <>

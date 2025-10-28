@@ -714,13 +714,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
 
   useEffect(() => {
     const checkCapabilities = async () => {
-      try {
-        const capabilities = await nextLevelAutomationService.getCapabilities();
-        setNextLevelCapabilities(capabilities);
-        console.log('📋 LOG: Capabilities loaded successfully:', capabilities);
-      } catch (err) {
-        console.error('❌ ERROR: Error fetching capabilities:', err);
-      }
+      const capabilities = await nextLevelAutomationService.getCapabilities();
+      setNextLevelCapabilities(capabilities);
     };
     checkCapabilities();
     

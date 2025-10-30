@@ -73,15 +73,17 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     performSearch, 
     setCurrentChat, 
     createNewChat,
-    internetSearchEnabled, // Get the internet search status from context
-    toggleSearchMode, // Keep this for backward compatibility
-    searchResults, // Add searchResults back for debugging
-    isSearching, // Add isSearching back for debugging
-    accessedWebsites, // Add accessedWebsites back
+    internetSearchEnabled,
+    toggleSearchMode,
+    searchResults,
+    isSearching,
+    accessedWebsites,
     avatarState,
     setAvatarState,
     avatarMessage,
-    setAvatarMessage
+    setAvatarMessage,
+    isGenerating,
+    stopGeneration
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -1601,14 +1603,25 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   />
                 </div>
                 
-                {/* Send button with glowing effect when active */}
-                <button 
-                  type="submit" 
-                  disabled={!message.trim() || isProcessing}
-                  className={`p-2 mr-2 rounded-full transition-all duration-300 ${!message.trim() || isProcessing ? 'text-gray-500' : 'text-[#00F3FF] hover:bg-[#00F3FF]/10 hover:shadow-sm hover:shadow-[#00F3FF]/20 active:bg-[#00F3FF]/20'}`}
-                >
-                  <Send className="w-5 h-5" />
-                </button>
+                {isGenerating ? (
+                  <button 
+                    type="button"
+                    onClick={stopGeneration}
+                    className="p-2 mr-2 rounded-full transition-all duration-300 text-red-500 hover:bg-red-500/10 hover:shadow-sm hover:shadow-red-500/20 active:bg-red-500/20"
+                  >
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <div className="w-3 h-3 bg-current rounded-sm"></div>
+                    </div>
+                  </button>
+                ) : (
+                  <button 
+                    type="submit" 
+                    disabled={!message.trim() || isProcessing}
+                    className={`p-2 mr-2 rounded-full transition-all duration-300 ${!message.trim() || isProcessing ? 'text-gray-500' : 'text-[#00F3FF] hover:bg-[#00F3FF]/10 hover:shadow-sm hover:shadow-[#00F3FF]/20 active:bg-[#00F3FF]/20'}`}
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                )}
               </div>
               
               {/* Bottom section with the search button on the left side */}
@@ -2407,14 +2420,26 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             </div>
             
             <div className="chat-input-actions">
-              {/* Send button */}
-              <button 
-                type="submit" 
-                className="chat-send-button neon-btn-primary"
-                disabled={isProcessing || (!message.trim() && uploadedImages.length === 0)}
-              >
-                <Send className="w-4 h-4 neon-icon" />
-              </button>
+              {isGenerating ? (
+                <button 
+                  type="button"
+                  onClick={stopGeneration}
+                  className="chat-send-button"
+                  style={{ backgroundColor: '#ef4444', borderColor: '#ef4444' }}
+                >
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 bg-white rounded-sm"></div>
+                  </div>
+                </button>
+              ) : (
+                <button 
+                  type="submit" 
+                  className="chat-send-button neon-btn-primary"
+                  disabled={isProcessing || (!message.trim() && uploadedImages.length === 0)}
+                >
+                  <Send className="w-4 h-4 neon-icon" />
+                </button>
+              )}
             </div>
           </div>
           

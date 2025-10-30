@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 
 // Extend the Window interface to include custom properties// Types for storing debug info on window object
 declare global {
@@ -67,14 +67,13 @@ interface ChatContextType {
   loading: boolean;
   error: string | null;
   createNewChat: (customTitle?: string) => Promise<Chat | null>;
-  createAgentChat: (agent?: Agent) => Promise<Chat | null>; // Update createAgentChat method
+  createAgentChat: (agent?: Agent) => Promise<Chat | null>;
   setCurrentChat: (chat: Chat) => void;
   addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string; chatId?: string }) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
-  selectedAgent: Agent | null; // Add selectedAgent state
-  setSelectedAgent: (agent: Agent | null) => void; // Add setSelectedAgent method
-  // Search-related properties and methods
+  selectedAgent: Agent | null;
+  setSelectedAgent: (agent: Agent | null) => void;
   isSearchMode: boolean;
   toggleSearchMode: () => void;
   searchResults: SearchResult[];
@@ -84,12 +83,14 @@ interface ChatContextType {
   searchQuery: string;
   isSearchSidebarOpen: boolean;
   toggleSearchSidebar: () => void;
-  internetSearchEnabled: boolean; // Indicates if internet search is currently active
-  toggleInternetSearch: (newState?: boolean) => void; // Function to toggle internet search with persistence
+  internetSearchEnabled: boolean;
+  toggleInternetSearch: (newState?: boolean) => void;
   avatarState: 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle';
   setAvatarState: (state: 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle') => void;
   avatarMessage: string;
   setAvatarMessage: (message: string) => void;
+  isGenerating: boolean;
+  stopGeneration: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -100,20 +101,21 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorState, setError] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null); // Initialize selectedAgent state
-  const { language } = useLanguage(); // Get the current language
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const { language } = useLanguage();
   
-  // Search-related state
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [accessedWebsites, setAccessedWebsites] = useState<{title: string, url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
-  const [internetSearchEnabled, setInternetSearchEnabled] = useState(false); // Track if internet search is active
-  const [internetEnabledChatIds, setInternetEnabledChatIds] = useState<Set<string>>(new Set()); // Track which chats have had internet search enabled
+  const [internetSearchEnabled, setInternetSearchEnabled] = useState(false);
+  const [internetEnabledChatIds, setInternetEnabledChatIds] = useState<Set<string>>(new Set());
   const [avatarState, setAvatarState] = useState<'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle'>('idle');
   const [avatarMessage, setAvatarMessage] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     loadChats();
@@ -328,6 +330,16 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return language.code;
   };
 
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsGenerating(false);
+      setAvatarState('idle');
+      toast.success('Generation stopped');
+    }
+  };
+
   const addMessage = async ({ role, content, chatId }: { role: 'user' | 'assistant' | 'system'; content: string; chatId?: string }) => {
     let chatToUse = currentChat;
 
@@ -415,11 +427,26 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log(`[ChatContext][addMessage] Sending message to chat ${activeChatId}:`, { content, role });
       console.log(`[ChatContext][addMessage] Detailed chat info: ID=${chatToUse.id}, Title=${chatToUse.title}, MessageCount=${chatToUse.messages?.length || 0}`);
 
+      abortControllerRef.current = new AbortController();
+      setIsGenerating(true);
+
       const messageData = { content, role };
       try {
-        await chatService.addMessage(activeChatId, messageData);
+        await chatService.addMessage(activeChatId, messageData, abortControllerRef.current.signal);
         console.log(`[ChatContext][addMessage] Message successfully added via API for chat ${activeChatId}.`);
       } catch (err: unknown) {
+        if ((err as Error).name === 'AbortError') {
+          console.log('Request was aborted by user');
+          setCurrentChat(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              messages: prev.messages.filter(msg => msg.id !== tempId)
+            };
+          });
+          setError(null);
+          return;
+        }
         console.error(`[ChatContext][addMessage] Error during addMessage for chat ${chatToUse?.id || 'UNKNOWN_CHAT_ID'}:`, err);
         toast.error('Failed to send message. Please try again.');
         setCurrentChat(prev => {
@@ -431,6 +458,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         setError('Failed to send message');
         return;
+      } finally {
+        setIsGenerating(false);
+        abortControllerRef.current = null;
       }
 
       setError(null);
@@ -1237,12 +1267,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       searchQuery,
       isSearchSidebarOpen,
       toggleSearchSidebar,
-      internetSearchEnabled, // Add to context so components can access this
-      toggleInternetSearch, // Add the new function to toggle internet search
+      internetSearchEnabled,
+      toggleInternetSearch,
       avatarState,
       setAvatarState,
       avatarMessage,
-      setAvatarMessage
+      setAvatarMessage,
+      isGenerating,
+      stopGeneration
     }}>
       {children}
     </ChatContext.Provider>

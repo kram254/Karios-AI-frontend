@@ -142,37 +142,29 @@ export const chatService = {
     return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
   },
   
-  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean; searchModeActive?: boolean }) => {
+  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean; searchModeActive?: boolean }, signal?: AbortSignal) => {
     console.log(`Adding message to chat ${chatId}`);
-    // Match the structure used in the WebSocket service
     let payload;
     
-    // Extract search mode flag if present
     const searchModeActive = typeof content === 'object' && 'searchModeActive' in content ? content.searchModeActive : false;
     
     if (typeof content === 'string') {
-      // If just a string is passed, assume it's user content
       payload = { 
         content: content,
         attachments: [],
-        role: 'user', // Default to user role for backward compatibility
-        suppress_ai_response: false, // Default behavior - generate AI response
+        role: 'user',
+        suppress_ai_response: false,
         search_only_mode: false
       };
     } else {
-      // If an object is passed, extract the necessary properties
       const suppressAiResponse = 'suppressAiResponse' in content ? content.suppressAiResponse : false;
       
       payload = {
         content: content.content,
         attachments: 'attachments' in content ? content.attachments || [] : [],
-        // Always include the role to ensure proper persistence
         role: content.role,
-        // Add suppress_ai_response flag if provided (for internet search mode)
         suppress_ai_response: suppressAiResponse,
-        // Add search_only_mode flag for enhanced directive handling
         search_only_mode: searchModeActive,
-        // Add directive to avoid disclaimers when in search mode
         system_directive: searchModeActive ? 
           "Provide only search results. Never generate disclaimers about future events, knowledge cutoff, or AI limitations." : 
           undefined
@@ -180,7 +172,7 @@ export const chatService = {
     }
     
     console.log(`Message payload with role=${payload.role}, suppress_ai_response=${payload.suppress_ai_response}, search_mode=${searchModeActive}`);
-    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload);
+    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload, signal ? { signal } : undefined);
   },
   
   addMessageWithAttachments: async (

@@ -772,9 +772,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   return (
     <>
       {showButton && (
-        <Button
+        <button
           type="button"
-          startIcon={<Web />}
+          className={`search-text-button neon-btn-secondary ${isAutomationActive ? 'search-active' : ''}`}
           onClick={async () => {
           console.log('WebAutomation button clicked', { isAutomationActive, isOpen, currentSession });
           try { await fetch(`${BACKEND_URL}/api/web-automation/enable`, { method: 'POST' }); } catch {}
@@ -789,32 +789,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setIsOpen(next);
           }
         }}
-        variant={'outlined'}
-        color={'inherit'}
-        size="small"
-        className={(() => { const c = `search-text-button ${isAutomationActive ? 'search-active' : ''}`; console.log('WebAutomation button class', { className: c }); return c; })()}
-        sx={{
-          minWidth: 'auto',
-          px: 1.5,
-          textTransform: 'none',
-          borderRadius: '20px',
-          ...(isAutomationActive && {
-            backgroundColor: 'rgba(0, 180, 216, 0.2)',
-            borderColor: '#00b4d8',
-            color: '#00b4d8'
-          })
-        }}
-      >
-        {(() => { console.log('WebAutomation button render', { active: isAutomationActive }); return 'Web Automation'; })()}
-        {isAutomationActive && (
-          <Chip
-            label={automationStatus.toUpperCase()}
-            size="small"
-            color={getStatusColor()}
-            sx={{ ml: 1, height: 20, fontSize: '0.6rem' }}
-          />
-        )}
-      </Button>
+        >
+          <Web className="w-4 h-4 neon-icon" />
+          Web Automation
+        </button>
       )}
 
       <Dialog

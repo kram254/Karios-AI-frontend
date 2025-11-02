@@ -268,11 +268,21 @@
   color: #fff;
 }
 
+.message-text {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
 .message-timestamp {
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
   font-size: 0.7rem;
-  opacity: 0.7;
+  opacity: 0.6;
   text-align: right;
+  padding-top: 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  clear: both;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* Agent Info Banner */

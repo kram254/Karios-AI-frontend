@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2, Zap, Workflow, Paintbrush } from 'lucide-react';
+import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2, Zap, Paintbrush } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -154,23 +154,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         <button
-          onClick={() => navigate('/builder')}
+          onClick={() => navigate('/builder-studio')}
           className={`w-full flex items-center p-4 transition-colors ${
-            isActive('/builder') ? 'neon-tab-active' : 'neon-btn-secondary'
+            isActive('/builder-studio') ? 'neon-tab-active' : 'neon-btn-secondary'
           }`}
         >
           <Paintbrush className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">Builder Studio</span>}
-        </button>
-
-        <button
-          onClick={() => navigate('/automation-workspace')}
-          className={`w-full flex items-center p-4 transition-colors ${
-            isActive('/automation-workspace') ? 'neon-tab-active' : 'neon-btn-secondary'
-          }`}
-        >
-          <Workflow className="w-5 h-5 text-neon-cyan neon-icon" />
-          {!isCollapsed && <span className="ml-3">Workflow Canvas</span>}
         </button>
 
         <button
@@ -193,9 +183,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Database className="w-5 h-5 text-neon-cyan neon-icon" />
           {!isCollapsed && <span className="ml-3">Knowledge</span>}
         </button>
-
-        {/* Divider */}
-        <div className="py-2 border-b border-[#2A2A2A]" />
 
         {/* Dashboard - Only for SUPER_ADMIN, RESELLER or CUSTOMER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER, UserRole.CUSTOMER].includes(user.role) && (
@@ -233,10 +220,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
         )}
-
-        {/* Divider */}
-        <div className="py-2 border-b border-neon-purple/20" />
-
 
         {/* User Management - Only for SUPER_ADMIN and RESELLER */}
         {user && [UserRole.SUPER_ADMIN, UserRole.RESELLER].includes(user.role) && (

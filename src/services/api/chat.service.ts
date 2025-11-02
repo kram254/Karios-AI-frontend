@@ -38,6 +38,13 @@ export interface Chat {
   requires_clarification?: boolean;
   clarification_request?: string;
   workflow_stage?: string;
+  automation_active?: boolean;
+  automation_session_id?: string | null;
+  browser_context_id?: string | null;
+  search_mode_active?: boolean;
+  knowledge_item_ids?: string[];
+  agent_actions?: string[];
+  research_depth?: 'shallow' | 'medium' | 'deep';
 }
 
 export interface ChatCreate {

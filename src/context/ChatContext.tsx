@@ -53,6 +53,13 @@ interface Chat {
   requires_clarification?: boolean;
   clarification_request?: string;
   workflow_stage?: string;
+  automation_active?: boolean;
+  automation_session_id?: string | null;
+  browser_context_id?: string | null;
+  search_mode_active?: boolean;
+  knowledge_item_ids?: string[];
+  agent_actions?: string[];
+  research_depth?: 'shallow' | 'medium' | 'deep';
 }
 
 export interface SearchResult {
@@ -91,6 +98,14 @@ interface ChatContextType {
   setAvatarMessage: (message: string) => void;
   isGenerating: boolean;
   stopGeneration: () => void;
+  getChatFeatures: () => {
+    showWebAutomationButton: boolean;
+    showSearchButton: boolean;
+    showEmailButton: boolean;
+    showMultiAgentCards: boolean;
+    showTaskOrchestration: boolean;
+    showKnowledgePanel: boolean;
+  };
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -219,9 +234,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           const freshChatResponse = await chatService.getChat(currentChat.id);
           console.log(`[ChatContext][useEffect] Full chat ${currentChat.id} loaded:`, freshChatResponse.data);
-          // Update the currentChat state with the fully loaded chat object from the server
-          setCurrentChat(freshChatResponse.data);
-          console.log(`[ChatContext][useEffect] Successfully fetched and set messages for chat ${currentChat.id}. New messages count: ${freshChatResponse.data.messages?.length || 0}. Messages:`, freshChatResponse.data.messages);
+          const loadedChat = freshChatResponse.data;
+          
+          if (loadedChat.agent_id && !loadedChat.agent_actions) {
+            try {
+              const { agentService } = await import('../services/api/agent.service');
+              const agentResponse = await agentService.getAgentById(loadedChat.agent_id);
+              loadedChat.agent_actions = agentResponse.data.actions || [];
+            } catch (agentErr) {
+              console.error('Failed to load agent actions:', agentErr);
+            }
+          }
+          
+          setCurrentChat(loadedChat);
+          console.log(`[ChatContext][useEffect] Successfully fetched and set messages for chat ${currentChat.id}. New messages count: ${loadedChat.messages?.length || 0}. Messages:`, loadedChat.messages);
           setError(null);
         } catch (err: unknown) {
           console.error(`Error loading messages for chat ${currentChat.id}:`, err);
@@ -303,6 +329,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Agent chat created response:', response);
       
       const newChat = response.data;
+      newChat.agent_actions = agentToUse.actions || [];
       setChats(prev => [newChat, ...prev]);
       setCurrentChat(newChat);
       
@@ -337,6 +364,85 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsGenerating(false);
       setAvatarState('idle');
       toast.success('Generation stopped');
+    }
+  };
+
+  const getChatFeatures = () => {
+    const defaultFeatures = {
+      showWebAutomationButton: false,
+      showSearchButton: false,
+      showEmailButton: false,
+      showMultiAgentCards: false,
+      showTaskOrchestration: false,
+      showKnowledgePanel: false
+    };
+
+    if (!currentChat) return defaultFeatures;
+
+    const chatType = currentChat.chat_type || 'default';
+    const agentActions = currentChat.agent_actions || [];
+
+    switch (chatType) {
+      case 'default':
+        return defaultFeatures;
+
+      case 'agent_chat':
+      case 'sales_agent':
+        return {
+          ...defaultFeatures,
+          showWebAutomationButton: agentActions.includes('WEB_AUTOMATION'),
+          showSearchButton: agentActions.includes('SEARCH_INTERNET'),
+          showEmailButton: agentActions.includes('SEND_MAIL'),
+          showKnowledgePanel: agentActions.includes('USE_KNOWLEDGE')
+        };
+
+      case 'web_automation':
+        return {
+          ...defaultFeatures,
+          showWebAutomationButton: true,
+          showMultiAgentCards: true,
+          showTaskOrchestration: true
+        };
+
+      case 'task_automation':
+        return {
+          ...defaultFeatures,
+          showMultiAgentCards: true,
+          showTaskOrchestration: true
+        };
+
+      case 'internet_search':
+        return {
+          ...defaultFeatures,
+          showSearchButton: true
+        };
+
+      case 'deep_research':
+        return {
+          ...defaultFeatures,
+          showSearchButton: true,
+          showMultiAgentCards: true,
+          showTaskOrchestration: true
+        };
+
+      case 'knowledge_based':
+        return {
+          ...defaultFeatures,
+          showKnowledgePanel: true
+        };
+
+      case 'multi_agent':
+        return {
+          showWebAutomationButton: agentActions.includes('WEB_AUTOMATION'),
+          showSearchButton: true,
+          showEmailButton: agentActions.includes('SEND_MAIL'),
+          showMultiAgentCards: true,
+          showTaskOrchestration: true,
+          showKnowledgePanel: true
+        };
+
+      default:
+        return defaultFeatures;
     }
   };
 
@@ -1274,7 +1380,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       avatarMessage,
       setAvatarMessage,
       isGenerating,
-      stopGeneration
+      stopGeneration,
+      getChatFeatures
     }}>
       {children}
     </ChatContext.Provider>

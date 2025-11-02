@@ -83,7 +83,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
     avatarMessage,
     setAvatarMessage,
     isGenerating,
-    stopGeneration
+    stopGeneration,
+    getChatFeatures
   } = useChat();
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -94,6 +95,8 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
   const [automationSessionId, setAutomationSessionId] = useState<string | null>(null);
   const [automationChatId, setAutomationChatId] = useState<string | null>(null);
   const [automationPlans, setAutomationPlans] = useState<Record<string, any>>({});
+
+  const chatFeatures = useMemo(() => getChatFeatures(), [currentChat?.chat_type, currentChat?.agent_actions]);
   const [pendingAutomationTask, setPendingAutomationTask] = useState<string | null>(null);
   const [multiAgentWorkflows, setMultiAgentWorkflows] = useState<Record<string, any>>({});
   const [agentUpdates, setAgentUpdates] = useState<Record<string, MultiAgentWSMessage[]>>({});
@@ -1895,7 +1898,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                   <div className="message-text">
                     <>
                        {/* Enhanced rendering for multi-agent workflow messages */}
-                        {isMultiAgentMessage(msg) ? (
+                        {chatFeatures.showMultiAgentCards && isMultiAgentMessage(msg) ? (
                           (() => {
                             const extractedTaskId = extractTaskId(msg);
                             const backendTaskId = lastTaskIdRef.current;
@@ -2234,7 +2237,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
             })}
             <div ref={messagesEndRef} />
             
-            {activeWorkflowTaskId && (() => {
+            {chatFeatures.showMultiAgentCards && activeWorkflowTaskId && (() => {
               console.log('🎬🎬🎬 RENDER BLOCK EXECUTING:', {
                 activeWorkflowTaskId,
                 workflowUpdateCounter,
@@ -2684,6 +2687,7 @@ const Chat: React.FC<ChatProps> = ({ chatId, onMessage, compact = false, isTaskM
                     console.log('🎯 Unknown automation result type:', result.type);
                   }
                 }}
+                showButton={chatFeatures.showWebAutomationButton}
               />
            </div>
         </form>

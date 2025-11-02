@@ -118,7 +118,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Main Navigation */}
-      <div className="border-b border-neon-purple/20 py-2">
+      <div className="py-2">
         {/* Chat Section */}
         <button
           onClick={() => navigate('/chat')}
@@ -236,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Conversations Heading */}
-      <div className="py-2 border-b border-neon-purple/20">
+      <div className="py-2">
         {!isCollapsed && (
           <div className="px-4 py-2 text-sm font-medium text-gray-400">
             Conversations
@@ -250,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           chats.map((chat) => (
             <div 
               key={chat.id}
-              className={`relative w-full flex items-center p-4 group transition-colors ${
+              className={`relative w-full flex items-center p-4 group transition-colors border-b border-gray-800/30 ${
                 currentChat?.id === chat.id ? 'neon-tab-active' : 'neon-btn-secondary'
               }`}
               style={{ position: 'relative' }}

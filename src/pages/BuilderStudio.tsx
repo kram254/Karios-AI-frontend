@@ -3,6 +3,7 @@ import { Box, Tabs, Tab, Typography, Paper } from '@mui/material';
 import { Paintbrush, Bot, Workflow, Wrench, Library } from 'lucide-react';
 import AgentCreationWizard from '../components/agent/AgentCreationWizard';
 import { AutomationWorkspace } from '../components/AutomationWorkspace';
+import { WorkflowBuilder } from '../components/workflow/WorkflowBuilder';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -186,7 +187,8 @@ export default function BuilderStudio() {
         </TabPanel>
 
         <TabPanel value={currentTab} index={1}>
-          <Box sx={{ height: '100%', bgcolor: '#0A0A0A' }}>
+          <Box sx={{ height: '100%', bgcolor: '#0A0A0A', overflow: 'hidden' }}>
+            <WorkflowBuilder />
           </Box>
         </TabPanel>
 

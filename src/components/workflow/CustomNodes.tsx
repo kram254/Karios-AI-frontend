@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
-import { Play, Database, Code, GitBranch, RefreshCw, UserCheck, Flag, StickyNote } from 'lucide-react';
+import { PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote } from 'lucide-react';
 
 export function CustomNode({ data, selected }: NodeProps) {
   const nodeType = data.nodeType;
@@ -215,27 +215,27 @@ export function CustomNode({ data, selected }: NodeProps) {
 }
 
 function getNodeIcon(type: string) {
-  const iconStyle = { width: '14px', height: '14px' };
+  const iconStyle = { width: '16px', height: '16px' };
   
   switch (type) {
     case 'start':
-      return <Play style={iconStyle} color="#10b981" />;
+      return <PlayCircle style={iconStyle} color="#10b981" fill="#10b981" fillOpacity={0.2} />;
     case 'agent':
-      return <Database style={iconStyle} color="#3b82f6" />;
+      return <Bot style={iconStyle} color="#3b82f6" strokeWidth={2.5} />;
     case 'mcp-tool':
-      return <Code style={iconStyle} color="#8b5cf6" />;
+      return <Wrench style={iconStyle} color="#8b5cf6" strokeWidth={2.5} />;
     case 'transform':
-      return <Code style={iconStyle} color="#f59e0b" />;
+      return <Shuffle style={iconStyle} color="#f59e0b" strokeWidth={2.5} />;
     case 'if-else':
-      return <GitBranch style={iconStyle} color="#ef4444" />;
+      return <GitBranch style={iconStyle} color="#ec4899" strokeWidth={2.5} />;
     case 'while':
-      return <RefreshCw style={iconStyle} color="#f59e0b" />;
+      return <RotateCw style={iconStyle} color="#14b8a6" strokeWidth={2.5} />;
     case 'approval':
-      return <UserCheck style={iconStyle} color="#06b6d4" />;
+      return <ShieldCheck style={iconStyle} color="#06b6d4" strokeWidth={2.5} />;
     case 'end':
-      return <Flag style={iconStyle} color="#ef4444" />;
+      return <StopCircle style={iconStyle} color="#ef4444" fill="#ef4444" fillOpacity={0.2} />;
     case 'note':
-      return <StickyNote style={iconStyle} color="#eab308" />;
+      return <StickyNote style={iconStyle} color="#eab308" strokeWidth={2.5} />;
     default:
       return null;
   }

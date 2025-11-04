@@ -105,11 +105,36 @@ export const AutomationCanvas: React.FC<AutomationCanvasProps> = ({
             if (status === 'completed' || data.type === 'workflow_completed') {
               setIsRunning(false);
               setProgress(100);
-              addLog('🎉 Task completed successfully!');
-            } else if (status === 'failed') {
-              setIsRunning(false);
-              addLog('❌ Task failed');
+              addLog('🎉 Automation completed successfully');
             }
+          } else if (data.type === 'error' || data.type === 'error_occurred') {
+            setIsRunning(false);
+            const errorMessage = data.payload?.error || data.error || 'Unknown error';
+            const nodeId = data.nodeId;
+            addLog(`❌ Error: ${errorMessage}`);
+            if (nodeId) {
+              updateNodeStatus(parseInt(nodeId.replace('step-', '')), 'failed');
+            }
+          } else if (data.type === 'node_status_changed') {
+            const nodeId = data.nodeId;
+            const status = data.status;
+            if (nodeId) {
+              const stepIndex = parseInt(nodeId.replace('step-', ''));
+              if (status === 'running') {
+                updateNodeStatus(stepIndex, 'running');
+              } else if (status === 'completed') {
+                updateNodeStatus(stepIndex, 'completed');
+              } else if (status === 'failed' || status === 'error') {
+                updateNodeStatus(stepIndex, 'failed');
+              }
+            }
+          } else if (data.type === 'screenshot' && data.screenshot) {
+            setScreenshot(data.screenshot);
+            if (data.nodeId) {
+              addLog(`📸 Screenshot captured for ${data.nodeId}`);
+            }
+          } else if (data.type === 'display_limitation') {
+            addLog(`⚠️ ${data.message || 'Running in headless mode'}`);
           } else if (data.type === 'workflow_status_update') {
             const message = data.payload?.message || data.message || '';
             if (message) {

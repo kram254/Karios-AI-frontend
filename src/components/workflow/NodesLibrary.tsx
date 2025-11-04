@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Play, Database, Code, GitBranch, RefreshCw, UserCheck, Flag, StickyNote } from 'lucide-react';
+import { X, PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote } from 'lucide-react';
 import type { NodeType } from '../../types/workflow';
 
 interface NodesLibraryProps {
@@ -11,29 +11,29 @@ const nodeCategories = [
   {
     title: 'Flow Control',
     nodes: [
-      { type: 'start' as NodeType, label: 'Start', icon: Play, color: '#10b981', description: 'Workflow entry point' },
-      { type: 'end' as NodeType, label: 'End', icon: Flag, color: '#ef4444', description: 'Workflow completion' },
+      { type: 'start' as NodeType, label: 'Start', icon: PlayCircle, color: '#10b981', description: 'Workflow entry point' },
+      { type: 'end' as NodeType, label: 'End', icon: StopCircle, color: '#ef4444', description: 'Workflow completion' },
     ],
   },
   {
     title: 'AI & Data',
     nodes: [
-      { type: 'agent' as NodeType, label: 'AI Agent', icon: Database, color: '#3b82f6', description: 'LLM reasoning node' },
-      { type: 'mcp-tool' as NodeType, label: 'MCP Tool', icon: Code, color: '#8b5cf6', description: 'External tool call' },
-      { type: 'transform' as NodeType, label: 'Transform', icon: Code, color: '#f59e0b', description: 'Data manipulation' },
+      { type: 'agent' as NodeType, label: 'AI Agent', icon: Bot, color: '#3b82f6', description: 'LLM reasoning node' },
+      { type: 'mcp-tool' as NodeType, label: 'MCP Tool', icon: Wrench, color: '#8b5cf6', description: 'External tool call' },
+      { type: 'transform' as NodeType, label: 'Transform', icon: Shuffle, color: '#f59e0b', description: 'Data manipulation' },
     ],
   },
   {
     title: 'Logic',
     nodes: [
-      { type: 'if-else' as NodeType, label: 'If/Else', icon: GitBranch, color: '#ef4444', description: 'Conditional branch' },
-      { type: 'while' as NodeType, label: 'While Loop', icon: RefreshCw, color: '#f59e0b', description: 'Loop iteration' },
+      { type: 'if-else' as NodeType, label: 'If/Else', icon: GitBranch, color: '#ec4899', description: 'Conditional branch' },
+      { type: 'while' as NodeType, label: 'While Loop', icon: RotateCw, color: '#14b8a6', description: 'Loop iteration' },
     ],
   },
   {
     title: 'Human-in-Loop',
     nodes: [
-      { type: 'approval' as NodeType, label: 'Approval', icon: UserCheck, color: '#06b6d4', description: 'User approval gate' },
+      { type: 'approval' as NodeType, label: 'Approval', icon: ShieldCheck, color: '#06b6d4', description: 'User approval gate' },
     ],
   },
   {
@@ -50,8 +50,9 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
       style={{
         width: '280px',
         height: '100%',
-        backgroundColor: '#1a1a1a',
-        borderRight: '1px solid #333',
+        background: 'rgba(10, 10, 10, 0.85)',
+        backdropFilter: 'blur(20px)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'auto',
@@ -60,7 +61,7 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
       <div
         style={{
           padding: '16px',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -70,13 +71,23 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
         <button
           onClick={onClose}
           style={{
-            background: 'none',
+            background: 'rgba(255, 255, 255, 0.05)',
             border: 'none',
+            borderRadius: '6px',
             color: '#999',
             cursor: 'pointer',
-            padding: 4,
+            padding: 6,
             display: 'flex',
             alignItems: 'center',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.color = 'white';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.color = '#999';
           }}
         >
           <X size={18} />
@@ -108,36 +119,42 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
                     width: '100%',
                     padding: '12px',
                     marginBottom: '8px',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
-                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '10px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    transition: 'all 0.2s',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backdropFilter: 'blur(10px)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#222';
-                    e.currentTarget.style.borderColor = node.color;
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.borderColor = `${node.color}80`;
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                    e.currentTarget.style.boxShadow = `0 4px 12px ${node.color}40`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#0a0a0a';
-                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <div
                     style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '6px',
-                      backgroundColor: `${node.color}20`,
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: `linear-gradient(135deg, ${node.color}20, ${node.color}10)`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      border: `1px solid ${node.color}30`,
                     }}
                   >
-                    <Icon size={16} color={node.color} />
+                    <Icon size={18} color={node.color} strokeWidth={2.5} />
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div style={{ color: 'white', fontSize: 13, fontWeight: 500, marginBottom: 2 }}>

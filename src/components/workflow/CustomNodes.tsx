@@ -19,13 +19,21 @@ export function CustomNode({ data, selected }: NodeProps) {
     if (executionStatus === 'completed') return '2px solid #10b981';
     if (executionStatus === 'failed') return '2px solid #ef4444';
     if (selected) return '2px solid #8b5cf6';
-    return '1px solid #e5e7eb';
+    return '1px solid rgba(255, 255, 255, 0.1)';
   };
 
   const getBackgroundColor = () => {
-    if (nodeType === 'note') return '#fef3c7';
-    if (nodeType === 'if-else' || nodeType === 'while') return '#fff7ed';
-    return 'white';
+    if (nodeType === 'note') return 'rgba(254, 243, 199, 0.95)';
+    if (nodeType === 'if-else' || nodeType === 'while') return 'rgba(255, 247, 237, 0.95)';
+    return 'rgba(255, 255, 255, 0.95)';
+  };
+
+  const getBoxShadow = () => {
+    if (isRunning) return '0 8px 24px rgba(59, 130, 246, 0.3)';
+    if (executionStatus === 'completed') return '0 8px 24px rgba(16, 185, 129, 0.3)';
+    if (executionStatus === 'failed') return '0 8px 24px rgba(239, 68, 68, 0.3)';
+    if (selected) return '0 8px 24px rgba(139, 92, 246, 0.3)';
+    return '0 4px 12px rgba(0, 0, 0, 0.1)';
   };
 
   const getTextColor = () => {
@@ -114,13 +122,14 @@ export function CustomNode({ data, selected }: NodeProps) {
   return (
     <div
       style={{
-        padding: '12px',
-        borderRadius: '8px',
+        padding: '14px',
+        borderRadius: '12px',
         border: getBorderStyle(),
         backgroundColor: getBackgroundColor(),
-        minWidth: '160px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        transition: 'all 0.2s ease',
+        backdropFilter: 'blur(12px)',
+        minWidth: '180px',
+        boxShadow: getBoxShadow(),
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
       {nodeType !== 'end' && (

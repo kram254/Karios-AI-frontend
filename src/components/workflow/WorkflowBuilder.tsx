@@ -8,13 +8,14 @@ import {
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Save, Play, Settings, Plus, Download, Upload } from 'lucide-react';
+import { Save, Play, Settings, Plus, Download, Upload, Sparkles } from 'lucide-react';
 import { useWorkflow } from '../../hooks/useWorkflow';
 import { nodeTypes } from './CustomNodes';
 import { NodePanel } from './NodePanel';
 import { NodesLibrary } from './NodesLibrary';
 import { ExecutionPanel } from './ExecutionPanel';
 import { WorkflowSettings } from './WorkflowSettings';
+import { AIWorkflowChat } from './AIWorkflowChat';
 import type { NodeType } from '../../types/workflow';
 
 interface WorkflowBuilderProps {
@@ -44,6 +45,7 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
   const [showSettings, setShowSettings] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
   const [showLibrary, setShowLibrary] = useState(true);
+  const [showAIChat, setShowAIChat] = useState(false);
   const [workflowName, setWorkflowName] = useState(workflow?.name || 'Untitled Workflow');
 
   const handleNodeClick = useCallback(
@@ -124,6 +126,13 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     };
     input.click();
   };
+
+  const handleWorkflowGenerated = useCallback((generatedNodes: any[], generatedEdges: any[]) => {
+    if (generatedNodes.length > 0) {
+      onNodesChange([{ type: 'reset', item: generatedNodes }] as any);
+      onEdgesChange([{ type: 'reset', item: generatedEdges }] as any);
+    }
+  }, [onNodesChange, onEdgesChange]);
 
   const selectedNodeData = nodes.find((n) => n.id === selectedNode);
 
@@ -284,6 +293,50 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
               </button>
             </div>
           </Panel>
+
+          <Panel position="bottom-left" style={{ margin: 20 }}>
+            <button
+              onClick={() => setShowAIChat(!showAIChat)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '12px 16px',
+                background: showAIChat
+                  ? 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)'
+                  : 'rgba(139, 92, 246, 0.15)',
+                backdropFilter: 'blur(12px)',
+                color: 'white',
+                border: showAIChat ? 'none' : '1px solid rgba(139, 92, 246, 0.3)',
+                borderRadius: 12,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 500,
+                boxShadow: showAIChat
+                  ? '0 8px 24px rgba(139, 92, 246, 0.4)'
+                  : '0 4px 12px rgba(0, 0, 0, 0.2)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => {
+                if (!showAIChat) {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.25)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 92, 246, 0.3)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showAIChat) {
+                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+                }
+              }}
+            >
+              <Sparkles size={18} />
+              <span>AI Builder</span>
+            </button>
+          </Panel>
         </ReactFlow>
       </div>
 
@@ -318,6 +371,12 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
           onClose={() => setShowExecution(false)}
         />
       )}
+
+      <AIWorkflowChat
+        isOpen={showAIChat}
+        onToggle={() => setShowAIChat(!showAIChat)}
+        onWorkflowGenerated={handleWorkflowGenerated}
+      />
     </div>
   );
 }

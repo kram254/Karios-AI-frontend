@@ -4,6 +4,7 @@ import { Paintbrush, Bot, Workflow, Wrench, Library } from 'lucide-react';
 import AgentCreationWizard from '../components/agent/AgentCreationWizard';
 import { AutomationWorkspace } from '../components/AutomationWorkspace';
 import { WorkflowBuilder } from '../components/workflow/WorkflowBuilder';
+import { StagehandAutomation } from '../components/StagehandAutomation';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -193,16 +194,8 @@ export default function BuilderStudio() {
         </TabPanel>
 
         <TabPanel value={currentTab} index={2}>
-          <Box sx={{ 
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: '#0A0A0A'
-          }}>
-            <Typography sx={{ color: '#888', fontSize: '1rem' }}>
-              Automation Studio - Ready for Configuration
-            </Typography>
+          <Box sx={{ height: '100%', bgcolor: '#0A0A0A', overflow: 'hidden' }}>
+            <StagehandAutomation />
           </Box>
         </TabPanel>
 

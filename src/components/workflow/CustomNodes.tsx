@@ -160,12 +160,12 @@ export function CustomNode({ data, selected }: NodeProps) {
   return (
     <div
       style={{
-        padding: '16px',
-        borderRadius: '14px',
+        padding: '10px',
+        borderRadius: '10px',
         border: getBorderStyle(),
         background: getBackgroundColor(),
         backdropFilter: 'blur(16px)',
-        minWidth: '200px',
+        minWidth: '140px',
         boxShadow: getBoxShadow(),
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         position: 'relative',
@@ -186,21 +186,21 @@ export function CustomNode({ data, selected }: NodeProps) {
           position={Position.Top}
           style={{
             background: '#8b5cf6',
-            width: '8px',
-            height: '8px',
+            width: '6px',
+            height: '6px',
             border: '2px solid white',
           }}
         />
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '36px',
-          height: '36px',
-          borderRadius: '10px',
+          width: '28px',
+          height: '28px',
+          borderRadius: '8px',
           background: getGlassyIconBackground(nodeType),
           backdropFilter: 'blur(10px)',
           boxShadow: getIconShadow(nodeType),
@@ -221,7 +221,7 @@ export function CustomNode({ data, selected }: NodeProps) {
             {getNodeIcon(nodeType)}
           </div>
         </div>
-        <div style={{ flex: 1, fontSize: '13px', fontWeight: 600, color: getTextColor() }}>
+        <div style={{ flex: 1, fontSize: '11px', fontWeight: 600, color: getTextColor() }}>
           {data.label}
         </div>
         {isRunning && (
@@ -240,12 +240,12 @@ export function CustomNode({ data, selected }: NodeProps) {
       {data.config?.prompt && (
         <div
           style={{
-            fontSize: '10px',
+            fontSize: '9px',
             color: '#6b7280',
-            marginTop: '10px',
-            padding: '8px 10px',
+            marginTop: '6px',
+            padding: '4px 6px',
             background: 'linear-gradient(135deg, rgba(0,0,0,0.02), rgba(0,0,0,0.04))',
-            borderRadius: '6px',
+            borderRadius: '4px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -253,24 +253,24 @@ export function CustomNode({ data, selected }: NodeProps) {
             backdropFilter: 'blur(4px)',
           }}
         >
-          {data.config.prompt.substring(0, 40)}...
+          {data.config.prompt.substring(0, 30)}...
         </div>
       )}
       
       {getNodeTypeLabel(nodeType) && (
         <div
           style={{
-            fontSize: '9px',
+            fontSize: '8px',
             color: getNodeTypeLabelColor(nodeType),
-            marginTop: '8px',
+            marginTop: '5px',
             fontWeight: 700,
             textTransform: 'uppercase',
-            letterSpacing: '0.8px',
+            letterSpacing: '0.5px',
             textShadow: '0 1px 2px rgba(0,0,0,0.1)',
             display: 'inline-block',
-            padding: '2px 6px',
+            padding: '1px 4px',
             background: `${getNodeTypeLabelColor(nodeType)}15`,
-            borderRadius: '4px',
+            borderRadius: '3px',
             border: `1px solid ${getNodeTypeLabelColor(nodeType)}30`,
           }}
         >
@@ -284,8 +284,8 @@ export function CustomNode({ data, selected }: NodeProps) {
           position={Position.Bottom}
           style={{
             background: '#8b5cf6',
-            width: '8px',
-            height: '8px',
+            width: '6px',
+            height: '6px',
             border: '2px solid white',
           }}
         />
@@ -299,8 +299,8 @@ export function CustomNode({ data, selected }: NodeProps) {
             id="true"
             style={{
               background: '#10b981',
-              width: '8px',
-              height: '8px',
+              width: '6px',
+              height: '6px',
               border: '2px solid white',
               top: '50%',
             }}
@@ -311,8 +311,8 @@ export function CustomNode({ data, selected }: NodeProps) {
             id="false"
             style={{
               background: '#ef4444',
-              width: '8px',
-              height: '8px',
+              width: '6px',
+              height: '6px',
               border: '2px solid white',
               top: '50%',
             }}
@@ -420,7 +420,7 @@ function getNodeTypeLabelColor(type: string) {
 }
 
 function getNodeIcon(type: string) {
-  const iconStyle = { width: '18px', height: '18px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' };
+  const iconStyle = { width: '14px', height: '14px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' };
   
   switch (type) {
     case 'start':

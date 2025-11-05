@@ -117,15 +117,15 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
                   onClick={() => onAddNode(node.type)}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    marginBottom: '8px',
+                    padding: '8px',
+                    marginBottom: '6px',
                     background: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
+                    gap: '8px',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     backdropFilter: 'blur(10px)',
                   }}
@@ -144,9 +144,9 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
                 >
                   <div
                     style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '8px',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '6px',
                       background: `linear-gradient(135deg, ${node.color}20, ${node.color}10)`,
                       display: 'flex',
                       alignItems: 'center',
@@ -154,13 +154,13 @@ export function NodesLibrary({ onAddNode, onClose }: NodesLibraryProps) {
                       border: `1px solid ${node.color}30`,
                     }}
                   >
-                    <Icon size={18} color={node.color} strokeWidth={2.5} />
+                    <Icon size={14} color={node.color} strokeWidth={2.5} />
                   </div>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div style={{ color: 'white', fontSize: 13, fontWeight: 500, marginBottom: 2 }}>
+                    <div style={{ color: 'white', fontSize: 11, fontWeight: 500, marginBottom: 1 }}>
                       {node.label}
                     </div>
-                    <div style={{ color: '#999', fontSize: 11 }}>{node.description}</div>
+                    <div style={{ color: '#999', fontSize: 9 }}>{node.description}</div>
                   </div>
                 </button>
               );

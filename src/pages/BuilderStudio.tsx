@@ -193,8 +193,16 @@ export default function BuilderStudio() {
         </TabPanel>
 
         <TabPanel value={currentTab} index={2}>
-          <Box sx={{ height: '100%' }}>
-            <AutomationWorkspace />
+          <Box sx={{ 
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: '#0A0A0A'
+          }}>
+            <Typography sx={{ color: '#888', fontSize: '1rem' }}>
+              Automation Studio - Ready for Configuration
+            </Typography>
           </Box>
         </TabPanel>
 

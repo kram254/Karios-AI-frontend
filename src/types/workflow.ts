@@ -11,7 +11,7 @@ export type NodeType =
 
 export interface WorkflowNode {
   id: string;
-  type: NodeType;
+  type: 'custom';
   position: { x: number; y: number };
   data: {
     label: string;

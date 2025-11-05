@@ -4,7 +4,7 @@ import type { NodeProps } from '@xyflow/react';
 import { PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote } from 'lucide-react';
 
 export function CustomNode({ data, selected }: NodeProps) {
-  const nodeType = data.nodeType;
+  const nodeType = data.nodeType || 'agent';
   const isRunning = data.isRunning;
   const executionStatus = data.executionStatus;
 

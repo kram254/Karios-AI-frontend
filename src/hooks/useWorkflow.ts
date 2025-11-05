@@ -13,7 +13,15 @@ export function useWorkflow(initialWorkflow?: Workflow) {
   useEffect(() => {
     if (initialWorkflow) {
       setWorkflow(initialWorkflow);
-      setNodes(initialWorkflow.nodes);
+      const migratedNodes = initialWorkflow.nodes.map(node => ({
+        ...node,
+        type: 'custom' as const,
+        data: {
+          ...node.data,
+          nodeType: node.data.nodeType || (node.type as NodeType),
+        },
+      }));
+      setNodes(migratedNodes as any);
       setEdges(initialWorkflow.edges);
     }
   }, [initialWorkflow, setNodes, setEdges]);
@@ -38,7 +46,7 @@ export function useWorkflow(initialWorkflow?: Workflow) {
       const nodeId = `node-${nanoid(8)}`;
       const newNode: WorkflowNode = {
         id: nodeId,
-        type,
+        type: 'custom',
         position,
         data: {
           label: getNodeLabel(type),
@@ -130,7 +138,15 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 
       const loadedWorkflow: Workflow = await response.json();
       setWorkflow(loadedWorkflow);
-      setNodes(loadedWorkflow.nodes);
+      const migratedNodes = loadedWorkflow.nodes.map(node => ({
+        ...node,
+        type: 'custom' as const,
+        data: {
+          ...node.data,
+          nodeType: node.data.nodeType || (node.type as NodeType),
+        },
+      }));
+      setNodes(migratedNodes as any);
       setEdges(loadedWorkflow.edges);
       return loadedWorkflow;
     } catch (error) {

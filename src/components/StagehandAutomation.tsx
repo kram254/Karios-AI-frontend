@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, TextField, Button, Typography, Paper, Chip, LinearProgress, IconButton, Tooltip } from '@mui/material';
-import { PlayArrow, Stop, Refresh, Monitor, Code, Zap, Eye, Target, Cloud } from '@mui/icons-material';
+import { PlayArrow, Stop, Refresh, Monitor, Code, FlashOn, Visibility, MyLocation, CloudQueue } from '@mui/icons-material';
 
 export const StagehandAutomation: React.FC = () => {
   const [instruction, setInstruction] = useState('');
@@ -172,7 +172,7 @@ export const StagehandAutomation: React.FC = () => {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0A0A0A', p: 3, gap: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Zap size={28} color="#00F3FF" />
+          <FlashOn sx={{ fontSize: 32, color: '#00F3FF' }} />
           <Typography variant="h5" sx={{ color: 'white', fontWeight: 600 }}>
             Stagehand Browser Automation
           </Typography>
@@ -238,7 +238,7 @@ export const StagehandAutomation: React.FC = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, minHeight: 0 }}>
           <Paper sx={{ p: 2, bgcolor: '#1A1A1A', border: '1px solid #2A2A2A' }}>
             <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Target size={18} />
+              <MyLocation sx={{ fontSize: 18 }} />
               Instruction
             </Typography>
             
@@ -290,7 +290,7 @@ export const StagehandAutomation: React.FC = () => {
             <Button
               fullWidth
               variant="contained"
-              startIcon={isRunning ? <Refresh className="animate-spin" /> : <Zap />}
+              startIcon={isRunning ? <Refresh className="animate-spin" /> : <FlashOn />}
               onClick={executeStagehandAction}
               disabled={browserStatus !== 'connected' || isRunning || !instruction.trim()}
               sx={{
@@ -308,7 +308,7 @@ export const StagehandAutomation: React.FC = () => {
           {currentUrl && (
             <Paper sx={{ p: 2, bgcolor: '#1A1A1A', border: '1px solid #2A2A2A' }}>
               <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Cloud size={18} />
+                <CloudQueue sx={{ fontSize: 18 }} />
                 Current URL
               </Typography>
               <Typography variant="body2" sx={{ color: '#888', wordBreak: 'break-all' }}>
@@ -319,7 +319,7 @@ export const StagehandAutomation: React.FC = () => {
 
           <Paper sx={{ p: 2, bgcolor: '#1A1A1A', border: '1px solid #2A2A2A', flex: 1, overflow: 'auto', minHeight: 0 }}>
             <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Code size={18} />
+              <Code sx={{ fontSize: 18 }} />
               Activity Log
             </Typography>
             <Box sx={{ 
@@ -343,7 +343,7 @@ export const StagehandAutomation: React.FC = () => {
 
         <Paper sx={{ p: 2, bgcolor: '#1A1A1A', border: '1px solid #2A2A2A', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Typography variant="subtitle2" sx={{ color: '#00F3FF', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Monitor size={18} />
+            <Monitor sx={{ fontSize: 18 }} />
             Live Browser View
           </Typography>
           <Box sx={{ 
@@ -370,7 +370,7 @@ export const StagehandAutomation: React.FC = () => {
               />
             ) : (
               <Box sx={{ textAlign: 'center', color: '#666' }}>
-                <Eye size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                <Visibility sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
                 <Typography variant="body2">
                   {browserStatus === 'connected' ? 'Waiting for screenshot...' : 'Start browser to view live feed'}
                 </Typography>

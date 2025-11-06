@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, TextField, Button, Typography, Paper, Chip, LinearProgress, IconButton, Tooltip } from '@mui/material';
-import { PlayArrow, Stop, Refresh, Monitor, Code, FlashOn, Visibility, MyLocation, CloudQueue } from '@mui/icons-material';
+import { Box, TextField, Button, Typography, Paper, Chip, LinearProgress, IconButton, Tooltip, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { PlayArrow, Stop, Refresh, Monitor, Code, FlashOn, Visibility, MyLocation, CloudQueue, ExpandMore, AccountTree } from '@mui/icons-material';
+import { WorkflowAutomationBridge } from './WorkflowAutomationBridge';
 
 export const StagehandAutomation: React.FC = () => {
   const [instruction, setInstruction] = useState('');
@@ -12,6 +13,12 @@ export const StagehandAutomation: React.FC = () => {
   const [browserStatus, setBrowserStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
   const [actionMode, setActionMode] = useState<'act' | 'extract' | 'observe' | 'agent'>('act');
   const wsRef = useRef<WebSocket | null>(null);
+  const [screenshotHistory, setScreenshotHistory] = useState<Array<{url: string, screenshot: string, timestamp: string}>>([]);
+  const [retryInfo, setRetryInfo] = useState<{attempt: number, maxRetries: number} | null>(null);
+  const [selectedElement, setSelectedElement] = useState<any>(null);
+  const [agentRunning, setAgentRunning] = useState(false);
+  const [agentGoal, setAgentGoal] = useState('');
+  const screenshotContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const sid = `stagehand_${Date.now()}`;
@@ -35,25 +42,36 @@ export const StagehandAutomation: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: sessionId,
+          sessionId: sessionId,
           browser_type: 'chromium',
-          headless: false
+          visible: true
         })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
       
       if (data.success) {
         setBrowserStatus('connected');
         addLog('✅ Stagehand browser initialized successfully');
+        if (data.stagehand_available) {
+          addLog('✅ Stagehand mode active');
+        }
         connectWebSocket();
       } else {
         setBrowserStatus('disconnected');
-        addLog(`❌ Browser initialization failed: ${data.message}`);
+        const errorMsg = data.message || 'Unknown initialization error';
+        addLog(`❌ Browser initialization failed: ${errorMsg}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       setBrowserStatus('disconnected');
-      addLog(`❌ Error: ${error}`);
+      const errorMsg = error.message || String(error);
+      addLog(`❌ Connection error: ${errorMsg}`);
+      console.error('Browser initialization error:', error);
     }
   };
 
@@ -68,13 +86,40 @@ export const StagehandAutomation: React.FC = () => {
         try {
           const data = JSON.parse(event.data);
           
-          if (data.type === 'screenshot_taken' || data.type === 'screenshot') {
-            setScreenshot(data.payload?.screenshot || data.screenshot);
+          if (data.type === 'screenshot_taken' || data.type === 'screenshot' || data.type === 'screenshot_update') {
+            const screenshotData = data.payload?.screenshot || data.screenshot;
+            setScreenshot(screenshotData);
+            if (data.url) {
+              setCurrentUrl(data.url);
+            }
+            if (data.timestamp) {
+              setScreenshotHistory(prev => [...prev, {
+                url: data.url || currentUrl,
+                screenshot: screenshotData,
+                timestamp: data.timestamp
+              }].slice(-10));
+            }
           } else if (data.type === 'navigation_completed') {
             setCurrentUrl(data.payload?.url || '');
-            addLog(`Navigated to: ${data.payload?.url}`);
+            addLog(`📍 Navigated to: ${data.payload?.url}`);
           } else if (data.type === 'action_completed') {
-            addLog(`✓ ${data.message || 'Action completed'}`);
+            addLog(`✅ ${data.message || 'Action completed'}`);
+            setRetryInfo(null);
+          } else if (data.type === 'action_retry') {
+            setRetryInfo({
+              attempt: data.attempt,
+              maxRetries: data.maxRetries
+            });
+            addLog(`🔄 Retry ${data.attempt}/${data.maxRetries}${data.error ? ': ' + data.error : ''}`);
+          } else if (data.type === 'agent_completed') {
+            setAgentRunning(false);
+            addLog(`🤖 Agent completed: ${JSON.stringify(data.result).substring(0, 100)}`);
+            if (data.screenshot) {
+              setScreenshot(data.screenshot);
+            }
+          } else if (data.type === 'agent_error') {
+            setAgentRunning(false);
+            addLog(`❌ Agent error: ${data.error}`);
           } else if (data.type === 'log') {
             addLog(data.message);
           }
@@ -97,12 +142,12 @@ export const StagehandAutomation: React.FC = () => {
 
   const executeStagehandAction = async () => {
     if (!instruction.trim()) {
-      addLog('Please enter an instruction');
+      addLog('⚠️ Please enter an instruction');
       return;
     }
 
     setIsRunning(true);
-    addLog(`Executing ${actionMode}: ${instruction}`);
+    addLog(`⚡ Executing ${actionMode}: ${instruction}`);
 
     try {
       const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -110,12 +155,17 @@ export const StagehandAutomation: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          session_id: sessionId,
+          sessionId: sessionId,
           action_type: actionMode,
           instruction: instruction,
           mode: 'stagehand'
         })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
       
@@ -127,11 +177,17 @@ export const StagehandAutomation: React.FC = () => {
         if (data.url) {
           setCurrentUrl(data.url);
         }
+        if (data.data) {
+          addLog(`📊 Result: ${JSON.stringify(data.data).substring(0, 200)}`);
+        }
       } else {
-        addLog(`❌ Action failed: ${data.message}`);
+        const errorMsg = data.message || 'Unknown action error';
+        addLog(`❌ Action failed: ${errorMsg}`);
       }
-    } catch (error) {
-      addLog(`❌ Error: ${error}`);
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      addLog(`❌ Execution error: ${errorMsg}`);
+      console.error('Action execution error:', error);
     } finally {
       setIsRunning(false);
     }
@@ -139,26 +195,109 @@ export const StagehandAutomation: React.FC = () => {
 
   const stopBrowser = async () => {
     try {
+      addLog('Stopping browser session...');
       const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
-      await fetch(`${BACKEND_URL}/api/web-automation/cleanup`, {
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/cleanup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId })
+        body: JSON.stringify({ sessionId: sessionId })
       });
       
+      const data = await response.json().catch(() => ({ success: true }));
+      
       setBrowserStatus('disconnected');
-      addLog('Browser session closed');
+      setScreenshot('');
+      setCurrentUrl('');
       
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
-    } catch (error) {
-      addLog(`Cleanup error: ${error}`);
+      
+      if (data.success) {
+        addLog('✅ Browser session closed successfully');
+      } else {
+        addLog(`⚠️ Browser closed with warnings: ${data.message || 'Unknown'}`);
+      }
+    } catch (error: any) {
+      setBrowserStatus('disconnected');
+      const errorMsg = error.message || String(error);
+      addLog(`❌ Cleanup error: ${errorMsg}`);
+      console.error('Cleanup error:', error);
     }
   };
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+  };
+
+  const executeAutonomousAgent = async () => {
+    if (!agentGoal.trim()) {
+      addLog('⚠️ Please enter a goal for the autonomous agent');
+      return;
+    }
+
+    setAgentRunning(true);
+    addLog(`🤖 Starting autonomous agent with goal: ${agentGoal}`);
+
+    try {
+      const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/autonomous-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          goal: agentGoal,
+          maxSteps: 10
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        addLog(`✅ Agent started successfully`);
+      } else {
+        setAgentRunning(false);
+        addLog(`❌ Agent failed to start: ${data.message}`);
+      }
+    } catch (error: any) {
+      setAgentRunning(false);
+      const errorMsg = error.message || String(error);
+      addLog(`❌ Agent error: ${errorMsg}`);
+      console.error('Agent execution error:', error);
+    }
+  };
+
+  const handleScreenshotClick = async (event: React.MouseEvent<HTMLImageElement>) => {
+    if (!screenshotContainerRef.current) return;
+    
+    const rect = screenshotContainerRef.current.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    try {
+      const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${BACKEND_URL}/api/web-automation/select-element`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          x: x,
+          y: y
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.selectors) {
+        setSelectedElement(data.selectors);
+        addLog(`🎯 Element selected: ${data.selectors.tag} "${data.selectors.text}"`);
+        addLog(`   CSS: ${data.selectors.css}`);
+        setInstruction(`click on element with selector: ${data.selectors.css}`);
+      }
+    } catch (error: any) {
+      addLog(`❌ Element selection error: ${error.message}`);
+    }
   };
 
   const quickActions = [
@@ -304,6 +443,126 @@ export const StagehandAutomation: React.FC = () => {
           />
         ))}
       </Box>
+
+      <Accordion 
+        sx={{
+          bgcolor: 'rgba(26, 26, 26, 0.6)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(0, 243, 255, 0.2)',
+          borderRadius: '12px !important',
+          '&:before': { display: 'none' },
+          boxShadow: 'none'
+        }}
+      >
+        <AccordionSummary
+          expandIcon={<ExpandMore sx={{ color: '#00F3FF' }} />}
+          sx={{
+            '& .MuiAccordionSummary-content': {
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }
+          }}
+        >
+          <AccountTree sx={{ fontSize: 20, color: '#00F3FF' }} />
+          <Typography sx={{ color: 'white', fontWeight: 600 }}>
+            Workflow Integration
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <WorkflowAutomationBridge 
+            nodes={[]}
+            onExecute={(steps) => {
+              addLog(`🔄 Workflow started with ${steps.length} steps`);
+            }}
+          />
+        </AccordionDetails>
+      </Accordion>
+
+      {retryInfo && (
+        <Paper sx={{ 
+          p: 2, 
+          bgcolor: 'rgba(245, 158, 11, 0.1)', 
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '12px',
+          animation: 'slideInLeft 0.3s ease-out'
+        }}>
+          <Typography variant="body2" sx={{ color: '#f59e0b', fontWeight: 600 }}>
+            🔄 Retrying action... Attempt {retryInfo.attempt}/{retryInfo.maxRetries}
+          </Typography>
+        </Paper>
+      )}
+
+      {actionMode === 'agent' && (
+        <Paper sx={{ 
+          p: 2, 
+          bgcolor: 'rgba(139, 92, 246, 0.1)', 
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '12px',
+          animation: 'fadeIn 0.5s ease-out'
+        }}>
+          <Typography variant="subtitle2" sx={{ color: '#8b5cf6', mb: 2, fontWeight: 600 }}>
+            🤖 Autonomous Agent Mode
+          </Typography>
+          <TextField
+            fullWidth
+            value={agentGoal}
+            onChange={(e) => setAgentGoal(e.target.value)}
+            placeholder="Enter goal (e.g., 'Find and purchase the cheapest laptop')"
+            disabled={browserStatus !== 'connected' || agentRunning}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: 'white',
+                bgcolor: 'rgba(10, 10, 10, 0.8)',
+                backdropFilter: 'blur(5px)',
+                borderRadius: '8px',
+                '& fieldset': { borderColor: 'rgba(139, 92, 246, 0.3)' },
+                '&:hover fieldset': { borderColor: '#8b5cf6' },
+                '&.Mui-focused fieldset': { borderColor: '#8b5cf6' }
+              },
+              mb: 1
+            }}
+          />
+          <Button
+            fullWidth
+            variant="contained"
+            disabled={browserStatus !== 'connected' || agentRunning || !agentGoal.trim()}
+            onClick={executeAutonomousAgent}
+            sx={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+              color: 'white',
+              fontWeight: 600,
+              '&:hover': { background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' },
+              '&:disabled': { background: 'rgba(42, 42, 42, 0.6)', color: '#666' }
+            }}
+          >
+            {agentRunning ? '🤖 Agent Running...' : 'Start Autonomous Agent'}
+          </Button>
+        </Paper>
+      )}
+
+      {selectedElement && (
+        <Paper sx={{ 
+          p: 2, 
+          bgcolor: 'rgba(16, 185, 129, 0.1)', 
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '12px',
+          animation: 'slideInLeft 0.3s ease-out'
+        }}>
+          <Typography variant="subtitle2" sx={{ color: '#10b981', mb: 1, fontWeight: 600 }}>
+            🎯 Selected Element
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#888', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+            Tag: {selectedElement.tag} | Text: "{selectedElement.text}"
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#888', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+            CSS: {selectedElement.css}
+          </Typography>
+        </Paper>
+      )}
 
       <Box sx={{ 
         display: 'grid', 
@@ -544,52 +803,129 @@ export const StagehandAutomation: React.FC = () => {
             boxShadow: '0 8px 32px rgba(0, 243, 255, 0.1)'
           }
         }}>
-          <Typography variant="subtitle2" sx={{ 
-            color: '#00F3FF', 
-            mb: 2, 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1,
-            fontWeight: 600
-          }}>
-            <Monitor sx={{ fontSize: 18 }} />
-            Live Browser View
-          </Typography>
-          <Box sx={{ 
-            flex: 1,
-            bgcolor: 'rgba(10, 10, 10, 0.8)',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 0,
-            position: 'relative',
-            border: '1px solid rgba(0, 243, 255, 0.1)',
-            transition: 'all 0.3s ease'
-          }}>
-            {screenshot ? (
-              <img 
-                src={screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`}
-                alt="Browser screenshot"
-                style={{ 
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                  borderRadius: '8px',
-                  animation: 'fadeIn 0.5s ease-out'
-                }}
-              />
-            ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ 
+              color: '#00F3FF', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              fontWeight: 600
+            }}>
+              <Monitor sx={{ fontSize: 18 }} />
+              Live Browser View
+            </Typography>
+            {screenshotHistory.length > 0 && (
+              <Typography variant="caption" sx={{ color: '#888' }}>
+                History: {screenshotHistory.length}
+              </Typography>
+            )}
+          </Box>
+          <Box 
+            ref={screenshotContainerRef}
+            sx={{ 
+              flex: 1,
+              bgcolor: 'rgba(10, 10, 10, 0.8)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              position: 'relative',
+              border: '1px solid rgba(0, 243, 255, 0.1)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <Box sx={{ 
+              flex: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              cursor: screenshot && browserStatus === 'connected' ? 'crosshair' : 'default',
+              position: 'relative'
+            }}>
+              {screenshot ? (
+                <>
+                  <img 
+                    src={screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`}
+                    alt="Browser screenshot"
+                    onClick={handleScreenshotClick}
+                    style={{ 
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                      animation: 'fadeIn 0.5s ease-out',
+                      cursor: browserStatus === 'connected' ? 'crosshair' : 'default'
+                    }}
+                  />
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    bgcolor: 'rgba(0, 243, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: '8px',
+                    border: '1px solid rgba(0, 243, 255, 0.3)'
+                  }}>
+                    <Typography variant="caption" sx={{ color: '#00F3FF', fontSize: '0.7rem' }}>
+                      Click to select element
+                    </Typography>
+                  </Box>
+                </>
+              ) : (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  color: '#666',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}>
+                  <Visibility sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
+                  <Typography variant="body2">
+                    {browserStatus === 'connected' ? 'Waiting for screenshot...' : 'Start browser to view live feed'}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+            {screenshotHistory.length > 1 && (
               <Box sx={{ 
-                textAlign: 'center', 
-                color: '#666',
-                animation: 'pulse 2s ease-in-out infinite'
+                display: 'flex', 
+                gap: 1, 
+                p: 1, 
+                overflowX: 'auto',
+                bgcolor: 'rgba(0, 0, 0, 0.3)',
+                borderTop: '1px solid rgba(0, 243, 255, 0.1)'
               }}>
-                <Visibility sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
-                <Typography variant="body2">
-                  {browserStatus === 'connected' ? 'Waiting for screenshot...' : 'Start browser to view live feed'}
-                </Typography>
+                {screenshotHistory.slice(-5).reverse().map((item, idx) => (
+                  <Box
+                    key={idx}
+                    onClick={() => setScreenshot(item.screenshot)}
+                    sx={{
+                      minWidth: '60px',
+                      height: '40px',
+                      cursor: 'pointer',
+                      border: '1px solid',
+                      borderColor: screenshot === item.screenshot ? '#00F3FF' : 'rgba(42, 42, 42, 0.5)',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        borderColor: '#00F3FF',
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                  >
+                    <img 
+                      src={item.screenshot.startsWith('data:') ? item.screenshot : `data:image/png;base64,${item.screenshot}`}
+                      alt="History"
+                      style={{ 
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </Box>
+                ))}
               </Box>
             )}
           </Box>

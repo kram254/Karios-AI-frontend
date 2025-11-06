@@ -19,6 +19,8 @@ export const StagehandAutomation: React.FC = () => {
   const [agentRunning, setAgentRunning] = useState(false);
   const [agentGoal, setAgentGoal] = useState('');
   const screenshotContainerRef = useRef<HTMLDivElement>(null);
+  const [useSandbox, setUseSandbox] = useState(true);
+  const [sandboxActive, setSandboxActive] = useState(false);
 
   useEffect(() => {
     const sid = `stagehand_${Date.now()}`;
@@ -34,7 +36,11 @@ export const StagehandAutomation: React.FC = () => {
 
   const initializeBrowser = async () => {
     setBrowserStatus('connecting');
-    addLog('Initializing Stagehand browser...');
+    if (useSandbox) {
+      addLog('🚀 Initializing E2B sandbox environment...');
+    } else {
+      addLog('Initializing Stagehand browser...');
+    }
 
     try {
       const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -44,7 +50,8 @@ export const StagehandAutomation: React.FC = () => {
         body: JSON.stringify({
           sessionId: sessionId,
           browser_type: 'chromium',
-          visible: true
+          visible: !useSandbox,
+          use_sandbox: useSandbox
         })
       });
 
@@ -57,9 +64,16 @@ export const StagehandAutomation: React.FC = () => {
       
       if (data.success) {
         setBrowserStatus('connected');
-        addLog('✅ Stagehand browser initialized successfully');
-        if (data.stagehand_available) {
-          addLog('✅ Stagehand mode active');
+        setSandboxActive(data.sandbox || false);
+        
+        if (data.sandbox) {
+          addLog('✅ E2B sandbox initialized successfully');
+          addLog('📦 Running in secure isolated environment');
+        } else {
+          addLog('✅ Stagehand browser initialized successfully');
+          if (data.stagehand_available) {
+            addLog('✅ Stagehand mode active');
+          }
         }
         connectWebSocket();
       } else {
@@ -350,7 +364,7 @@ export const StagehandAutomation: React.FC = () => {
           </Typography>
         </Box>
         
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <Chip 
             label={browserStatus === 'connected' ? 'Connected' : browserStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
             color={browserStatus === 'connected' ? 'success' : browserStatus === 'connecting' ? 'warning' : 'default'}
@@ -366,6 +380,42 @@ export const StagehandAutomation: React.FC = () => {
               transition: 'all 0.3s ease'
             }}
           />
+
+          {sandboxActive && (
+            <Chip 
+              label="🔒 E2B Sandbox"
+              size="small"
+              sx={{ 
+                bgcolor: 'rgba(139, 92, 246, 0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid #8b5cf6',
+                color: '#8b5cf6',
+                fontWeight: 600
+              }}
+            />
+          )}
+
+          {browserStatus === 'disconnected' && (
+            <Chip 
+              label={useSandbox ? "Sandbox Mode" : "Local Mode"}
+              size="small"
+              onClick={() => setUseSandbox(!useSandbox)}
+              sx={{ 
+                bgcolor: useSandbox ? 'rgba(139, 92, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid',
+                borderColor: useSandbox ? '#8b5cf6' : '#3b82f6',
+                color: useSandbox ? '#8b5cf6' : '#3b82f6',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+                }
+              }}
+            />
+          )}
           
           {browserStatus === 'disconnected' ? (
             <Button
@@ -443,6 +493,24 @@ export const StagehandAutomation: React.FC = () => {
           />
         ))}
       </Box>
+
+      {useSandbox && browserStatus === 'disconnected' && (
+        <Paper sx={{ 
+          p: 2, 
+          bgcolor: 'rgba(139, 92, 246, 0.05)', 
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '12px',
+          animation: 'fadeIn 0.5s ease-out'
+        }}>
+          <Typography variant="subtitle2" sx={{ color: '#8b5cf6', mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+            🔒 Sandbox Mode Enabled
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#888', fontSize: '0.85rem' }}>
+            Your automation will run in a secure E2B isolated environment with Playwright pre-installed. Perfect for production deployments and untrusted code execution.
+          </Typography>
+        </Paper>
+      )}
 
       <Accordion 
         sx={{

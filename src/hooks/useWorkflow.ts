@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNodesState, useEdgesState, addEdge, Connection, Edge } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import type { Workflow, WorkflowNode, WorkflowEdge, NodeType } from '../types/workflow';
@@ -9,6 +9,10 @@ export function useWorkflow(initialWorkflow?: Workflow) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialWorkflow?.edges || []);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedStateRef = useRef<string>('');
 
   useEffect(() => {
     if (initialWorkflow) {
@@ -23,8 +27,70 @@ export function useWorkflow(initialWorkflow?: Workflow) {
       }));
       setNodes(migratedNodes as any);
       setEdges(initialWorkflow.edges);
+      lastSavedStateRef.current = JSON.stringify({ nodes: migratedNodes, edges: initialWorkflow.edges });
+      setLastSaved(new Date());
     }
   }, [initialWorkflow, setNodes, setEdges]);
+
+  useEffect(() => {
+    const currentState = JSON.stringify({ nodes, edges });
+    if (currentState !== lastSavedStateRef.current && workflow?.id) {
+      setHasUnsavedChanges(true);
+      
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      
+      autoSaveTimerRef.current = setTimeout(() => {
+        autoSave();
+      }, 3000);
+    }
+    
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [nodes, edges, workflow?.id]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const autoSave = useCallback(async () => {
+    if (!workflow?.id || !hasUnsavedChanges) return;
+    
+    try {
+      const workflowData: Workflow = {
+        ...workflow,
+        nodes,
+        edges,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const response = await fetch(`/api/workflows/${workflow.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(workflowData),
+      });
+
+      if (response.ok) {
+        lastSavedStateRef.current = JSON.stringify({ nodes, edges });
+        setHasUnsavedChanges(false);
+        setLastSaved(new Date());
+      }
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    }
+  }, [workflow, nodes, edges, hasUnsavedChanges]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -122,6 +188,9 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 
       const savedWorkflow = await response.json();
       setWorkflow(savedWorkflow);
+      lastSavedStateRef.current = JSON.stringify({ nodes, edges });
+      setHasUnsavedChanges(false);
+      setLastSaved(new Date());
       return savedWorkflow;
     } catch (error) {
       console.error('Error saving workflow:', error);
@@ -168,6 +237,8 @@ export function useWorkflow(initialWorkflow?: Workflow) {
     edges,
     selectedNode,
     isSaving,
+    hasUnsavedChanges,
+    lastSaved,
     setSelectedNode,
     onNodesChange,
     onEdgesChange,

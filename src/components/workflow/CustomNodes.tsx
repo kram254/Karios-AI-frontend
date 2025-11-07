@@ -180,7 +180,7 @@ export function CustomNode({ data, selected }: NodeProps) {
         height: '2px',
         background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
       }} />
-      {nodeType !== 'end' && (
+      {nodeType !== 'start' && (
         <Handle
           type="target"
           position={Position.Top}
@@ -278,7 +278,7 @@ export function CustomNode({ data, selected }: NodeProps) {
         </div>
       )}
 
-      {nodeType !== 'start' && (
+      {nodeType !== 'end' && (
         <Handle
           type="source"
           position={Position.Bottom}

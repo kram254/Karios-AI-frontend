@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,9 +6,10 @@ import {
   MiniMap,
   Panel,
   BackgroundVariant,
+  Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Save, Play, Settings, Plus, Download, Upload, Sparkles } from 'lucide-react';
+import { Save, Play, Settings, Plus, Download, Upload, Sparkles, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { useWorkflow } from '../../hooks/useWorkflow';
 import { nodeTypes } from './CustomNodes';
 import { NodePanel } from './NodePanel';
@@ -16,6 +17,8 @@ import { NodesLibrary } from './NodesLibrary';
 import { ExecutionPanel } from './ExecutionPanel';
 import { WorkflowSettings } from './WorkflowSettings';
 import { AIWorkflowChat } from './AIWorkflowChat';
+import { validateWorkflow, type ValidationError } from '../../utils/workflowValidator';
+import { validateConnection as validateNodeConnection } from '../../utils/nodeTypeSystem';
 import type { NodeType } from '../../types/workflow';
 
 interface WorkflowBuilderProps {
@@ -31,6 +34,8 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     edges,
     selectedNode,
     isSaving,
+    hasUnsavedChanges,
+    lastSaved,
     setSelectedNode,
     onNodesChange,
     onEdgesChange,
@@ -47,6 +52,37 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
   const [showLibrary, setShowLibrary] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
   const [workflowName, setWorkflowName] = useState(workflow?.name || 'Untitled Workflow');
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [showValidationPanel, setShowValidationPanel] = useState(false);
+
+  useEffect(() => {
+    const validation = validateWorkflow(nodes, edges);
+    setValidationErrors([...validation.errors, ...validation.warnings]);
+  }, [nodes, edges]);
+
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      const sourceNode = nodes.find(n => n.id === connection.source);
+      const targetNode = nodes.find(n => n.id === connection.target);
+      
+      if (sourceNode && targetNode) {
+        const validation = validateNodeConnection(
+          sourceNode.data.nodeType,
+          targetNode.data.nodeType,
+          connection.sourceHandle || undefined,
+          connection.targetHandle || undefined
+        );
+        
+        if (!validation.valid) {
+          alert(validation.message || 'Invalid connection');
+          return;
+        }
+      }
+      
+      onConnect(connection);
+    },
+    [nodes, onConnect]
+  );
 
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: any) => {
@@ -148,7 +184,7 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          onConnect={handleConnect}
           onNodeClick={handleNodeClick}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
@@ -201,8 +237,40 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
                 }}
               >
                 <Save size={14} />
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save*' : 'Saved'}
               </button>
+              {lastSaved && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 11,
+                  color: hasUnsavedChanges ? '#f59e0b' : '#10b981',
+                }}>
+                  {hasUnsavedChanges ? <Clock size={12} /> : <CheckCircle size={12} />}
+                  {new Date(lastSaved).toLocaleTimeString()}
+                </div>
+              )}
+              {validationErrors.length > 0 && (
+                <button
+                  onClick={() => setShowValidationPanel(!showValidationPanel)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    backgroundColor: validationErrors.some(e => e.type === 'error') ? '#ef4444' : '#f59e0b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                  }}
+                >
+                  <AlertCircle size={14} />
+                  {validationErrors.length}
+                </button>
+              )}
               <button
                 onClick={handleExecute}
                 disabled={!workflow?.id}
@@ -337,6 +405,54 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
               <span>AI Builder</span>
             </button>
           </Panel>
+
+          {showValidationPanel && validationErrors.length > 0 && (
+            <Panel position="top-right" style={{ margin: 10, maxWidth: 300 }}>
+              <div style={{
+                backgroundColor: '#1a1a1a',
+                padding: 12,
+                borderRadius: 8,
+                border: '1px solid #333',
+                maxHeight: 400,
+                overflowY: 'auto',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}>
+                  <h3 style={{ margin: 0, color: 'white', fontSize: 14 }}>Validation Issues</h3>
+                  <button
+                    onClick={() => setShowValidationPanel(false)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#999',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                    }}
+                  >×</button>
+                </div>
+                {validationErrors.map((error, idx) => (
+                  <div key={idx} style={{
+                    padding: 8,
+                    marginBottom: 8,
+                    backgroundColor: error.type === 'error' ? '#7f1d1d' : '#78350f',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    color: 'white',
+                  }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                      {error.type === 'error' ? '❌' : '⚠️'} {error.type.toUpperCase()}
+                    </div>
+                    <div>{error.message}</div>
+                    {error.nodeId && <div style={{ fontSize: 10, marginTop: 4, opacity: 0.7 }}>Node: {error.nodeId}</div>}
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
         </ReactFlow>
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
-import { PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote } from 'lucide-react';
+import { PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote, Shield, Save, Search } from 'lucide-react';
 
 export function CustomNode({ data, selected }: NodeProps) {
   const nodeType = data.nodeType || 'agent';
@@ -441,6 +441,12 @@ function getNodeIcon(type: string) {
       return <StopCircle style={iconStyle} color="#ef4444" fill="#ef4444" fillOpacity={0.2} />;
     case 'note':
       return <StickyNote style={iconStyle} color="#eab308" strokeWidth={2.5} />;
+    case 'guardrail':
+      return <Shield style={iconStyle} color="#ef4444" strokeWidth={2.5} />;
+    case 'set-state':
+      return <Save style={iconStyle} color="#10b981" strokeWidth={2.5} />;
+    case 'file-search':
+      return <Search style={iconStyle} color="#06b6d4" strokeWidth={2.5} />;
     default:
       return null;
   }

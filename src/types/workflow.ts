@@ -7,7 +7,10 @@ export type NodeType =
   | 'while'
   | 'approval'
   | 'end'
-  | 'note';
+  | 'note'
+  | 'guardrail'
+  | 'set-state'
+  | 'file-search';
 
 export interface WorkflowNode {
   id: string;
@@ -23,16 +26,33 @@ export interface WorkflowNode {
       model?: string;
       temperature?: number;
       maxTokens?: number;
+      reasoningEffort?: 'minimum' | 'low' | 'medium' | 'high';
+      outputFormat?: 'text' | 'json' | 'widgets';
+      verbosity?: 'low' | 'medium' | 'high';
+      includeChatHistory?: boolean;
+      writeConversationHistory?: boolean;
+      showReasoning?: boolean;
+      tools?: string[];
       mcpServer?: string;
       tool?: string;
       toolArgs?: Record<string, any>;
       code?: string;
       condition?: string;
       maxIterations?: number;
+      iterationMode?: 'sequential' | 'parallel';
       approvalMessage?: string;
+      requireMultiLevelApproval?: boolean;
+      approvers?: string[];
       outputVariable?: string;
       inputVariables?: string[];
       noteText?: string;
+      guardrailType?: 'moderation' | 'pii' | 'jailbreak' | 'hallucination' | 'custom';
+      guardrailRules?: string[];
+      vectorStoreId?: string;
+      stateKey?: string;
+      stateValue?: any;
+      searchQuery?: string;
+      topK?: number;
     };
     outputs?: Record<string, any>;
     inputs?: Record<string, any>;

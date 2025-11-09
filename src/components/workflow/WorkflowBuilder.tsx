@@ -9,7 +9,7 @@ import {
   Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Save, Play, Settings, Plus, Download, Upload, Sparkles, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Save, Play, Settings, Plus, Download, Upload, Sparkles, AlertCircle, CheckCircle, Clock, Code, Snowflake, BarChart3 } from 'lucide-react';
 import { useWorkflow } from '../../hooks/useWorkflow';
 import { nodeTypes } from './CustomNodes';
 import { NodePanel } from './NodePanel';
@@ -17,6 +17,9 @@ import { NodesLibrary } from './NodesLibrary';
 import { ExecutionPanel } from './ExecutionPanel';
 import { WorkflowSettings } from './WorkflowSettings';
 import { AIWorkflowChat } from './AIWorkflowChat';
+import { AICopilot } from './AICopilot';
+import { PerformanceAnalytics } from './PerformanceAnalytics';
+import { BreakpointDebugger } from './BreakpointDebugger';
 import { validateWorkflow, type ValidationError } from '../../utils/workflowValidator';
 import { validateConnection as validateNodeConnection } from '../../utils/nodeTypeSystem';
 import type { NodeType } from '../../types/workflow';
@@ -43,6 +46,7 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     addNode,
     updateNode,
     deleteNode,
+    deleteEdge,
     saveWorkflow,
   } = useWorkflow();
 
@@ -51,12 +55,21 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
   const [showExecution, setShowExecution] = useState(false);
   const [showLibrary, setShowLibrary] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [workflowName, setWorkflowName] = useState(workflow?.name || 'Untitled Workflow');
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [showValidationPanel, setShowValidationPanel] = useState(false);
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [frozenNodes, setFrozenNodes] = useState<Set<string>>(new Set());
+  const [breakpoints, setBreakpoints] = useState<Set<string>>(new Set());
+  const [executionState, setExecutionState] = useState({
+    isPaused: false,
+    currentNodeId: null as string | null,
+    variables: {} as Record<string, any>
+  });
 
   useEffect(() => {
-    const validation = validateWorkflow(nodes, edges);
+    const validation = validateWorkflow(nodes as any, edges as any);
     setValidationErrors([...validation.errors, ...validation.warnings]);
   }, [nodes, edges]);
 
@@ -95,7 +108,29 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
   const handlePaneClick = useCallback(() => {
     setSelectedNode(null);
     setShowNodePanel(false);
+    setSelectedEdge(null);
   }, [setSelectedNode]);
+
+  const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: any) => {
+    setSelectedEdge(edge.id);
+  }, []);
+
+  const handleEdgesChange = useCallback((changes: any[]) => {
+    onEdgesChange(changes);
+  }, [onEdgesChange]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdge) {
+        deleteEdge(selectedEdge);
+        setSelectedEdge(null);
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEdge, deleteEdge]);
 
   const handleAddNode = useCallback(
     (type: NodeType) => {
@@ -110,14 +145,94 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     [addNode, setSelectedNode]
   );
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
-      const saved = await saveWorkflow(workflowName);
-      if (onSave) onSave(saved.id);
+      await saveWorkflow(workflowName);
     } catch (error) {
       console.error('Failed to save workflow:', error);
     }
-  };
+  }, [workflowName, saveWorkflow]);
+
+  const handleExportCode = useCallback(() => {
+    const code = {
+      typescript: generateTypeScriptCode(nodes, edges),
+      python: generatePythonCode(nodes, edges),
+      config: { nodes, edges, name: workflowName }
+    };
+    const blob = new Blob([JSON.stringify(code, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}-export.json`;
+    a.click();
+  }, [nodes, edges, workflowName]);
+
+  const toggleNodeFreeze = useCallback(() => {
+    if (selectedNode) {
+      setFrozenNodes(prev => {
+        const next = new Set(prev);
+        if (next.has(selectedNode)) {
+          next.delete(selectedNode);
+        } else {
+          next.add(selectedNode);
+        }
+        return next;
+      });
+    }
+  }, [selectedNode]);
+
+  const handleToggleBreakpoint = useCallback((nodeId: string) => {
+    setBreakpoints(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleContinueExecution = useCallback(() => {
+    setExecutionState({ isPaused: false, currentNodeId: null, variables: {} });
+  }, []);
+
+  const handleStepOver = useCallback(() => {
+    setExecutionState({ isPaused: false, currentNodeId: null, variables: {} });
+  }, []);
+
+  const handleAIAddNode = useCallback((type: string, position: { x: number; y: number }) => {
+    const nodeId = addNode(type as NodeType, position);
+    setSelectedNode(nodeId);
+    setShowNodePanel(true);
+    return nodeId;
+  }, [addNode, setSelectedNode]);
+
+  function generateTypeScriptCode(nodes: any[], edges: any[]): string {
+    return `import { Agent, Runner } from '@openai/agents-sdk';
+
+const workflow = async () => {
+  const nodes = ${JSON.stringify(nodes, null, 2)};
+  const edges = ${JSON.stringify(edges, null, 2)};
+  
+  const runner = new Runner();
+  return await runner.execute(nodes, edges);
+};
+
+export default workflow;`;
+  }
+
+  function generatePythonCode(nodes: any[], edges: any[]): string {
+    return `from agents import Agent, Runner
+
+async def workflow():
+    nodes = ${JSON.stringify(nodes, null, 2)}
+    edges = ${JSON.stringify(edges, null, 2)}
+    
+    runner = Runner()
+    return await runner.execute(nodes, edges)
+`;
+  }
 
   const handleExecute = () => {
     if (workflow?.id) {
@@ -164,11 +279,32 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
   };
 
   const handleWorkflowGenerated = useCallback((generatedNodes: any[], generatedEdges: any[]) => {
-    if (generatedNodes.length > 0) {
-      onNodesChange([{ type: 'reset', item: generatedNodes }] as any);
-      onEdgesChange([{ type: 'reset', item: generatedEdges }] as any);
+    if (generatedNodes && generatedNodes.length > 0) {
+      const validatedNodes = generatedNodes.map(node => ({
+        ...node,
+        type: 'custom',
+        data: {
+          ...node.data,
+          onUpdate: (updates: any) => {
+            updateNode(node.id, updates);
+          }
+        }
+      }));
+      
+      onNodesChange([{ type: 'reset', item: validatedNodes }] as any);
+      onEdgesChange([{ type: 'reset', item: generatedEdges || [] }] as any);
+      
+      setShowAIChat(false);
+      setShowLibrary(false);
+      
+      if (validatedNodes.length > 0) {
+        setTimeout(() => {
+          setSelectedNode(validatedNodes[1]?.id || validatedNodes[0]?.id);
+          setShowNodePanel(true);
+        }, 100);
+      }
     }
-  }, [onNodesChange, onEdgesChange]);
+  }, [onNodesChange, onEdgesChange, updateNode]);
 
   const selectedNodeData = nodes.find((n) => n.id === selectedNode);
 
@@ -181,14 +317,23 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
       <div style={{ flex: 1, height: '100%' }}>
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={edges.map(edge => ({
+            ...edge,
+            selected: edge.id === selectedEdge,
+            style: {
+              stroke: edge.id === selectedEdge ? '#ef4444' : undefined,
+              strokeWidth: edge.id === selectedEdge ? 3 : undefined,
+            },
+          }))}
           onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          onEdgesChange={handleEdgesChange}
           onConnect={handleConnect}
           onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView
+          deleteKeyCode="Delete"
           style={{ backgroundColor: '#0A0A0A' }}
         >
           <Background color="#333" variant={BackgroundVariant.Dots} gap={16} size={1} />
@@ -326,6 +471,24 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
                 <Settings size={14} />
               </button>
               <button
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                disabled={!workflow?.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  backgroundColor: workflow?.id ? '#3b82f6' : '#333',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: workflow?.id ? 'pointer' : 'not-allowed',
+                  fontSize: 13,
+                }}
+              >
+                <BarChart3 size={14} />
+              </button>
+              <button
                 onClick={handleExport}
                 style={{
                   display: 'flex',
@@ -342,6 +505,44 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
               >
                 <Download size={14} />
               </button>
+              <button
+                onClick={handleExportCode}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  backgroundColor: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+                title="Export to TypeScript/Python"
+              >
+                <Code size={14} />
+              </button>
+              {selectedNode && (
+                <button
+                  onClick={toggleNodeFreeze}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px',
+                    backgroundColor: frozenNodes.has(selectedNode) ? '#06b6d4' : '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                  }}
+                  title={frozenNodes.has(selectedNode) ? "Unfreeze Node" : "Freeze Node for Testing"}
+                >
+                  <Snowflake size={14} />
+                </button>
+              )}
               <button
                 onClick={handleImport}
                 style={{
@@ -492,6 +693,33 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
         isOpen={showAIChat}
         onToggle={() => setShowAIChat(!showAIChat)}
         onWorkflowGenerated={handleWorkflowGenerated}
+      />
+
+      <AICopilot
+        selectedNodeId={selectedNode}
+        nodes={nodes}
+        edges={edges}
+        onAddNode={handleAIAddNode}
+        onUpdateNode={updateNode}
+        onConnect={(source, target) => onConnect({ source, target, sourceHandle: null, targetHandle: null })}
+        validationErrors={validationErrors}
+      />
+
+      {showAnalytics && workflow && (
+        <PerformanceAnalytics
+          workflowId={workflow.id}
+          isOpen={showAnalytics}
+          onClose={() => setShowAnalytics(false)}
+        />
+      )}
+
+      <BreakpointDebugger
+        nodes={nodes}
+        onToggleBreakpoint={handleToggleBreakpoint}
+        breakpoints={breakpoints}
+        executionState={executionState}
+        onContinue={handleContinueExecution}
+        onStepOver={handleStepOver}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote } from 'lucide-react';
+import { X, PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote, Shield, Save, Search } from 'lucide-react';
 import type { NodeType } from '../../types/workflow';
 
 interface NodesLibraryProps {
@@ -21,6 +21,19 @@ const nodeCategories = [
       { type: 'agent' as NodeType, label: 'AI Agent', icon: Bot, color: '#3b82f6', description: 'LLM reasoning node' },
       { type: 'mcp-tool' as NodeType, label: 'MCP Tool', icon: Wrench, color: '#8b5cf6', description: 'External tool call' },
       { type: 'transform' as NodeType, label: 'Transform', icon: Shuffle, color: '#f59e0b', description: 'Data manipulation' },
+      { type: 'file-search' as NodeType, label: 'File Search', icon: Search, color: '#06b6d4', description: 'Vector store query' },
+    ],
+  },
+  {
+    title: 'State Management',
+    nodes: [
+      { type: 'set-state' as NodeType, label: 'Set State', icon: Save, color: '#10b981', description: 'Store workflow variables' },
+    ],
+  },
+  {
+    title: 'Safety & Quality',
+    nodes: [
+      { type: 'guardrail' as NodeType, label: 'Guardrail', icon: Shield, color: '#ef4444', description: 'Safety validation layer' },
     ],
   },
   {

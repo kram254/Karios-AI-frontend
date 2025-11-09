@@ -264,6 +264,9 @@ function getNodeLabel(type: NodeType): string {
     'approval': 'User Approval',
     'end': 'End',
     'note': 'Note',
+    'guardrail': 'Guardrail',
+    'set-state': 'Set State',
+    'file-search': 'File Search',
   };
   return labels[type] || type;
 }
@@ -271,14 +274,28 @@ function getNodeLabel(type: NodeType): string {
 function getDefaultConfig(type: NodeType): Record<string, any> {
   const defaults: Record<NodeType, Record<string, any>> = {
     'start': { inputVariables: [] },
-    'agent': { prompt: '', model: 'gpt-4', temperature: 0.7, maxTokens: 2000 },
+    'agent': { 
+      prompt: '', 
+      model: 'gpt-4', 
+      temperature: 0.7, 
+      maxTokens: 2000,
+      reasoningEffort: 'medium',
+      outputFormat: 'text',
+      verbosity: 'medium',
+      includeChatHistory: true,
+      writeConversationHistory: false,
+      showReasoning: false
+    },
     'mcp-tool': { tool: '', toolArgs: {} },
     'transform': { code: '' },
     'if-else': { condition: '' },
-    'while': { condition: '', maxIterations: 10 },
-    'approval': { approvalMessage: '' },
+    'while': { condition: '', maxIterations: 10, iterationMode: 'sequential' },
+    'approval': { approvalMessage: '', requireMultiLevelApproval: false, approvers: [] },
     'end': { outputVariable: '' },
     'note': { noteText: 'Double-click to edit note' },
+    'guardrail': { guardrailType: 'moderation', guardrailRules: [] },
+    'set-state': { stateKey: '', stateValue: '' },
+    'file-search': { vectorStoreId: '', searchQuery: '', topK: 5 },
   };
   return defaults[type] || {};
 }

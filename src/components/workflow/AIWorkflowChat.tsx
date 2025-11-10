@@ -46,6 +46,13 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
     setInput('');
     setIsGenerating(true);
 
+    const thinkingMessage: Message = {
+      role: 'assistant',
+      content: 'Analyzing your request and breaking down tasks...',
+      timestamp: Date.now()
+    };
+    setMessages(prev => [...prev, thinkingMessage]);
+
     try {
       const response = await axios.post('/api/workflows/generate-from-prompt', {
         prompt: userMessage.content,
@@ -56,13 +63,7 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
 
       const { nodes, edges, explanation } = response.data;
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: explanation || 'Workflow generated successfully!',
-        timestamp: Date.now()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => prev.slice(0, -1));
 
       if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
         console.warn('No valid nodes in response:', { nodes, edges });
@@ -72,12 +73,22 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
           timestamp: Date.now()
         };
         setMessages(prev => [...prev, errorMsg]);
-      } else {
-        console.log(`Generating workflow with ${nodes.length} nodes and ${edges?.length || 0} edges`);
-        onWorkflowGenerated(nodes, edges || []);
+        return;
       }
+
+      console.log(`Generating workflow with ${nodes.length} nodes and ${edges?.length || 0} edges`);
+      
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: explanation || `Workflow generated with ${nodes.length} nodes!`,
+        timestamp: Date.now()
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      onWorkflowGenerated(nodes, edges || []);
     } catch (error: any) {
       console.error('Workflow generation error:', error);
+      setMessages(prev => prev.slice(0, -1));
       const errorMessage: Message = {
         role: 'assistant',
         content: error?.response?.data?.detail || 'Failed to generate workflow. Please try again.',

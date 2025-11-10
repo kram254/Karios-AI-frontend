@@ -52,6 +52,8 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
         conversationHistory: messages.slice(-4)
       });
 
+      console.log('Workflow generation response:', response.data);
+
       const { nodes, edges, explanation } = response.data;
 
       const assistantMessage: Message = {
@@ -61,11 +63,24 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      onWorkflowGenerated(nodes, edges);
-    } catch (error) {
+
+      if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+        console.warn('No valid nodes in response:', { nodes, edges });
+        const errorMsg: Message = {
+          role: 'assistant',
+          content: 'No workflow nodes were generated. Please try again with a different prompt.',
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, errorMsg]);
+      } else {
+        console.log(`Generating workflow with ${nodes.length} nodes and ${edges?.length || 0} edges`);
+        onWorkflowGenerated(nodes, edges || []);
+      }
+    } catch (error: any) {
+      console.error('Workflow generation error:', error);
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Failed to generate workflow. Please try again.',
+        content: error?.response?.data?.detail || 'Failed to generate workflow. Please try again.',
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMessage]);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Circle, Play, StepOver, StepInto, Eye, X } from 'lucide-react';
+import { Circle, Play, SkipForward, X } from 'lucide-react';
 
 interface BreakpointDebuggerProps {
   nodes: any[];
@@ -93,7 +93,7 @@ export function BreakpointDebugger({
               fontSize: 12,
             }}
           >
-            <StepOver size={14} />
+            <SkipForward size={14} />
             Step Over
           </button>
         </div>

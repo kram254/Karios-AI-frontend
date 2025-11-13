@@ -292,9 +292,26 @@ async def workflow():
       return;
     }
 
+    // Validate workflow has start and end nodes
+    const hasStartNode = nodes.some(n => n.data.nodeType === 'start');
+    const hasEndNode = nodes.some(n => n.data.nodeType === 'end');
+    
+    if (!hasStartNode) {
+      alert('Workflow must have a START node. Add one from the Nodes library.');
+      return;
+    }
+    
+    if (!hasEndNode) {
+      alert('Workflow must have an END node. Add one from the Nodes library.');
+      return;
+    }
+
     setShowExecution(true);
     
     try {
+      console.log('[WORKFLOW EXECUTION] Starting execution for workflow:', workflow.id);
+      console.log('[WORKFLOW EXECUTION] Nodes:', nodes.length, 'Edges:', edges.length);
+      
       const response = await fetch(`/api/workflows/${workflow.id}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -312,17 +329,28 @@ async def workflow():
       }
 
       const execution = await response.json();
-      console.log('Workflow execution started:', execution);
+      console.log('[WORKFLOW EXECUTION] Execution started successfully:', execution);
       
       // Store execution ID for agent chat
       setCurrentExecutionId(execution.id);
       setExecutionSuccess(false);
       
+      // Connect to WebSocket for real-time updates
       connectExecutionWebSocket(execution.id);
+      
+      // Show chat interface immediately after successful execution start
+      // This ensures users can interact even if WebSocket updates are delayed
+      setTimeout(() => {
+        if (execution.id) {
+          console.log('[WORKFLOW EXECUTION] Opening agent chat interface');
+          setExecutionSuccess(true);
+          setShowAgentChat(true);
+        }
+      }, 1500); // Give 1.5 seconds for initial execution setup
       
       if (onExecute) onExecute(workflow.id);
     } catch (error: any) {
-      console.error('Execution error:', error);
+      console.error('[WORKFLOW EXECUTION] Error:', error);
       alert(`Failed to execute workflow: ${error.message}`);
       setShowExecution(false);
     }
@@ -331,61 +359,88 @@ async def workflow():
   const connectExecutionWebSocket = useCallback((executionId: string) => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/workflows/executions/${executionId}/ws`;
-    const ws = new WebSocket(wsUrl);
     
-    ws.onopen = () => {
-      console.log('WebSocket connected for execution:', executionId);
-    };
+    console.log('[WEBSOCKET] Connecting to:', wsUrl);
     
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('Execution update:', message);
+    try {
+      const ws = new WebSocket(wsUrl);
       
-      if (message.type === 'node_started') {
-        setNodeExecutionStatus(prev => ({
-          ...prev,
-          [message.data.nodeId]: { status: 'running' }
-        }));
-      } else if (message.type === 'agent_streaming') {
-        // Real-time token streaming for AI agent responses
-        setStreamingOutput(prev => ({
-          ...prev,
-          [message.data.nodeId]: message.data.accumulated
-        }));
-      } else if (message.type === 'node_completed') {
-        setNodeExecutionStatus(prev => ({
-          ...prev,
-          [message.data.nodeId]: { status: 'completed', result: message.data.result }
-        }));
-        // Clear streaming output when node completes
-        setStreamingOutput(prev => {
-          const next = { ...prev };
-          delete next[message.data.nodeId];
-          return next;
-        });
-      } else if (message.type === 'execution_completed') {
-        console.log('Workflow execution completed:', message.data);
-        
-        // Show agent chat interface only if execution was successful
-        if (message.data.status === 'completed' && !message.data.error) {
-          setExecutionSuccess(true);
-          setShowAgentChat(true);
+      ws.onopen = () => {
+        console.log('[WEBSOCKET] Connected successfully for execution:', executionId);
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('[WEBSOCKET] Received message:', message.type, message.data);
+          
+          if (message.type === 'node_started') {
+            console.log('[NODE EXECUTION] Node started:', message.data.nodeId);
+            setNodeExecutionStatus(prev => ({
+              ...prev,
+              [message.data.nodeId]: { status: 'running' }
+            }));
+          } else if (message.type === 'agent_streaming') {
+            // Real-time token streaming for AI agent responses
+            setStreamingOutput(prev => ({
+              ...prev,
+              [message.data.nodeId]: message.data.accumulated
+            }));
+          } else if (message.type === 'node_completed') {
+            console.log('[NODE EXECUTION] Node completed:', message.data.nodeId);
+            setNodeExecutionStatus(prev => ({
+              ...prev,
+              [message.data.nodeId]: { status: 'completed', result: message.data.result }
+            }));
+            // Clear streaming output when node completes
+            setStreamingOutput(prev => {
+              const next = { ...prev };
+              delete next[message.data.nodeId];
+              return next;
+            });
+          } else if (message.type === 'node_failed') {
+            console.error('[NODE EXECUTION] Node failed:', message.data.nodeId, message.data.error);
+            setNodeExecutionStatus(prev => ({
+              ...prev,
+              [message.data.nodeId]: { status: 'failed', result: message.data }
+            }));
+          } else if (message.type === 'execution_completed') {
+            console.log('[WORKFLOW EXECUTION] Completed with status:', message.data.status);
+            
+            // Show agent chat interface for successful execution
+            if (message.data.status === 'completed' && !message.data.error) {
+              console.log('[WORKFLOW EXECUTION] Success! Opening agent chat interface');
+              setExecutionSuccess(true);
+              setShowAgentChat(true);
+            } else if (message.data.error) {
+              console.error('[WORKFLOW EXECUTION] Failed with error:', message.data.error);
+              alert(`Workflow execution failed: ${message.data.error}`);
+            }
+            
+            // Clear node execution status after delay
+            setTimeout(() => {
+              setNodeExecutionStatus({});
+              setStreamingOutput({});
+            }, 2000);
+          }
+        } catch (parseError) {
+          console.error('[WEBSOCKET] Error parsing message:', parseError);
         }
-        
-        setTimeout(() => {
-          setNodeExecutionStatus({});
-          setStreamingOutput({});
-        }, 2000);
-      }
-    };
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-    
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-    };
+      };
+      
+      ws.onerror = (error) => {
+        console.error('[WEBSOCKET] Connection error:', error);
+        // Don't block chat opening due to WebSocket errors
+        // The timeout in handleExecute will still open the chat
+      };
+      
+      ws.onclose = (event) => {
+        console.log('[WEBSOCKET] Disconnected. Code:', event.code, 'Reason:', event.reason);
+      };
+    } catch (error) {
+      console.error('[WEBSOCKET] Failed to create connection:', error);
+      // Chat will still open via the timeout in handleExecute
+    }
   }, []);
 
   const handleExport = () => {

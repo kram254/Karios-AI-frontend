@@ -83,6 +83,33 @@ export function NodePanel({ nodeId, data, onUpdate, onClose, onDelete }: Extende
       <div style={{ padding: '16px', flex: 1, overflow: 'auto' }}>
         {nodeType === 'start' && (
           <div>
+            {/* START NODE CONFIGURATION GUIDE:
+                The START node defines the entry point of your workflow and accepts user input.
+                
+                HOW TO USE:
+                1. Define input variables that users will provide when the workflow runs
+                2. Each variable should be on a new line (e.g., "user_query", "website_url", "api_key")
+                3. These variables can be referenced in agent nodes using {{variable_name}} syntax
+                4. The agent chat interface will prompt users for these values when execution starts
+                
+                EXAMPLE CONFIGURATION:
+                - user_query (for user's question or instruction)
+                - target_url (for website to process)
+                - options (for additional parameters)
+            */}
+            <div style={{ 
+              backgroundColor: '#1e293b', 
+              padding: '12px', 
+              borderRadius: '6px', 
+              marginBottom: '16px',
+              border: '1px solid #334155'
+            }}>
+              <div style={{ color: '#10b981', fontSize: 11, fontWeight: 600, marginBottom: 6 }}>ℹ️ START NODE GUIDE</div>
+              <div style={{ color: '#94a3b8', fontSize: 10, lineHeight: '1.5' }}>
+                Define input variables that users will provide when running the workflow.
+                Each variable on a new line. Reference them in agents using {'{'}{'{'}<i>variable_name</i>{'}'}{'}'}.
+              </div>
+            </div>
             <label style={{ display: 'block', color: '#999', fontSize: 12, marginBottom: 8 }}>
               Input Variables (one per line)
             </label>
@@ -101,8 +128,11 @@ export function NodePanel({ nodeId, data, onUpdate, onClose, onDelete }: Extende
                 fontFamily: 'monospace',
                 resize: 'vertical',
               }}
-              placeholder="url\nquery\napi_key"
+              placeholder="user_query\ntarget_url\napi_key\noptions"
             />
+            <div style={{ color: '#64748b', fontSize: 10, marginTop: 6 }}>
+              💡 Tip: Common variables include "user_query", "url", "data", "config"
+            </div>
           </div>
         )}
 
@@ -652,7 +682,37 @@ export function NodePanel({ nodeId, data, onUpdate, onClose, onDelete }: Extende
 
         {nodeType === 'end' && (
           <div>
-            <label style={{ display: 'block', color: '#999', fontSize: 12, marginBottom: 8 }}>Output Variable</label>
+            {/* END NODE CONFIGURATION GUIDE:
+                The END node marks the completion of your workflow and returns the final result.
+                
+                HOW TO USE:
+                1. Specify which variable from previous nodes should be returned as the final output
+                2. The output variable should match a variable name from an agent or transform node
+                3. This value will be displayed in the agent chat interface after workflow completion
+                4. Common patterns: "final_answer", "processed_data", "result", "summary"
+                
+                WORKFLOW FLOW:
+                START → [Agent Nodes] → END
+                - START: Accepts user input
+                - AGENT: Processes data and stores in variables
+                - END: Returns final result from specified variable
+            */}
+            <div style={{ 
+              backgroundColor: '#1e293b', 
+              padding: '12px', 
+              borderRadius: '6px', 
+              marginBottom: '16px',
+              border: '1px solid #334155'
+            }}>
+              <div style={{ color: '#ef4444', fontSize: 11, fontWeight: 600, marginBottom: 6 }}>ℹ️ END NODE GUIDE</div>
+              <div style={{ color: '#94a3b8', fontSize: 10, lineHeight: '1.5' }}>
+                Specify the variable containing the final result to return to the user.
+                This should match a variable name from a previous agent or transform node.
+              </div>
+            </div>
+            <label style={{ display: 'block', color: '#999', fontSize: 12, marginBottom: 8 }}>
+              Output Variable
+            </label>
             <input
               type="text"
               value={config.outputVariable || ''}
@@ -668,6 +728,9 @@ export function NodePanel({ nodeId, data, onUpdate, onClose, onDelete }: Extende
               }}
               placeholder="result"
             />
+            <div style={{ color: '#64748b', fontSize: 10, marginTop: 6 }}>
+              💡 Tip: Use variable names like "final_answer", "processed_data", "summary"
+            </div>
           </div>
         )}
       </div>

@@ -287,8 +287,43 @@ async def workflow():
   }
 
   const handleExecute = async () => {
-    if (!workflow?.id) {
-      alert('Please save workflow first');
+    console.log('🚀 [RUN BUTTON] Clicked! Starting execution process...');
+    console.log('🚀 [RUN BUTTON] Current workflow:', workflow);
+    console.log('🚀 [RUN BUTTON] Workflow ID:', workflow?.id);
+    console.log('🚀 [RUN BUTTON] Nodes count:', nodes.length);
+    console.log('🚀 [RUN BUTTON] Edges count:', edges.length);
+
+    // Store the actual workflow ID we'll use for execution
+    // CRITICAL: We need to track this separately because if we auto-save,
+    // the workflow state won't update immediately (React state is async)
+    let workflowId = workflow?.id;
+
+    // Auto-save workflow if not saved yet
+    if (!workflowId) {
+      console.log('⚠️ [RUN BUTTON] No workflow ID - attempting auto-save...');
+      try {
+        const savedWorkflow = await saveWorkflow(workflowName || 'Untitled Workflow');
+        console.log('✅ [RUN BUTTON] Auto-save successful:', savedWorkflow.id);
+        
+        if (!savedWorkflow?.id) {
+          alert('Failed to save workflow. Please try saving manually first.');
+          return;
+        }
+        
+        // CRITICAL FIX: Use the saved workflow ID, not the stale state
+        workflowId = savedWorkflow.id;
+        console.log('✅ [RUN BUTTON] Using saved workflow ID:', workflowId);
+      } catch (error) {
+        console.error('❌ [RUN BUTTON] Auto-save failed:', error);
+        alert('Please save workflow first using the Save button');
+        return;
+      }
+    }
+
+    // Double-check we have a workflow ID before proceeding
+    if (!workflowId) {
+      console.error('❌ [RUN BUTTON] CRITICAL: No workflow ID available after save attempt');
+      alert('Failed to get workflow ID. Please try saving manually.');
       return;
     }
 
@@ -296,40 +331,69 @@ async def workflow():
     const hasStartNode = nodes.some(n => n.data.nodeType === 'start');
     const hasEndNode = nodes.some(n => n.data.nodeType === 'end');
     
+    console.log('🔍 [RUN BUTTON] Validation - Has START node:', hasStartNode);
+    console.log('🔍 [RUN BUTTON] Validation - Has END node:', hasEndNode);
+    
     if (!hasStartNode) {
+      console.warn('⚠️ [RUN BUTTON] Missing START node');
       alert('Workflow must have a START node. Add one from the Nodes library.');
       return;
     }
     
     if (!hasEndNode) {
+      console.warn('⚠️ [RUN BUTTON] Missing END node');
       alert('Workflow must have an END node. Add one from the Nodes library.');
       return;
     }
 
+    console.log('✅ [RUN BUTTON] Validation passed - opening execution panel');
     setShowExecution(true);
     
     try {
-      console.log('[WORKFLOW EXECUTION] Starting execution for workflow:', workflow.id);
+      // workflowId is guaranteed to exist here (from state or auto-save)
+      console.log('[WORKFLOW EXECUTION] Starting execution for workflow:', workflowId);
       console.log('[WORKFLOW EXECUTION] Nodes:', nodes.length, 'Edges:', edges.length);
+      console.log('[WORKFLOW EXECUTION] API endpoint:', `/api/workflows/${workflowId}/execute`);
       
-      const response = await fetch(`/api/workflows/${workflow.id}/execute`, {
+      const response = await fetch(`/api/workflows/${workflowId}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workflowId: workflow.id,
+          workflowId: workflowId,
           nodes,
           edges,
           inputVariables: {}
         })
       });
 
+      console.log('[WORKFLOW EXECUTION] Response status:', response.status);
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Execution failed');
+        const errorText = await response.text();
+        console.error('[WORKFLOW EXECUTION] Error response:', errorText);
+        try {
+          const error = JSON.parse(errorText);
+          throw new Error(error.detail || 'Execution failed');
+        } catch {
+          throw new Error(`Execution failed with status ${response.status}: ${errorText}`);
+        }
       }
 
-      const execution = await response.json();
+      const responseData = await response.json();
+      console.log('[WORKFLOW EXECUTION] Raw response:', responseData);
+      
+      // Handle both wrapped and unwrapped response formats
+      // Backend might return: { success: true, execution: {...} } OR just the execution object
+      const execution = responseData.execution || responseData;
       console.log('[WORKFLOW EXECUTION] Execution started successfully:', execution);
+      
+      // Verify we have a valid execution ID
+      if (!execution?.id) {
+        console.error('[WORKFLOW EXECUTION] No execution ID in response:', responseData);
+        throw new Error('Invalid response: missing execution ID');
+      }
+      
+      console.log('[WORKFLOW EXECUTION] Execution ID:', execution.id);
       
       // Store execution ID for agent chat
       setCurrentExecutionId(execution.id);
@@ -348,7 +412,8 @@ async def workflow():
         }
       }, 1500); // Give 1.5 seconds for initial execution setup
       
-      if (onExecute) onExecute(workflow.id);
+      // Call onExecute callback with the workflow ID (using workflowId variable to avoid null check)
+      if (onExecute && workflowId) onExecute(workflowId);
     } catch (error: any) {
       console.error('[WORKFLOW EXECUTION] Error:', error);
       alert(`Failed to execute workflow: ${error.message}`);
@@ -620,18 +685,20 @@ async def workflow():
               )}
               <button
                 onClick={handleExecute}
-                disabled={!workflow?.id}
+                disabled={nodes.length === 0}
+                title={nodes.length === 0 ? 'Add nodes to your workflow first' : 'Run workflow (will auto-save if needed)'}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
                   padding: '6px 12px',
-                  backgroundColor: '#10b981',
+                  backgroundColor: nodes.length === 0 ? '#6b7280' : '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: 6,
-                  cursor: 'pointer',
+                  cursor: nodes.length === 0 ? 'not-allowed' : 'pointer',
                   fontSize: 13,
+                  opacity: nodes.length === 0 ? 0.5 : 1,
                 }}
               >
                 <Play size={14} />

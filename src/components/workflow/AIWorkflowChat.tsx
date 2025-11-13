@@ -48,7 +48,7 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
 
     const thinkingMessage: Message = {
       role: 'assistant',
-      content: 'Analyzing your request and breaking down tasks...',
+      content: '🔍 Analyzing request...\n📋 Breaking down into sub-tasks...\n🔧 Identifying required nodes...\n⚙️ Designing workflow...',
       timestamp: Date.now()
     };
     setMessages(prev => [...prev, thinkingMessage]);
@@ -61,7 +61,7 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
 
       console.log('Workflow generation response:', response.data);
 
-      const { nodes, edges, explanation } = response.data;
+      const { nodes, edges, explanation, analysis, identified_nodes } = response.data;
 
       setMessages(prev => prev.slice(0, -1));
 
@@ -78,9 +78,25 @@ export function AIWorkflowChat({ onWorkflowGenerated, isOpen, onToggle }: AIWork
 
       console.log(`Generating workflow with ${nodes.length} nodes and ${edges?.length || 0} edges`);
       
+      let fullResponse = '';
+      
+      if (analysis) {
+        fullResponse += `📋 Task Analysis:\n${analysis}\n\n`;
+      }
+      
+      if (identified_nodes && Array.isArray(identified_nodes)) {
+        fullResponse += `🔧 Identified Nodes:\n${identified_nodes.map((n, i) => `${i + 1}. ${n}`).join('\n')}\n\n`;
+      }
+      
+      if (explanation) {
+        fullResponse += `✅ ${explanation}`;
+      } else {
+        fullResponse += `✅ Workflow generated with ${nodes.length} nodes successfully!`;
+      }
+      
       const assistantMessage: Message = {
         role: 'assistant',
-        content: explanation || `Workflow generated with ${nodes.length} nodes!`,
+        content: fullResponse,
         timestamp: Date.now()
       };
 

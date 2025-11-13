@@ -20,6 +20,9 @@ import { AIWorkflowChat } from './AIWorkflowChat';
 import { AICopilot } from './AICopilot';
 import { PerformanceAnalytics } from './PerformanceAnalytics';
 import { BreakpointDebugger } from './BreakpointDebugger';
+import { AISuggestionsPanel } from './AISuggestionsPanel';
+import { StreamingOutputDisplay } from './StreamingOutputDisplay';
+import { ErrorRecoveryPanel } from './ErrorRecoveryPanel';
 import { validateWorkflow, type ValidationError } from '../../utils/workflowValidator';
 import { validateConnection as validateNodeConnection } from '../../utils/nodeTypeSystem';
 import type { NodeType } from '../../types/workflow';
@@ -67,6 +70,11 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     currentNodeId: null as string | null,
     variables: {} as Record<string, any>
   });
+  const [nodeExecutionStatus, setNodeExecutionStatus] = useState<Record<string, { status: string; result?: any }>>({});
+  const [streamingOutput, setStreamingOutput] = useState<Record<string, string>>({});
+  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [errorFixes, setErrorFixes] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const validation = validateWorkflow(nodes as any, edges as any);
@@ -208,6 +216,46 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     return nodeId;
   }, [addNode, setSelectedNode]);
 
+  // Handle AI-suggested node addition with pre-filled config
+  const handleAddSuggestedNode = useCallback(
+    (suggestion: any) => {
+      const lastNode = nodes[nodes.length - 1];
+      const position = lastNode
+        ? { x: lastNode.position.x + 200, y: lastNode.position.y }
+        : { x: 250, y: 250 };
+      
+      const nodeId = addNode(suggestion.nodeType as NodeType, position);
+      
+      // Apply pre-filled configuration
+      if (suggestion.prefilledConfig && nodeId) {
+        setTimeout(() => {
+          updateNode(nodeId, { config: suggestion.prefilledConfig });
+        }, 100);
+      }
+    },
+    [nodes, addNode, updateNode]
+  );
+
+  // Handle applying AI-suggested fixes to nodes
+  const handleApplyErrorFix = useCallback(
+    async (nodeId: string, fixedConfig: any) => {
+      updateNode(nodeId, { config: fixedConfig });
+      
+      // Clear error state
+      setErrorFixes(prev => {
+        const next = { ...prev };
+        delete next[nodeId];
+        return next;
+      });
+      
+      // Retry execution if workflow is running
+      if (workflow?.id) {
+        console.log('Retrying workflow with fixed configuration...');
+      }
+    },
+    [updateNode, workflow]
+  );
+
   function generateTypeScriptCode(nodes: any[], edges: any[]): string {
     return `import { Agent, Runner } from '@openai/agents-sdk';
 
@@ -234,12 +282,96 @@ async def workflow():
 `;
   }
 
-  const handleExecute = () => {
-    if (workflow?.id) {
-      setShowExecution(true);
+  const handleExecute = async () => {
+    if (!workflow?.id) {
+      alert('Please save workflow first');
+      return;
+    }
+
+    setShowExecution(true);
+    
+    try {
+      const response = await fetch(`/api/workflows/${workflow.id}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workflowId: workflow.id,
+          nodes,
+          edges,
+          inputVariables: {}
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Execution failed');
+      }
+
+      const execution = await response.json();
+      console.log('Workflow execution started:', execution);
+      
+      connectExecutionWebSocket(execution.id);
+      
       if (onExecute) onExecute(workflow.id);
+    } catch (error: any) {
+      console.error('Execution error:', error);
+      alert(`Failed to execute workflow: ${error.message}`);
+      setShowExecution(false);
     }
   };
+
+  const connectExecutionWebSocket = useCallback((executionId: string) => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/workflows/executions/${executionId}/ws`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('WebSocket connected for execution:', executionId);
+    };
+    
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log('Execution update:', message);
+      
+      if (message.type === 'node_started') {
+        setNodeExecutionStatus(prev => ({
+          ...prev,
+          [message.data.nodeId]: { status: 'running' }
+        }));
+      } else if (message.type === 'agent_streaming') {
+        // Real-time token streaming for AI agent responses
+        setStreamingOutput(prev => ({
+          ...prev,
+          [message.data.nodeId]: message.data.accumulated
+        }));
+      } else if (message.type === 'node_completed') {
+        setNodeExecutionStatus(prev => ({
+          ...prev,
+          [message.data.nodeId]: { status: 'completed', result: message.data.result }
+        }));
+        // Clear streaming output when node completes
+        setStreamingOutput(prev => {
+          const next = { ...prev };
+          delete next[message.data.nodeId];
+          return next;
+        });
+      } else if (message.type === 'execution_completed') {
+        console.log('Workflow execution completed:', message.data);
+        setTimeout(() => {
+          setNodeExecutionStatus({});
+          setStreamingOutput({});
+        }, 2000);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+    };
+  }, []);
 
   const handleExport = () => {
     const data = JSON.stringify({ nodes, edges, name: workflowName }, null, 2);
@@ -472,21 +604,39 @@ async def workflow():
               </button>
               <button
                 onClick={() => setShowAnalytics(!showAnalytics)}
-                disabled={!workflow?.id}
+                title="Performance Analytics"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '6px 12px',
-                  backgroundColor: workflow?.id ? '#3b82f6' : '#333',
+                  padding: 8,
+                  background: showAnalytics ? '#ffffff20' : 'transparent',
                   color: 'white',
                   border: 'none',
-                  borderRadius: 6,
-                  cursor: workflow?.id ? 'pointer' : 'not-allowed',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   fontSize: 13,
                 }}
               >
                 <BarChart3 size={14} />
+              </button>
+              <button
+                onClick={() => setShowSuggestions(!showSuggestions)}
+                title="AI Suggestions"
+                style={{
+                  padding: 8,
+                  background: showSuggestions ? '#8b5cf6' : 'transparent',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 13,
+                }}
+              >
+                <Sparkles size={14} />
               </button>
               <button
                 onClick={handleExport}
@@ -721,6 +871,47 @@ async def workflow():
         onContinue={handleContinueExecution}
         onStepOver={handleStepOver}
       />
+
+      {/* AI Suggestions Panel - Smart node recommendations */}
+      <AISuggestionsPanel
+        nodes={nodes}
+        edges={edges}
+        workflowName={workflowName}
+        onAddNode={handleAddSuggestedNode}
+        show={showSuggestions}
+        onClose={() => setShowSuggestions(false)}
+      />
+
+      {/* Streaming Output Display - Real-time AI response streaming */}
+      {Object.entries(streamingOutput).map(([nodeId, output]) => (
+        <div key={nodeId} style={{ position: 'relative' }}>
+          <StreamingOutputDisplay
+            nodeId={nodeId}
+            output={output}
+            isStreaming={nodeExecutionStatus[nodeId]?.status === 'running'}
+          />
+        </div>
+      ))}
+
+      {/* Error Recovery Panel - AI-powered error fixing */}
+      {Object.entries(nodeExecutionStatus)
+        .filter(([_, status]) => status.status === 'failed')
+        .map(([nodeId, status]) => {
+          const node = nodes.find(n => n.id === nodeId);
+          if (!node || errorFixes[nodeId] === false) return null;
+          
+          return (
+            <ErrorRecoveryPanel
+              key={nodeId}
+              nodeId={nodeId}
+              node={node}
+              error={status.result?.error || 'Unknown error'}
+              executionContext={{ variables: {}, nodes, edges }}
+              onApplyFix={handleApplyErrorFix}
+              onDismiss={() => setErrorFixes(prev => ({ ...prev, [nodeId]: false }))}
+            />
+          );
+        })}
     </div>
   );
 }

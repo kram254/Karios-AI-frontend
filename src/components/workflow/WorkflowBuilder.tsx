@@ -23,6 +23,7 @@ import { BreakpointDebugger } from './BreakpointDebugger';
 import { AISuggestionsPanel } from './AISuggestionsPanel';
 import { StreamingOutputDisplay } from './StreamingOutputDisplay';
 import { ErrorRecoveryPanel } from './ErrorRecoveryPanel';
+import { EnhancedAgentChatInterface } from './EnhancedAgentChatInterface';
 import { validateWorkflow, type ValidationError } from '../../utils/workflowValidator';
 import { validateConnection as validateNodeConnection } from '../../utils/nodeTypeSystem';
 import type { NodeType } from '../../types/workflow';
@@ -75,6 +76,9 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [errorFixes, setErrorFixes] = useState<Record<string, any>>({});
+  const [showAgentChat, setShowAgentChat] = useState(false);
+  const [currentExecutionId, setCurrentExecutionId] = useState<string | null>(null);
+  const [executionSuccess, setExecutionSuccess] = useState(false);
 
   useEffect(() => {
     const validation = validateWorkflow(nodes as any, edges as any);
@@ -310,6 +314,10 @@ async def workflow():
       const execution = await response.json();
       console.log('Workflow execution started:', execution);
       
+      // Store execution ID for agent chat
+      setCurrentExecutionId(execution.id);
+      setExecutionSuccess(false);
+      
       connectExecutionWebSocket(execution.id);
       
       if (onExecute) onExecute(workflow.id);
@@ -357,6 +365,13 @@ async def workflow():
         });
       } else if (message.type === 'execution_completed') {
         console.log('Workflow execution completed:', message.data);
+        
+        // Show agent chat interface only if execution was successful
+        if (message.data.status === 'completed' && !message.data.error) {
+          setExecutionSuccess(true);
+          setShowAgentChat(true);
+        }
+        
         setTimeout(() => {
           setNodeExecutionStatus({});
           setStreamingOutput({});
@@ -912,6 +927,19 @@ async def workflow():
             />
           );
         })}
+
+      {/* Enhanced Agent Chat Interface - Professional agent testing console */}
+      {showAgentChat && executionSuccess && currentExecutionId && workflow && (
+        <EnhancedAgentChatInterface
+          workflowId={workflow.id}
+          workflowName={workflowName}
+          executionId={currentExecutionId}
+          onClose={() => {
+            setShowAgentChat(false);
+            setExecutionSuccess(false);
+          }}
+        />
+      )}
     </div>
   );
 }

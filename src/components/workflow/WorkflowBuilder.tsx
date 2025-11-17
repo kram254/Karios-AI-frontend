@@ -26,15 +26,16 @@ import { ErrorRecoveryPanel } from './ErrorRecoveryPanel';
 import { EnhancedAgentChatInterface } from './EnhancedAgentChatInterface';
 import { validateWorkflow, type ValidationError } from '../../utils/workflowValidator';
 import { validateConnection as validateNodeConnection } from '../../utils/nodeTypeSystem';
-import type { NodeType } from '../../types/workflow';
+import type { NodeType, Workflow as BuilderWorkflow } from '../../types/workflow';
 
 interface WorkflowBuilderProps {
   workflowId?: string;
   onSave?: (workflowId: string) => void;
   onExecute?: (workflowId: string) => void;
+  initialWorkflow?: BuilderWorkflow;
 }
 
-export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuilderProps) {
+export function WorkflowBuilder({ workflowId, onSave, onExecute, initialWorkflow }: WorkflowBuilderProps) {
   const {
     workflow,
     nodes,
@@ -52,7 +53,7 @@ export function WorkflowBuilder({ workflowId, onSave, onExecute }: WorkflowBuild
     deleteNode,
     deleteEdge,
     saveWorkflow,
-  } = useWorkflow();
+  } = useWorkflow(initialWorkflow);
 
   const [showNodePanel, setShowNodePanel] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -972,6 +973,9 @@ async def workflow():
       {showExecution && workflow && (
         <ExecutionPanel
           workflowId={workflow.id}
+          nodes={nodes as any[]}
+          edges={edges as any[]}
+          currentExecutionId={currentExecutionId}
           onClose={() => setShowExecution(false)}
         />
       )}

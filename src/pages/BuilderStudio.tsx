@@ -5,12 +5,154 @@ import AgentCreationWizard from '../components/agent/AgentCreationWizard';
 import { AutomationWorkspace } from '../components/AutomationWorkspace';
 import { WorkflowBuilder } from '../components/workflow/WorkflowBuilder';
 import { StagehandAutomation } from '../components/StagehandAutomation';
+import { Agent, AgentRole, AgentMode, SEND_MAIL, SEARCH_INTERNET } from '../types/agent';
+import type { Workflow as BuilderWorkflow } from '../types/workflow';
 
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
+
+type WorkflowTemplateKey =
+  | 'contentMarketing'
+  | 'leadEnrichment'
+  | 'customerOnboarding'
+  | 'competitiveAnalysis'
+  | 'codeReviewBot'
+  | 'socialMediaManager';
+
+function makeLinearTemplate(
+  id: string,
+  name: string,
+  description: string,
+  category: string,
+  tags: string[],
+  agentLabel: string,
+  agentPrompt: string
+): BuilderWorkflow {
+  const now = new Date().toISOString();
+  return {
+    id,
+    name,
+    description,
+    category,
+    tags,
+    difficulty: 'Intermediate',
+    estimatedTime: '5-15 minutes',
+    nodes: [
+      {
+        id: 'start',
+        type: 'custom',
+        position: { x: 250, y: 60 },
+        data: {
+          label: 'Start',
+          nodeType: 'start',
+          config: {
+            inputVariables: [],
+          },
+        },
+      },
+      {
+        id: 'agent',
+        type: 'custom',
+        position: { x: 250, y: 220 },
+        data: {
+          label: agentLabel,
+          nodeType: 'agent',
+          config: {
+            prompt: agentPrompt,
+            model: 'gpt-4',
+            temperature: 0.6,
+            maxTokens: 1600,
+            reasoningEffort: 'medium',
+            outputFormat: 'text',
+            verbosity: 'medium',
+            includeChatHistory: true,
+            writeConversationHistory: false,
+            showReasoning: false,
+          },
+        },
+      },
+      {
+        id: 'end',
+        type: 'custom',
+        position: { x: 250, y: 380 },
+        data: {
+          label: 'End',
+          nodeType: 'end',
+          config: {
+            outputVariable: 'result',
+          },
+        },
+      },
+    ],
+    edges: [
+      { id: 'e1', source: 'start', target: 'agent', type: 'smoothstep' },
+      { id: 'e2', source: 'agent', target: 'end', type: 'smoothstep' },
+    ],
+    createdAt: now,
+    updatedAt: now,
+    isTemplate: true,
+  };
+}
+
+const builderWorkflowTemplates: Record<WorkflowTemplateKey, BuilderWorkflow> = {
+  contentMarketing: makeLinearTemplate(
+    'template-content-marketing-pipeline',
+    'Content Marketing Pipeline',
+    'Research, write, and polish long-form marketing content for a given topic and audience.',
+    'Marketing',
+    ['marketing', 'content'],
+    'Content Writer',
+    'You are a content marketing specialist. Produce a detailed article or campaign asset based on the provided topic, audience, and tone. Focus on clarity, value, and actionable insights.'
+  ),
+  leadEnrichment: makeLinearTemplate(
+    'template-lead-enrichment',
+    'Lead Enrichment',
+    'Enrich raw leads with company, role, and intent insights.',
+    'Sales',
+    ['sales', 'enrichment'],
+    'Lead Enrichment Agent',
+    'You are a B2B sales assistant. Given basic lead details, enrich them with company info, role, and buying signals to prepare for outreach.'
+  ),
+  customerOnboarding: makeLinearTemplate(
+    'template-customer-onboarding',
+    'Customer Onboarding',
+    'Generate an onboarding plan and communication sequence for new customers.',
+    'Support',
+    ['onboarding', 'customer-success'],
+    'Onboarding Planner',
+    'You are a customer success specialist. Design a short onboarding plan and set of messages that guide a new customer to value quickly.'
+  ),
+  competitiveAnalysis: makeLinearTemplate(
+    'template-competitive-analysis',
+    'Competitive Analysis',
+    'Summarize competitor offerings and strategic differences.',
+    'Research',
+    ['research', 'competitive'],
+    'Competitive Analyst',
+    'You are a market analyst. Compare our product against listed competitors, highlighting strengths, weaknesses, and strategic opportunities.'
+  ),
+  codeReviewBot: makeLinearTemplate(
+    'template-code-review-bot',
+    'Code Review Bot',
+    'Analyze code changes and suggest improvements before merge.',
+    'Development',
+    ['code', 'review'],
+    'Code Review Assistant',
+    'You are a senior software engineer. Review the provided code diff for bugs, readability issues, and performance problems, suggesting concrete improvements.'
+  ),
+  socialMediaManager: makeLinearTemplate(
+    'template-social-media-manager',
+    'Social Media Manager',
+    'Draft a set of social posts for multiple channels from a core message.',
+    'Marketing',
+    ['marketing', 'social'],
+    'Social Media Strategist',
+    'You are a social media strategist. Turn the core message and context into a short campaign plan and channel-specific posts.'
+  ),
+};
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
@@ -35,9 +177,105 @@ function TabPanel(props: TabPanelProps) {
 export default function BuilderStudio() {
   const [currentTab, setCurrentTab] = useState(0);
   const [showAgentWizard, setShowAgentWizard] = useState(false);
+  const [agentInitialData, setAgentInitialData] = useState<Partial<Agent> | undefined>(undefined);
+  const [initialWorkflow, setInitialWorkflow] = useState<BuilderWorkflow | undefined>(undefined);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
+  };
+
+  const openAgentWizardWithTemplate = (templateKey: 'sales' | 'support' | 'research' | 'code') => {
+    if (templateKey === 'sales') {
+      setAgentInitialData({
+        name: 'Sales Agent',
+        description: 'Automate lead qualification, follow-ups, and pipeline nurturing.',
+        ai_role: AgentRole.EMAIL_AUTOMATION,
+        language: 'en',
+        mode: AgentMode.TEXT,
+        response_style: 0.7,
+        response_length: 220,
+        actions: [SEND_MAIL, SEARCH_INTERNET],
+        config: {
+          language: 'en',
+          mode: AgentMode.TEXT,
+          response_style: 0.7,
+          response_length: 220,
+          model: 'gpt-4',
+          temperature: 0.7,
+          max_tokens: 1500,
+          actions: [SEND_MAIL, SEARCH_INTERNET]
+        }
+      });
+    } else if (templateKey === 'support') {
+      setAgentInitialData({
+        name: 'Support Agent',
+        description: 'Handle customer questions, troubleshooting, and FAQs 24/7.',
+        ai_role: AgentRole.TASK_AUTOMATION,
+        language: 'en',
+        mode: AgentMode.TEXT,
+        response_style: 0.4,
+        response_length: 180,
+        actions: [SEARCH_INTERNET],
+        config: {
+          language: 'en',
+          mode: AgentMode.TEXT,
+          response_style: 0.4,
+          response_length: 180,
+          model: 'gpt-4',
+          temperature: 0.4,
+          max_tokens: 1200,
+          actions: [SEARCH_INTERNET]
+        }
+      });
+    } else if (templateKey === 'research') {
+      setAgentInitialData({
+        name: 'Research Agent',
+        description: 'Gather and synthesize market or product research across many sources.',
+        ai_role: AgentRole.DEEP_RESEARCH,
+        language: 'en',
+        mode: AgentMode.TEXT,
+        response_style: 0.3,
+        response_length: 260,
+        actions: [SEARCH_INTERNET],
+        config: {
+          language: 'en',
+          mode: AgentMode.TEXT,
+          response_style: 0.3,
+          response_length: 260,
+          model: 'gpt-4',
+          temperature: 0.6,
+          max_tokens: 2000,
+          actions: [SEARCH_INTERNET]
+        }
+      });
+    } else if (templateKey === 'code') {
+      setAgentInitialData({
+        name: 'Code Agent',
+        description: 'Generate, review, and debug code with testing-focused workflows.',
+        ai_role: AgentRole.TESTING_QA,
+        language: 'en',
+        mode: AgentMode.TEXT,
+        response_style: 0.5,
+        response_length: 200,
+        actions: [],
+        config: {
+          language: 'en',
+          mode: AgentMode.TEXT,
+          response_style: 0.5,
+          response_length: 200,
+          model: 'gpt-4',
+          temperature: 0.3,
+          max_tokens: 1600
+        }
+      });
+    }
+    setShowAgentWizard(true);
+  };
+
+  const openWorkflowFromTemplate = (templateKey: WorkflowTemplateKey) => {
+    const template = builderWorkflowTemplates[templateKey];
+    setInitialWorkflow(template);
+    setCurrentTab(1);
   };
 
   return (
@@ -153,13 +391,14 @@ export default function BuilderStudio() {
               justifyContent: 'center'
             }}>
               {[
-                { title: 'Sales Agent', desc: 'Automate lead qualification and follow-ups', color: '#10b981' },
-                { title: 'Support Agent', desc: 'Handle customer queries 24/7', color: '#3b82f6' },
-                { title: 'Research Agent', desc: 'Gather and analyze market intelligence', color: '#8b5cf6' },
-                { title: 'Code Agent', desc: 'Generate, review, and debug code', color: '#f59e0b' }
+                { key: 'sales' as const, title: 'Sales Agent', desc: 'Automate lead qualification and follow-ups', color: '#10b981' },
+                { key: 'support' as const, title: 'Support Agent', desc: 'Handle customer queries 24/7', color: '#3b82f6' },
+                { key: 'research' as const, title: 'Research Agent', desc: 'Gather and analyze market intelligence', color: '#8b5cf6' },
+                { key: 'code' as const, title: 'Code Agent', desc: 'Generate, review, and debug code', color: '#f59e0b' }
               ].map((template, idx) => (
                 <Paper 
                   key={idx}
+                  onClick={() => openAgentWizardWithTemplate(template.key)}
                   sx={{ 
                     p: 3, 
                     bgcolor: '#1A1A1A', 
@@ -189,7 +428,7 @@ export default function BuilderStudio() {
 
         <TabPanel value={currentTab} index={1}>
           <Box sx={{ height: '100%', bgcolor: '#0A0A0A', overflow: 'hidden' }}>
-            <WorkflowBuilder />
+            <WorkflowBuilder initialWorkflow={initialWorkflow} />
           </Box>
         </TabPanel>
 
@@ -222,15 +461,16 @@ export default function BuilderStudio() {
               width: '100%'
             }}>
               {[
-                { name: 'Content Marketing Pipeline', category: 'Marketing', desc: 'Research → Write → Edit → Publish workflow' },
-                { name: 'Lead Enrichment', category: 'Sales', desc: 'Enrich leads with company data and contact info' },
-                { name: 'Customer Onboarding', category: 'Support', desc: 'Automated welcome sequence with docs and training' },
-                { name: 'Competitive Analysis', category: 'Research', desc: 'Monitor competitors and analyze strategies' },
-                { name: 'Code Review Bot', category: 'Development', desc: 'Automated PR reviews with suggestions' },
-                { name: 'Social Media Manager', category: 'Marketing', desc: 'Schedule and post across platforms' }
+                { key: 'contentMarketing' as WorkflowTemplateKey, name: 'Content Marketing Pipeline', category: 'Marketing', desc: 'Research → Write → Edit → Publish workflow' },
+                { key: 'leadEnrichment' as WorkflowTemplateKey, name: 'Lead Enrichment', category: 'Sales', desc: 'Enrich leads with company data and contact info' },
+                { key: 'customerOnboarding' as WorkflowTemplateKey, name: 'Customer Onboarding', category: 'Support', desc: 'Automated welcome sequence with docs and training' },
+                { key: 'competitiveAnalysis' as WorkflowTemplateKey, name: 'Competitive Analysis', category: 'Research', desc: 'Monitor competitors and analyze strategies' },
+                { key: 'codeReviewBot' as WorkflowTemplateKey, name: 'Code Review Bot', category: 'Development', desc: 'Automated PR reviews with suggestions' },
+                { key: 'socialMediaManager' as WorkflowTemplateKey, name: 'Social Media Manager', category: 'Marketing', desc: 'Schedule and post across platforms' }
               ].map((template, idx) => (
                 <Paper 
                   key={idx}
+                  onClick={() => openWorkflowFromTemplate(template.key)}
                   sx={{ 
                     p: 3, 
                     bgcolor: '#1A1A1A', 
@@ -279,13 +519,18 @@ export default function BuilderStudio() {
 
       <AgentCreationWizard
         open={showAgentWizard}
-        onClose={() => setShowAgentWizard(false)}
+        onClose={() => {
+          setShowAgentWizard(false);
+          setAgentInitialData(undefined);
+        }}
         onDataChange={(data) => console.log('Agent data:', data)}
         onKnowledgeSelect={(ids) => console.log('Knowledge selected:', ids)}
         onSubmit={(data) => {
           console.log('Agent created:', data);
           setShowAgentWizard(false);
+          setAgentInitialData(undefined);
         }}
+        initialData={agentInitialData}
       />
     </Box>
   );

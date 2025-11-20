@@ -5,7 +5,7 @@ import AgentCreationWizard from '../components/agent/AgentCreationWizard';
 import { AutomationWorkspace } from '../components/AutomationWorkspace';
 import { WorkflowBuilder } from '../components/workflow/WorkflowBuilder';
 import { StagehandAutomation } from '../components/StagehandAutomation';
-import { Agent, AgentRole, AgentMode, SEND_MAIL, SEARCH_INTERNET } from '../types/agent';
+import { Agent, AgentRole, AgentMode, SEND_MAIL, SEARCH_INTERNET, EXECUTE_CODE } from '../types/agent';
 import type { Workflow as BuilderWorkflow } from '../types/workflow';
 
 interface TabPanelProps {
@@ -194,7 +194,7 @@ export default function BuilderStudio() {
         mode: AgentMode.TEXT,
         response_style: 0.7,
         response_length: 220,
-        actions: [SEND_MAIL, SEARCH_INTERNET],
+        actions: [SEND_MAIL, SEARCH_INTERNET, EXECUTE_CODE],
         config: {
           language: 'en',
           mode: AgentMode.TEXT,
@@ -203,7 +203,7 @@ export default function BuilderStudio() {
           model: 'gpt-4',
           temperature: 0.7,
           max_tokens: 1500,
-          actions: [SEND_MAIL, SEARCH_INTERNET]
+          actions: [SEND_MAIL, SEARCH_INTERNET, EXECUTE_CODE]
         }
       });
     } else if (templateKey === 'support') {
@@ -215,7 +215,7 @@ export default function BuilderStudio() {
         mode: AgentMode.TEXT,
         response_style: 0.4,
         response_length: 180,
-        actions: [SEARCH_INTERNET],
+        actions: [SEARCH_INTERNET, EXECUTE_CODE],
         config: {
           language: 'en',
           mode: AgentMode.TEXT,
@@ -224,7 +224,7 @@ export default function BuilderStudio() {
           model: 'gpt-4',
           temperature: 0.4,
           max_tokens: 1200,
-          actions: [SEARCH_INTERNET]
+          actions: [SEARCH_INTERNET, EXECUTE_CODE]
         }
       });
     } else if (templateKey === 'research') {
@@ -236,7 +236,7 @@ export default function BuilderStudio() {
         mode: AgentMode.TEXT,
         response_style: 0.3,
         response_length: 260,
-        actions: [SEARCH_INTERNET],
+        actions: [SEARCH_INTERNET, EXECUTE_CODE],
         config: {
           language: 'en',
           mode: AgentMode.TEXT,
@@ -245,7 +245,7 @@ export default function BuilderStudio() {
           model: 'gpt-4',
           temperature: 0.6,
           max_tokens: 2000,
-          actions: [SEARCH_INTERNET]
+          actions: [SEARCH_INTERNET, EXECUTE_CODE]
         }
       });
     } else if (templateKey === 'code') {
@@ -257,7 +257,7 @@ export default function BuilderStudio() {
         mode: AgentMode.TEXT,
         response_style: 0.5,
         response_length: 200,
-        actions: [],
+        actions: [EXECUTE_CODE, SEARCH_INTERNET],
         config: {
           language: 'en',
           mode: AgentMode.TEXT,
@@ -265,7 +265,8 @@ export default function BuilderStudio() {
           response_length: 200,
           model: 'gpt-4',
           temperature: 0.3,
-          max_tokens: 1600
+          max_tokens: 1600,
+          actions: [EXECUTE_CODE, SEARCH_INTERNET]
         }
       });
     }

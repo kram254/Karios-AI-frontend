@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Agent, AgentRole, AgentMode, AgentConfig } from '../../types/agent';
+import { Agent, AgentRole, AgentMode, AgentConfig, EXECUTE_CODE } from '../../types/agent';
 import { useNavigate } from 'react-router-dom';
 import './AgentCreationWizard.css';
 import './dropdownFix.css';
@@ -1753,6 +1753,37 @@ export default function AgentCreationWizard({
                                             </FormGroup>
                                         </Box>
                                     )}
+                                </Box>
+
+                                {/* EXECUTE_CODE Action */}
+                                <Box 
+                                    sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        p: 1.25,
+                                        bgcolor: isActionSelected('EXECUTE_CODE') ? 'rgba(0, 243, 255, 0.05)' : '#333',
+                                        borderRadius: 1,
+                                        border: isActionSelected('EXECUTE_CODE') ? '1px solid rgba(0, 243, 255, 0.3)' : 'none'
+                                    }}
+                                >
+                                    <Checkbox
+                                        checked={isActionSelected('EXECUTE_CODE')}
+                                        onChange={(e) => handleActionChange('EXECUTE_CODE', e.target.checked)}
+                                        sx={{
+                                            color: '#AAAAAA',
+                                            '&.Mui-checked': {
+                                                color: '#00F3FF',
+                                            },
+                                        }}
+                                    />
+                                    <Box sx={{ ml: 1 }}>
+                                        <Typography sx={{ fontWeight: 'bold', color: '#fff' }}>
+                                            💻 Code Execution
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#AAAAAA', display: 'block' }}>
+                                            Execute Python/JavaScript code for calculations and data manipulation
+                                        </Typography>
+                                    </Box>
                                 </Box>
 
                                 {/* SEARCH_INTERNET Action */}

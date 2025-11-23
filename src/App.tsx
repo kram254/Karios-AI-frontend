@@ -28,6 +28,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { LanguageProvider } from './context/LanguageContext';
 import { ProductionDebugConsole } from './components/ProductionDebugConsole';
+import ToolManagementPanel from './components/tools/ToolManagementPanel';
 
 // Create a dark theme
 const darkTheme = createTheme({
@@ -239,6 +240,9 @@ function App() {
                   
                   {/* Autonomous Tasks */}
                   <Route path="/autonomous-tasks" element={<AutonomousTasksPage />} />
+                  
+                  {/* Tool Management & Authentication Engine */}
+                  <Route path="/tools" element={<ToolManagementPanel />} />
                   
                   {/* User Profile */}
                   <Route path="/profile" element={<UserProfile />} />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2, Zap, Paintbrush } from 'lucide-react';
+import { MessageSquare, Plus, Settings, ChevronLeft, ChevronRight, Users, Database, LayoutDashboard, UserCircle, Bot, MoreVertical, Share2, Edit, Trash2, Zap, Paintbrush, Wrench } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -215,6 +215,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <Zap className="w-4 h-4 text-neon-cyan neon-icon" />
                   <span className="ml-3 text-sm">Task Builder</span>
+                </button>
+                <button
+                  onClick={() => navigate('/tools')}
+                  className={`w-full flex items-center px-4 py-2 ml-2 transition-colors ${
+                    isActive('/tools') ? 'neon-tab-active' : 'neon-btn-secondary'
+                  }`}
+                >
+                  <Wrench className="w-4 h-4 text-neon-cyan neon-icon" />
+                  <span className="ml-3 text-sm">Tool Manager</span>
                 </button>
               </>
             )}

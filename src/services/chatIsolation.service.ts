@@ -9,6 +9,16 @@ interface ChatState {
   messageInput: string;
   uploadedImages: any[];
   lastActivity: number;
+  activeArtifactId: string | null;
+  artifactLayoutMode: 'chat' | 'split' | 'artifact-focused';
+  liveExecutionActive: boolean;
+  stepProgress?: any[];
+  agentThoughts?: any[];
+  liveExecution?: any;
+  workflowCompleted?: Record<string, boolean>;
+  executionSnapshotsByTask?: Record<string, Record<string, any>>;
+  latestExecutionSnapshot?: Record<string, any> | null;
+  lastWorkflowEventSeqByTask?: Record<string, number>;
 }
 
 class ChatIsolationService {
@@ -54,21 +64,30 @@ class ChatIsolationService {
   snapshotState(chatId: string, state: Partial<ChatState>): void {
     const existingState = this.stateSnapshot.get(chatId);
     const mergedState: ChatState = {
+      ...(existingState || {} as ChatState),
       chatId,
-      workflows: state.workflows || {},
-      activeTaskId: state.activeTaskId || null,
-      showBrowser: state.showBrowser || false,
-      browserTask: state.browserTask || '',
-      automationActive: state.automationActive || false,
-      pendingTask: state.pendingTask || null,
-      messageInput: state.messageInput || '',
-      uploadedImages: state.uploadedImages || [],
+      workflows: state.workflows ?? existingState?.workflows ?? {},
+      activeTaskId: state.activeTaskId ?? existingState?.activeTaskId ?? null,
+      showBrowser: state.showBrowser ?? existingState?.showBrowser ?? false,
+      browserTask: state.browserTask ?? existingState?.browserTask ?? '',
+      automationActive: state.automationActive ?? existingState?.automationActive ?? false,
+      pendingTask: state.pendingTask ?? existingState?.pendingTask ?? null,
+      messageInput: state.messageInput ?? existingState?.messageInput ?? '',
+      uploadedImages: state.uploadedImages ?? existingState?.uploadedImages ?? [],
       lastActivity: Date.now(),
-      ...existingState
+      activeArtifactId: state.activeArtifactId ?? existingState?.activeArtifactId ?? null,
+      artifactLayoutMode: state.artifactLayoutMode ?? existingState?.artifactLayoutMode ?? 'chat',
+      liveExecutionActive: state.liveExecutionActive ?? existingState?.liveExecutionActive ?? false,
+      stepProgress: state.stepProgress ?? existingState?.stepProgress,
+      agentThoughts: state.agentThoughts ?? existingState?.agentThoughts,
+      liveExecution: state.liveExecution ?? existingState?.liveExecution,
+      workflowCompleted: state.workflowCompleted ?? existingState?.workflowCompleted,
+      executionSnapshotsByTask: state.executionSnapshotsByTask ?? existingState?.executionSnapshotsByTask,
+      latestExecutionSnapshot: state.latestExecutionSnapshot ?? existingState?.latestExecutionSnapshot ?? null,
+      lastWorkflowEventSeqByTask: state.lastWorkflowEventSeqByTask ?? existingState?.lastWorkflowEventSeqByTask
     };
 
     this.stateSnapshot.set(chatId, mergedState);
-    console.log('[ChatIsolation] State snapshot saved for chat:', chatId.slice(0, 8));
   }
 
   getSnapshot(chatId: string): ChatState | null {

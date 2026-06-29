@@ -14,7 +14,7 @@ interface AICopilotProps {
   selectedNodeId: string | null;
   nodes: any[];
   edges: any[];
-  onAddNode: (type: string, position: { x: number; y: number }) => void;
+  onAddNode: (type: string, position: { x: number; y: number }) => string;
   onUpdateNode: (nodeId: string, updates: any) => void;
   onConnect: (source: string, target: string) => void;
   validationErrors: any[];

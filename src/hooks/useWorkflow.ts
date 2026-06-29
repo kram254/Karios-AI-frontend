@@ -1,18 +1,53 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useNodesState, useEdgesState, addEdge, Connection, Edge } from '@xyflow/react';
+import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useNodesState, useEdgesState, Connection } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import type { Workflow, WorkflowNode, WorkflowEdge, NodeType } from '../types/workflow';
 
+const API_BASE_URL = String((import.meta as any).env?.VITE_BACKEND_URL || '').replace(/\/$/, '');
+const apiUrl = (path: string) => (API_BASE_URL ? `${API_BASE_URL}${path}` : path);
+
 export function useWorkflow(initialWorkflow?: Workflow) {
   const [workflow, setWorkflow] = useState<Workflow | null>(initialWorkflow || null);
-  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialWorkflow?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialWorkflow?.edges || []);
+  const [nodes, setNodes, onNodesChange] = useNodesState((initialWorkflow?.nodes || []) as any) as unknown as [
+    WorkflowNode[],
+    Dispatch<SetStateAction<WorkflowNode[]>>,
+    (changes: any[]) => void
+  ];
+  const [edges, setEdges, onEdgesChange] = useEdgesState((initialWorkflow?.edges || []) as any) as unknown as [
+    WorkflowEdge[],
+    Dispatch<SetStateAction<WorkflowEdge[]>>,
+    (changes: any[]) => void
+  ];
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedStateRef = useRef<string>('');
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedStateRef = useRef<string>(JSON.stringify({ nodes: initialWorkflow?.nodes || [], edges: initialWorkflow?.edges || [] }));
+
+  const handleNodesChange = useCallback(
+    (changes: any[]) => {
+      const reset = Array.isArray(changes) ? changes.find((c) => c && c.type === 'reset' && Array.isArray(c.item)) : null;
+      if (reset) {
+        setNodes(reset.item as WorkflowNode[]);
+        return;
+      }
+      onNodesChange(changes as any);
+    },
+    [onNodesChange, setNodes]
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: any[]) => {
+      const reset = Array.isArray(changes) ? changes.find((c) => c && c.type === 'reset' && Array.isArray(c.item)) : null;
+      if (reset) {
+        setEdges(reset.item as WorkflowEdge[]);
+        return;
+      }
+      onEdgesChange(changes as any);
+    },
+    [onEdgesChange, setEdges]
+  );
 
   useEffect(() => {
     if (initialWorkflow) {
@@ -34,18 +69,27 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 
   useEffect(() => {
     const currentState = JSON.stringify({ nodes, edges });
-    if (currentState !== lastSavedStateRef.current && workflow?.id) {
+    const changed = currentState !== lastSavedStateRef.current;
+
+    if (changed) {
       setHasUnsavedChanges(true);
-      
+
+      if (workflow?.id) {
+        if (autoSaveTimerRef.current) {
+          clearTimeout(autoSaveTimerRef.current);
+        }
+
+        autoSaveTimerRef.current = setTimeout(() => {
+          autoSave();
+        }, 3000);
+      }
+    } else {
+      setHasUnsavedChanges(false);
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
-      
-      autoSaveTimerRef.current = setTimeout(() => {
-        autoSave();
-      }, 3000);
     }
-    
+
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
@@ -74,11 +118,18 @@ export function useWorkflow(initialWorkflow?: Workflow) {
         nodes,
         edges,
         updatedAt: new Date().toISOString(),
+        userId: (workflow as any)?.userId,
       };
 
-      const response = await fetch(`/api/workflows/${workflow.id}`, {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      } catch {}
+
+      const response = await fetch(apiUrl(`/api/workflows/${workflow.id}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(workflowData),
       });
 
@@ -102,7 +153,7 @@ export function useWorkflow(initialWorkflow?: Workflow) {
         targetHandle: params.targetHandle || undefined,
         type: 'smoothstep',
       };
-      setEdges((eds) => addEdge(newEdge as Edge, eds));
+      setEdges((eds: WorkflowEdge[]) => [...eds, newEdge]);
     },
     [setEdges]
   );
@@ -120,7 +171,7 @@ export function useWorkflow(initialWorkflow?: Workflow) {
           config: getDefaultConfig(type),
         },
       };
-      setNodes((nds) => [...nds, newNode]);
+      setNodes((nds: WorkflowNode[]) => [...nds, newNode]);
       return nodeId;
     },
     [setNodes]
@@ -128,7 +179,7 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 
   const updateNode = useCallback(
     (nodeId: string, updates: Partial<WorkflowNode['data']>) => {
-      setNodes((nds) =>
+      setNodes((nds: WorkflowNode[]) =>
         nds.map((node) => {
           if (node.id === nodeId) {
             return {
@@ -152,20 +203,20 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 
   const deleteNode = useCallback(
     (nodeId: string) => {
-      setNodes((nds) => nds.filter((node) => node.id !== nodeId));
-      setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+      setNodes((nds: WorkflowNode[]) => nds.filter((node) => node.id !== nodeId));
+      setEdges((eds: WorkflowEdge[]) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
     },
     [setNodes, setEdges]
   );
 
   const deleteEdge = useCallback(
     (edgeId: string) => {
-      setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+      setEdges((eds: WorkflowEdge[]) => eds.filter((edge) => edge.id !== edgeId));
     },
     [setEdges]
   );
 
-  const saveWorkflow = useCallback(async (name: string, description?: string) => {
+  const saveWorkflow = useCallback(async (name: string, description?: string, userId?: number) => {
     setIsSaving(true);
     try {
       const workflowData: Workflow = {
@@ -176,15 +227,55 @@ export function useWorkflow(initialWorkflow?: Workflow) {
         edges,
         createdAt: workflow?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: userId || (workflow as any)?.userId,
       };
 
-      const response = await fetch('/api/workflows', {
-        method: workflow?.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const isUpdate = Boolean(workflow?.id);
+      const url = isUpdate
+        ? apiUrl(`/api/workflows/${workflowData.id}`)
+        : apiUrl('/api/workflows/');
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      } catch {}
+
+      let response = await fetch(url, {
+        method: isUpdate ? 'PUT' : 'POST',
+        headers,
         body: JSON.stringify(workflowData),
       });
 
-      if (!response.ok) throw new Error('Failed to save workflow');
+      if (!response.ok && isUpdate && response.status === 404) {
+        response = await fetch(apiUrl('/api/workflows/'), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(workflowData),
+        });
+      }
+
+      if (!response.ok) {
+        let detail = '';
+        try {
+          detail = await response.text();
+        } catch {}
+
+        if (detail) {
+          try {
+            const parsed = JSON.parse(detail);
+            const parsedDetail = (parsed as any)?.detail;
+            if (parsedDetail) {
+              throw new Error(typeof parsedDetail === 'string' ? parsedDetail : JSON.stringify(parsedDetail));
+            }
+          } catch (e) {
+            if (e instanceof Error) throw e;
+          }
+          throw new Error(detail);
+        }
+
+        throw new Error(`Failed to save workflow (${response.status})`);
+      }
 
       const savedWorkflow = await response.json();
       setWorkflow(savedWorkflow);
@@ -202,7 +293,12 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 
   const loadWorkflow = useCallback(async (workflowId: string) => {
     try {
-      const response = await fetch(`/api/workflows/${workflowId}`);
+      const headers: Record<string, string> = {};
+      try {
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      } catch {}
+      const response = await fetch(apiUrl(`/api/workflows/${workflowId}`), { headers });
       if (!response.ok) throw new Error('Failed to load workflow');
 
       const loadedWorkflow: Workflow = await response.json();
@@ -240,8 +336,8 @@ export function useWorkflow(initialWorkflow?: Workflow) {
     hasUnsavedChanges,
     lastSaved,
     setSelectedNode,
-    onNodesChange,
-    onEdgesChange,
+    onNodesChange: handleNodesChange,
+    onEdgesChange: handleEdgesChange,
     onConnect,
     addNode,
     updateNode,
@@ -254,7 +350,7 @@ export function useWorkflow(initialWorkflow?: Workflow) {
 }
 
 function getNodeLabel(type: NodeType): string {
-  const labels: Record<NodeType, string> = {
+  const labels: Partial<Record<NodeType, string>> = {
     'start': 'Start',
     'agent': 'AI Agent',
     'mcp-tool': 'MCP Tool',
@@ -272,8 +368,8 @@ function getNodeLabel(type: NodeType): string {
 }
 
 function getDefaultConfig(type: NodeType): Record<string, any> {
-  const defaults: Record<NodeType, Record<string, any>> = {
-    'start': { inputVariables: [] },
+  const defaults: Partial<Record<NodeType, Record<string, any>>> = {
+    'start': { inputVariables: [], inputSchema: { fields: [] } },
     'agent': { 
       prompt: '', 
       model: 'gpt-4', 
@@ -286,7 +382,7 @@ function getDefaultConfig(type: NodeType): Record<string, any> {
       writeConversationHistory: false,
       showReasoning: false
     },
-    'mcp-tool': { tool: '', toolArgs: {} },
+    'mcp-tool': { tool: '', toolArgs: {}, approvalRequired: true },
     'transform': { code: '' },
     'if-else': { condition: '' },
     'while': { condition: '', maxIterations: 10, iterationMode: 'sequential' },
@@ -295,7 +391,8 @@ function getDefaultConfig(type: NodeType): Record<string, any> {
     'note': { noteText: 'Double-click to edit note' },
     'guardrail': { guardrailType: 'moderation', guardrailRules: [] },
     'set-state': { stateKey: '', stateValue: '' },
-    'file-search': { vectorStoreId: '', searchQuery: '', topK: 5 },
+    'file-search': { vectorStoreId: '', searchQuery: '', topK: 5, approvalRequired: true },
+    'integration': { integration: '', action: '', params: {}, credentials: {}, approvalRequired: true },
   };
   return defaults[type] || {};
 }

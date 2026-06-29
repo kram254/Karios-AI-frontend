@@ -146,7 +146,7 @@ export function AISuggestionsPanel({
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-xs text-gray-500 mt-2">AI is thinking...</p>
+              <p className="text-xs text-gray-500 mt-2">Loading suggestions...</p>
             </div>
           ) : suggestions.length > 0 ? (
             <div className="space-y-2">

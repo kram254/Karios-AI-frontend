@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Copy, Check } from 'lucide-react';
 
 interface CopyableCardProps {
@@ -22,7 +23,7 @@ export const CopyableCard: React.FC<CopyableCardProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      toast.error('Failed to copy to clipboard.');
     }
   };
 

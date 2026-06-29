@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 export interface AutomationCapabilities {
   gemini_available: boolean;
@@ -31,13 +31,32 @@ export interface WorkflowResult {
 }
 
 class NextLevelAutomationService {
+  private getAuthToken(): string {
+    try {
+      const token = localStorage.getItem('token');
+      if (typeof token === 'string' && token.trim().length > 0) {
+        return token;
+      }
+    } catch (error) {
+    }
+    return 'fake_token_for_development';
+  }
+
+  private getJsonHeaders(includeAuth = false): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (includeAuth) {
+      headers.Authorization = `Bearer ${this.getAuthToken()}`;
+    }
+    return headers;
+  }
+
   async getCapabilities(): Promise<AutomationCapabilities> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/capabilities`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
       });
       
       if (!response.ok) {
@@ -60,9 +79,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/strategies`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
       });
       
       if (!response.ok) {
@@ -79,13 +96,9 @@ class NextLevelAutomationService {
 
   async executeWorkflow(request: WorkflowRequest): Promise<WorkflowResult> {
     try {
-      const token = localStorage.getItem('token') || 'fake_token_for_development';
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/unified/execute-workflow`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: this.getJsonHeaders(true),
         body: JSON.stringify(request),
       });
       
@@ -108,9 +121,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/gemini/execute-action`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
         body: JSON.stringify({
           instruction,
           screenshot_base64: screenshot,
@@ -133,9 +144,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/stagehand/execute-action`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
         body: JSON.stringify({
           instruction,
           action_type: actionType,
@@ -159,9 +168,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/claude/execute-task`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
         body: JSON.stringify({
           instruction,
           task_type: 'general',
@@ -185,9 +192,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/test-gemini`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
       });
       
       if (!response.ok) {
@@ -207,9 +212,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/test-claude`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
       });
       
       if (!response.ok) {
@@ -229,9 +232,7 @@ class NextLevelAutomationService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/next-level-automation/test-stagehand`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getJsonHeaders(true),
       });
       
       if (!response.ok) {

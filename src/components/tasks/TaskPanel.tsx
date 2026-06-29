@@ -244,7 +244,11 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({ chatId, isWebAutomation = 
           });
         }
       } else {
-        console.error('🔍 Failed to load tasks, status:', response.status);
+        if (response.status === 404) {
+          setTasks([]);
+        } else {
+          console.error('🔍 Failed to load tasks, status:', response.status);
+        }
       }
     } catch (error) {
       console.error('Error loading existing tasks:', error);

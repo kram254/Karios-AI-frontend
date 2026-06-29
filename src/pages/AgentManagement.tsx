@@ -61,6 +61,12 @@ interface PartialAgent {
     name?: string;
     description?: string;
     ai_role?: AgentRole;
+    role_description?: string;
+    custom_role?: string;
+    language?: string;
+    mode?: AgentMode;
+    config?: Partial<AgentConfig>;
+    actions?: string[];
     model?: string;
     response_style?: number;
     response_length?: number;
@@ -224,14 +230,15 @@ export const AgentManagement: React.FC = () => {
     };
 
     // Handlers for each dialog's save operation
-    const handleSaveAgentInfo = async (agentData: { name: string; description: string }) => {
+    const handleSaveAgentInfo = async (agentData: { name: string; description: string; skill_ids?: string[] }) => {
         try {
             if (!selectedAgent) return;
             
             console.log('Saving agent info:', agentData);
             const response = await agentService.updateAgent(String(selectedAgent.id), {
                 name: agentData.name,
-                description: agentData.description
+                description: agentData.description,
+                ...(Array.isArray(agentData.skill_ids) ? { skill_ids: agentData.skill_ids } : {})
             });
             
             if (response && response.data) {
@@ -241,7 +248,9 @@ export const AgentManagement: React.FC = () => {
                         return {
                             ...agent,
                             name: agentData.name,
-                            description: agentData.description
+                            description: agentData.description,
+                            ...(Array.isArray(agentData.skill_ids) ? { skill_ids: agentData.skill_ids } : {}),
+                            ...(response.data && (response.data as any).skills ? { skills: (response.data as any).skills } : {})
                         };
                     }
                     return agent;
@@ -251,7 +260,9 @@ export const AgentManagement: React.FC = () => {
                 setSelectedAgent(prev => prev ? {
                     ...prev,
                     name: agentData.name,
-                    description: agentData.description
+                    description: agentData.description,
+                    ...(Array.isArray(agentData.skill_ids) ? { skill_ids: agentData.skill_ids } : {}),
+                    ...(response.data && (response.data as any).skills ? { skills: (response.data as any).skills } : {})
                 } : null);
                 
                 setSnackbarMessage('Agent information updated successfully');
@@ -458,13 +469,22 @@ export const AgentManagement: React.FC = () => {
                 return;
             }
             
-            const response = await agentService.createAgent({ 
-                name: newAgentData.name, 
+            const response = await agentService.createAgent({
+                name: newAgentData.name,
+                description: newAgentData.description,
                 ai_role: newAgentData.ai_role || AgentRole.WEB_SCRAPING,
-                response_style: typeof newAgentData.response_style === 'number' ? 
+                role_description: newAgentData.role_description || newAgentData.custom_role,
+                language: newAgentData.language || 'en',
+                mode: newAgentData.mode || AgentMode.TEXT,
+                response_style: typeof newAgentData.response_style === 'number' ?
                     Math.max(0, Math.min(1, newAgentData.response_style)) : 0.5,
-                response_length: typeof newAgentData.response_length === 'number' ? 
-                    Math.max(50, Math.min(500, newAgentData.response_length)) : 150
+                response_length: typeof newAgentData.response_length === 'number' ?
+                    Math.max(50, Math.min(500, newAgentData.response_length)) : 150,
+                knowledge_item_ids: Array.isArray(newAgentData.config?.knowledge_item_ids)
+                    ? (newAgentData.config?.knowledge_item_ids as number[])
+                    : [],
+                config: newAgentData.config,
+                actions: Array.isArray(newAgentData.actions) ? newAgentData.actions : undefined
             });
             
             if (response && response.data) {
@@ -504,7 +524,7 @@ export const AgentManagement: React.FC = () => {
             [AgentRole.DATA_ANALYSIS]: 'Process and analyze data for insights',
             [AgentRole.EMAIL_AUTOMATION]: 'Manage and automate email communications',
             [AgentRole.DOCUMENT_PROCESSING]: 'Analyze and transform document content',
-            [AgentRole.TESTING_QA]: 'Automated testing and quality assurance'
+            [AgentRole.TESTING_QA]: 'QA automated testing and quality assurance'
         };
         return descriptions[role] || 'Custom role';
     };
@@ -936,7 +956,7 @@ export const AgentManagement: React.FC = () => {
                     setEditDialogOpen(false);
                     setConfirmDeleteDialogOpen(true);
                 }}
-                onSave={(agentData: { name: string; description: string }) => handleSaveAgentInfo(agentData)}
+                onSave={(agentData: { name: string; description: string; skill_ids?: string[] }) => handleSaveAgentInfo(agentData)}
             />
             
             {/* Configure Role Dialog */}
@@ -988,3 +1008,5 @@ export const AgentManagement: React.FC = () => {
         </Container>
     );
 };
+
+export default AgentManagement;

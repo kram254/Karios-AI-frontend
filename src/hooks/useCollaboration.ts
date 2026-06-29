@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { wsUrl } from '../config/env';
 
 interface UserPresence {
   user_id: string;
@@ -26,7 +27,7 @@ export function useCollaboration(workspaceId: string, userId: string, username: 
   useEffect(() => {
     if (!workspaceId || !userId) return;
 
-    const ws = new WebSocket(`${process.env.REACT_APP_WS_URL || 'ws://localhost:8000'}/ws/collaboration/${workspaceId}`);
+    const ws = new WebSocket(wsUrl(`/ws/collaboration/${workspaceId}`));
     
     ws.onopen = () => {
       setIsConnected(true);

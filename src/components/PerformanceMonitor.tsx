@@ -56,7 +56,7 @@ export const PerformanceMonitor: React.FC<{ componentName?: string }> = ({
   const status = getPerformanceStatus();
   const uptime = Math.round((Date.now() - mountTime.current) / 1000);
 
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env.DEV) {
     return null;
   }
 
@@ -103,7 +103,7 @@ export const useRenderCount = (componentName: string) => {
   
   useEffect(() => {
     renderCount.current += 1;
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log(`[${componentName}] Render #${renderCount.current}`);
     }
   });

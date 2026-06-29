@@ -15,6 +15,8 @@ interface MultiAgentWSMessage {
 
 interface MultiAgentWSCallbacks {
   onAgentStatus?: (data: MultiAgentWSMessage) => void;
+  onAgentThinking?: (data: any) => void;
+  onStepProgress?: (data: any) => void;
   onClarificationRequest?: (data: MultiAgentWSMessage) => void;
   onWorkflowUpdate?: (data: MultiAgentWSMessage) => void;
   onWorkflowStarted?: (data: MultiAgentWSMessage) => void;
@@ -23,6 +25,8 @@ interface MultiAgentWSCallbacks {
   onNewMessage?: (data: MultiAgentWSMessage) => void;
   onTaskCompleted?: (data: MultiAgentWSMessage) => void;
   onFormattingCompleted?: (data: MultiAgentWSMessage) => void;
+  onApprovalRequired?: (data: MultiAgentWSMessage) => void;
+  onApprovalReceived?: (data: MultiAgentWSMessage) => void;
   onError?: (error: Event) => void;
   onClose?: (event: CloseEvent) => void;
 }
@@ -80,9 +84,17 @@ class MultiAgentWebSocketService {
       this.ws.onmessage = (event) => {
         try {
           const data: MultiAgentWSMessage = JSON.parse(event.data);
-          console.log('🔥 DEBUG WS RECEIVE - Raw message received:', event.data);
-          console.log('🔥 DEBUG WS RECEIVE - Parsed data:', data);
-          console.log('🔥 DEBUG WS RECEIVE - Message type:', data.type);
+          if (data && (data.type === 'pong' || data.type === 'ping' || (data as any).ephemeral === true)) {
+            if (this.chatId) {
+              websocketStateManager.updateHeartbeat(this.chatId);
+            }
+            return;
+          }
+          if (import.meta.env.DEV) {
+            console.log('🔥 DEBUG WS RECEIVE - Raw message received:', event.data);
+            console.log('🔥 DEBUG WS RECEIVE - Parsed data:', data);
+            console.log('🔥 DEBUG WS RECEIVE - Message type:', data.type);
+          }
           this.handleMessage(data);
         } catch (error) {
           console.error('🔥 DEBUG WS RECEIVE - Parse error:', error, 'Raw data:', event.data);
@@ -127,8 +139,10 @@ class MultiAgentWebSocketService {
   }
 
   private handleMessage(data: MultiAgentWSMessage) {
-    console.log('🔥 DEBUG WS HANDLE - handleMessage called with type:', data.type);
-    console.log('🔥 DEBUG WS HANDLE - Full data object:', data);
+    if (import.meta.env.DEV) {
+      console.log('🔥 DEBUG WS HANDLE - handleMessage called with type:', data.type);
+      console.log('🔥 DEBUG WS HANDLE - Full data object:', data);
+    }
     switch (data.type) {
       case 'connection_established':
         console.log('📡 MULTI-AGENT WS - Connection established for chat:', data.chatId);
@@ -167,6 +181,24 @@ class MultiAgentWebSocketService {
         this.callbacksList.forEach(callbacks => {
           if (callbacks.onAgentStatus) {
             callbacks.onAgentStatus(data);
+          }
+        });
+        break;
+      
+      case 'agent_thinking':
+        console.log('💭 MULTI-AGENT WS - Agent thinking:', data);
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onAgentThinking) {
+            callbacks.onAgentThinking(data);
+          }
+        });
+        break;
+      
+      case 'step_progress':
+        console.log('📊 MULTI-AGENT WS - Step progress:', data);
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onStepProgress) {
+            callbacks.onStepProgress(data);
           }
         });
         break;
@@ -219,8 +251,34 @@ class MultiAgentWebSocketService {
         });
         break;
         
+      case 'approval_required':
+        console.log('🔐 MULTI-AGENT WS - Approval required:', data);
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onApprovalRequired) {
+            callbacks.onApprovalRequired(data);
+          }
+          if (callbacks.onWorkflowUpdate) {
+            callbacks.onWorkflowUpdate(data);
+          }
+        });
+        break;
+
+      case 'approval_received':
+        console.log('✅ MULTI-AGENT WS - Approval received:', data);
+        this.callbacksList.forEach(callbacks => {
+          if (callbacks.onApprovalReceived) {
+            callbacks.onApprovalReceived(data);
+          }
+          if (callbacks.onWorkflowUpdate) {
+            callbacks.onWorkflowUpdate(data);
+          }
+        });
+        break;
+
       case 'pong':
-        console.log('📡 MULTI-AGENT WS - Pong received');
+        if (!(data as any).ephemeral) {
+          console.log('📡 MULTI-AGENT WS - Pong received');
+        }
         break;
       
       case 'test_message':
@@ -305,7 +363,10 @@ class MultiAgentWebSocketService {
     this.reconnectAttempts = 0;
   }
 
-  isConnected(): boolean {
+  isConnected(chatId?: string): boolean {
+    if (chatId && this.chatId !== chatId) {
+      return false;
+    }
     return this.ws?.readyState === WebSocket.OPEN;
   }
 }

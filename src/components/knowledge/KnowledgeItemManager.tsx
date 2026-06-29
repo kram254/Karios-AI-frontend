@@ -61,12 +61,12 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    
+
     // Form states
     const [textContent, setTextContent] = useState({ title: '', content: '', updateFrequency: UpdateFrequency.NEVER });
-    const [urlContent, setUrlContent] = useState({ 
-        url: '', 
-        description: '', 
+    const [urlContent, setUrlContent] = useState({
+        url: '',
+        description: '',
         updateFrequency: UpdateFrequency.NEVER,
         maxDepth: 2,
         extractCodeExamples: true,
@@ -74,11 +74,11 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     });
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [fileDescription, setFileDescription] = useState('');
-    
+
     // Dialog states
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<KnowledgeItem | null>(null);
-    
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -90,7 +90,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const validateCategoryAndFetchItems = async () => {
         setLoading(true);
         clearMessages();
-        
+
         try {
             // First verify the category exists and is not deleted
             try {
@@ -101,7 +101,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 setLoading(false);
                 return;
             }
-            
+
             // Then fetch the knowledge items
             const response = await categoryService.getKnowledgeItemsByCategory(parseInt(categoryId));
             const items = response.data || [];
@@ -140,9 +140,9 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
 
     const resetForms = () => {
         setTextContent({ title: '', content: '', updateFrequency: UpdateFrequency.NEVER });
-        setUrlContent({ 
-            url: '', 
-            description: '', 
+        setUrlContent({
+            url: '',
+            description: '',
             updateFrequency: UpdateFrequency.NEVER,
             maxDepth: 2,
             extractCodeExamples: true,
@@ -172,16 +172,16 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     const handleAddTextContent = async () => {
         setLoading(true);
         clearMessages();
-        
+
         // Check if category still exists
         if (!await checkCategoryExists()) {
             setLoading(false);
             return;
         }
-        
+
         try {
             const response = await categoryService.addTextContent(
-                parseInt(categoryId), 
+                parseInt(categoryId),
                 textContent.content,
                 textContent.title,
                 textContent.updateFrequency
@@ -238,13 +238,13 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         pages_processed?: number;
         processing_error?: string | null;
     }
-    
+
     // Function to check URL processing status
     const checkUrlProcessingStatus = async (itemId: number) => {
         try {
             const response = await categoryService.getKnowledgeItem(itemId);
             const item = response.data;
-            
+
             // Parse metadata from content field (JSON string)
             let metadata: ProcessingMetadata = {};
             if (item && item.content) {
@@ -254,14 +254,14 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                     console.error('Error parsing content as JSON:', e);
                     metadata = {};
                 }
-                
+
                 const status = metadata.processing_status || '';
                 const progress = metadata.processing_progress || 0;
                 const statusMessage = metadata.status_message || '';
                 const currentPage = metadata.current_page || null;
                 const pagesProcessed = metadata.pages_processed || 0;
                 const processingError = metadata.processing_error || null;
-                
+
                 setUrlProcessingStatus(prev => ({
                     ...prev,
                     progress: progress,
@@ -271,7 +271,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                     pagesProcessed: pagesProcessed,
                     error: processingError
                 }));
-                
+
                 // Continue polling if still processing
                 if (status === 'processing' || status === '') {
                     setTimeout(() => checkUrlProcessingStatus(itemId), 1500); // Poll every 1.5 seconds for more responsive updates
@@ -284,17 +284,21 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                     } else if (status === 'limited') {
                         setSuccess('URL processed with limited capability (basic extraction)');
                     }
-                    
+
                     // Reset processing state after showing the result for 3 seconds
                     setTimeout(() => {
-                        setUrlProcessingStatus({ 
-                            isProcessing: false, 
-                            itemId: null, 
-                            progress: 0, 
+                        setUrlProcessingStatus({
+                            isProcessing: false,
+                            itemId: null,
+                            progress: 0,
                             status: '',
                             statusMessage: '',
                             currentPage: null,
                             pagesProcessed: 0,
+                            totalPages: 0,
+                            chunksStored: 0,
+                            codeExamplesCount: 0,
+                            crawlStrategy: 'single_page',
                             error: null
                         });
                         validateCategoryAndFetchItems(); // Refresh items
@@ -304,14 +308,18 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
         } catch (error) {
             console.error('Error checking URL processing status:', error);
             // Stop checking after error
-            setUrlProcessingStatus({ 
-                isProcessing: false, 
-                itemId: null, 
-                progress: 0, 
+            setUrlProcessingStatus({
+                isProcessing: false,
+                itemId: null,
+                progress: 0,
                 status: '',
                 statusMessage: '',
                 currentPage: null,
                 pagesProcessed: 0,
+                totalPages: 0,
+                chunksStored: 0,
+                codeExamplesCount: 0,
+                crawlStrategy: 'single_page',
                 error: 'Failed to check processing status'
             });
         }
@@ -323,14 +331,14 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             setError('URL is required');
             return;
         }
-        
+
         setLoading(true);
         setSuccess(''); // Clear any previous success message
         setError(''); // Clear any previous error message
-        
+
         try {
             const response = await categoryService.addUrl(
-                parseInt(categoryId), 
+                parseInt(categoryId),
                 urlContent.url,
                 urlContent.description,
                 urlContent.updateFrequency,
@@ -338,12 +346,12 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                 urlContent.extractCodeExamples,
                 urlContent.knowledgeType
             );
-            
+
             // Start tracking the processing status
             if (response.data && response.data.id) {
                 resetForms();
                 setLoading(false);
-                
+
                 // Set processing status to start polling
                 setUrlProcessingStatus({
                     isProcessing: true,
@@ -353,12 +361,16 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                     statusMessage: '',
                     currentPage: null,
                     pagesProcessed: 0,
+                    totalPages: 0,
+                    chunksStored: 0,
+                    codeExamplesCount: 0,
+                    crawlStrategy: 'single_page',
                     error: null
                 });
-                
+
                 // Start polling for status updates
                 checkUrlProcessingStatus(response.data.id);
-                
+
                 if (onKnowledgeAdded) {
                     onKnowledgeAdded(response.data);
                 }
@@ -376,20 +388,20 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             setError('Please select at least one file to upload');
             return;
         }
-        
+
         setLoading(true);
         clearMessages();
-        
+
         // Check if category still exists
         if (!await checkCategoryExists()) {
             setLoading(false);
             return;
         }
-        
+
         try {
             const formData = fileDescription ? { description: fileDescription } : undefined;
             const uploadResults = [];
-            
+
             // Upload each file sequentially
             for (const file of selectedFiles) {
                 try {
@@ -399,7 +411,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                         fileName: file.name,
                         response: response.data
                     });
-                    
+
                     // Notify parent if callback exists and response has data
                     if (onKnowledgeAdded && response.data) {
                         onKnowledgeAdded(response.data);
@@ -413,11 +425,11 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                     });
                 }
             }
-            
+
             // Count successes and failures
             const successCount = uploadResults.filter(r => r.success).length;
             const failureCount = uploadResults.length - successCount;
-            
+
             // Create appropriate success message
             if (successCount === uploadResults.length) {
                 setSuccess(`Successfully uploaded ${successCount} file${successCount !== 1 ? 's' : ''}`);
@@ -426,7 +438,7 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
             } else {
                 setError('Failed to upload files. Please try again.');
             }
-            
+
             validateCategoryAndFetchItems();
             resetForms();
         } catch (error) {
@@ -444,24 +456,24 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
 
     const handleDeleteItem = async () => {
         if (!itemToDelete) return;
-        
+
         setDeleteDialogOpen(false);
         setLoading(true);
         clearMessages();
-        
+
         try {
             await categoryService.deleteKnowledgeItem(itemToDelete.id);
             setSuccess('Knowledge item deleted successfully');
-            
+
             // Update the local state by removing the deleted item
             setKnowledgeItems(prevItems => prevItems.filter(item => item.id !== itemToDelete.id));
-            
+
             // Important: Notify the parent component to update category counts
             if (onKnowledgeDeleted) {
                 console.log('Notifying parent of knowledge item deletion');
                 onKnowledgeDeleted(itemToDelete);
             }
-            
+
             setItemToDelete(null);
         } catch (error) {
             console.error('Failed to delete knowledge item:', error);
@@ -522,418 +534,265 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
     };
 
     return (
-        <Box sx={{ py: 3 }}>
+        <div className="kim-container">
             {error && (
-                <Alert 
-                    severity="error" 
-                    onClose={clearMessages}
-                    sx={{ mb: 3, bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#f44336' }}
-                >
-                    {error}
-                </Alert>
+                <div className="kim-alert kim-alert-error">
+                    <span>{error}</span>
+                    <button className="kim-alert-close" onClick={clearMessages}>
+                        <DeleteIcon fontSize="small" />
+                    </button>
+                </div>
             )}
-            
+
             {success && (
-                <Alert 
-                    severity="success" 
-                    onClose={clearMessages}
-                    sx={{ mb: 3, bgcolor: 'rgba(46, 125, 50, 0.1)', color: '#4caf50' }}
-                >
-                    {success}
-                </Alert>
+                <div className="kim-alert kim-alert-success">
+                    <span>{success}</span>
+                    <button className="kim-alert-close" onClick={clearMessages}>
+                        <DeleteIcon fontSize="small" />
+                    </button>
+                </div>
             )}
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" component="h2">
+
+            <div className="kim-header">
+                <h2 className="kim-title">
+                    <DescriptionIcon className="kim-title-icon" />
                     Knowledge Items
-                </Typography>
-                <Button
-                    variant="outlined"
-                    startIcon={<RefreshIcon />}
+                </h2>
+                <button
+                    className="kim-refresh-btn"
                     onClick={validateCategoryAndFetchItems}
                     disabled={loading}
-                    sx={{
-                        borderColor: '#00F3FF',
-                        color: '#00F3FF',
-                        '&:hover': {
-                            borderColor: '#00D4E0',
-                            bgcolor: 'rgba(0, 243, 255, 0.1)'
-                        }
-                    }}
                 >
+                    <RefreshIcon fontSize="small" />
                     Refresh
-                </Button>
-            </Box>
-            
-            <Paper 
-                sx={{ 
-                    bgcolor: '#1A1A1A',
-                    color: '#FFFFFF',
-                    border: '1px solid rgba(0, 243, 255, 0.2)',
-                    mb: 4
-                }}
-            >
-                <Tabs 
-                    value={tabValue} 
-                    onChange={handleTabChange}
-                    sx={{
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        '& .MuiTab-root': {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            '&.Mui-selected': {
-                                color: '#00F3FF'
-                            }
-                        },
-                        '& .MuiTabs-indicator': {
-                            bgcolor: '#00F3FF'
-                        }
-                    }}
-                >
-                    <Tab label="All Items" />
-                    <Tab label="Add Text" />
-                    <Tab label="Add URL" />
-                    <Tab label="Upload File" />
-                </Tabs>
-                
-                <Box sx={{ p: 3 }}>
-                    <TabPanel value={tabValue} index={0}>
-                        {loading && knowledgeItems.length === 0 ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress sx={{ color: '#00F3FF' }} />
-                            </Box>
-                        ) : knowledgeItems.length === 0 ? (
-                            <Box sx={{ textAlign: 'center', py: 4 }}>
-                                <DescriptionIcon sx={{ fontSize: 60, color: 'rgba(255, 255, 255, 0.2)', mb: 2 }} />
-                                <Typography variant="h6" gutterBottom>
-                                    No Knowledge Items
-                                </Typography>
-                                <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    Add text, URLs, or upload files to build your knowledge base
-                                </Typography>
-                            </Box>
-                        ) : (
-                            <div className="scrollable-container">
-                                <List sx={{ width: '100%' }}>
-                                    {knowledgeItems.map((item, index) => (
-                                        <React.Fragment key={item.id}>
-                                            {index > 0 && <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />}
-                                            <ListItem 
-                                                sx={{ 
-                                                    py: 2,
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(0, 243, 255, 0.05)'
-                                                    }
-                                                }}
+                </button>
+            </div>
+
+            <div className="kim-content-wrapper">
+                <div className="kim-tabs-container">
+                    <button
+                        className={`kim-tab ${tabValue === 0 ? 'active' : ''}`}
+                        onClick={() => setTabValue(0)}
+                    >
+                        <DescriptionIcon fontSize="small" />
+                        All Items
+                    </button>
+                    <button
+                        className={`kim-tab ${tabValue === 1 ? 'active' : ''}`}
+                        onClick={() => setTabValue(1)}
+                    >
+                        <AddIcon fontSize="small" />
+                        Add Text
+                    </button>
+                    <button
+                        className={`kim-tab ${tabValue === 2 ? 'active' : ''}`}
+                        onClick={() => setTabValue(2)}
+                    >
+                        <LinkIcon fontSize="small" />
+                        Add URL
+                    </button>
+                    <button
+                        className={`kim-tab ${tabValue === 3 ? 'active' : ''}`}
+                        onClick={() => setTabValue(3)}
+                    >
+                        <UploadIcon fontSize="small" />
+                        Upload File
+                    </button>
+                </div>
+
+                <div className="kim-tab-content">
+                    {tabValue === 0 && (
+                        <>
+                            {loading && knowledgeItems.length === 0 ? (
+                                <div className="kim-loading">
+                                    <div className="kim-loading-spinner"></div>
+                                    <span className="kim-loading-text">Loading items...</span>
+                                </div>
+                            ) : knowledgeItems.length === 0 ? (
+                                <div className="kim-empty-state">
+                                    <div className="kim-empty-icon">
+                                        <DescriptionIcon />
+                                    </div>
+                                    <h3 className="kim-empty-title">No Knowledge Items</h3>
+                                    <p className="kim-empty-text">
+                                        Add text, URLs, or upload files to build your knowledge base
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="kim-items-list">
+                                    {knowledgeItems.map((item) => (
+                                        <div key={item.id} className="kim-item-card">
+                                            <div className="kim-item-icon">
+                                                {getItemIcon(item.content_type)}
+                                            </div>
+                                            <div className="kim-item-info">
+                                                <h4 className="kim-item-title">{getItemTitle(item)}</h4>
+                                                <p className="kim-item-description">{getItemDescription(item)}</p>
+                                            </div>
+                                            <button
+                                                className="kim-item-delete"
+                                                onClick={() => openDeleteDialog(item)}
                                             >
-                                                <ListItemIcon sx={{ color: '#00F3FF' }}>
-                                                    {getItemIcon(item.content_type)}
-                                                </ListItemIcon>
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography variant="subtitle1" sx={{ color: '#FFFFFF' }}>
-                                                            {getItemTitle(item)}
-                                                        </Typography>
-                                                    }
-                                                    secondary={
-                                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                                            {getItemDescription(item)}
-                                                        </Typography>
-                                                    }
-                                                />
-                                                <ListItemSecondaryAction>
-                                                    <Tooltip title="Delete Item">
-                                                        <IconButton 
-                                                            edge="end" 
-                                                            onClick={() => openDeleteDialog(item)}
-                                                            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                                                        >
-                                                            <DeleteIcon />
-                                                        </IconButton>
-                                                    </Tooltip>
-                                                </ListItemSecondaryAction>
-                                            </ListItem>
-                                        </React.Fragment>
+                                                <DeleteIcon fontSize="small" />
+                                            </button>
+                                        </div>
                                     ))}
-                                </List>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {tabValue === 1 && (
+                        <div className="kim-form-section">
+                            <h3 className="kim-form-title">
+                                <AddIcon /> Add Text Content
+                            </h3>
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">Title</label>
+                                <input
+                                    type="text"
+                                    className="kim-form-input"
+                                    placeholder="Enter a title for this content..."
+                                    value={textContent.title}
+                                    onChange={(e) => setTextContent({ ...textContent, title: e.target.value })}
+                                />
                             </div>
-                        )}
-                    </TabPanel>
-                    
-                    <TabPanel value={tabValue} index={1}>
-                        <div className="scrollable-form-container">
-                            <Typography variant="h6" gutterBottom>
-                                Add Text Content
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                label="Title"
-                                margin="normal"
-                                value={textContent.title}
-                                onChange={(e) => setTextContent({ ...textContent, title: e.target.value })}
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    mb: 2,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Content"
-                                multiline
-                                rows={8}
-                                margin="normal"
-                                value={textContent.content}
-                                onChange={(e) => setTextContent({ ...textContent, content: e.target.value })}
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    mb: 3,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Update Frequency"
-                                select
-                                margin="normal"
-                                value={textContent.updateFrequency}
-                                onChange={(e) => setTextContent({ ...textContent, updateFrequency: e.target.value as UpdateFrequency })}
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    mb: 3,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            >
-                                <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
-                                <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
-                                <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
-                                <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
-                            </TextField>
-                            <Button
-                                variant="contained"
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">Content</label>
+                                <textarea
+                                    className="kim-form-textarea"
+                                    placeholder="Enter your text content here..."
+                                    value={textContent.content}
+                                    onChange={(e) => setTextContent({ ...textContent, content: e.target.value })}
+                                />
+                            </div>
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">Update Frequency</label>
+                                <select
+                                    className="kim-form-select"
+                                    value={textContent.updateFrequency}
+                                    onChange={(e) => setTextContent({ ...textContent, updateFrequency: e.target.value as UpdateFrequency })}
+                                >
+                                    <option value={UpdateFrequency.NEVER}>Never</option>
+                                    <option value={UpdateFrequency.DAILY}>Daily</option>
+                                    <option value={UpdateFrequency.WEEKLY}>Weekly</option>
+                                    <option value={UpdateFrequency.MONTHLY}>Monthly</option>
+                                </select>
+                            </div>
+                            <button
+                                className="kim-submit-btn"
                                 onClick={handleAddTextContent}
                                 disabled={loading}
-                                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
-                                sx={{
-                                    bgcolor: '#00F3FF',
-                                    color: '#000000',
-                                    '&:hover': {
-                                        bgcolor: '#00D4E0'
-                                    }
-                                }}
                             >
+                                {loading ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
                                 Add Text
-                            </Button>
+                            </button>
                         </div>
-                    </TabPanel>
-                    
-                    <TabPanel value={tabValue} index={2}>
-                        <div className="scrollable-form-container">
-                            <Typography variant="h6" gutterBottom>
-                                Add URL
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                label="URL"
-                                placeholder="https://example.com"
-                                margin="normal"
-                                value={urlContent.url}
-                                onChange={(e) => setUrlContent({ ...urlContent, url: e.target.value })}
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    mb: 2,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Description (Optional)"
-                                value={urlContent.description}
-                                onChange={(e) => setUrlContent({ ...urlContent, description: e.target.value })}
-                                multiline
-                                rows={2}
-                                margin="normal"
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.3)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            />
-                            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                                <TextField
-                                    label="Max Depth"
-                                    type="number"
-                                    value={urlContent.maxDepth}
-                                    onChange={(e) => setUrlContent({ ...urlContent, maxDepth: parseInt(e.target.value) || 2 })}
-                                    InputProps={{ inputProps: { min: 1, max: 5 } }}
-                                    sx={{ flex: 1 }}
+                    )}
+
+                    {tabValue === 2 && (
+                        <div className="kim-form-section">
+                            <h3 className="kim-form-title">
+                                <LinkIcon /> Add URL
+                            </h3>
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">URL</label>
+                                <input
+                                    type="text"
+                                    className="kim-form-input"
+                                    placeholder="https://example.com"
+                                    value={urlContent.url}
+                                    onChange={(e) => setUrlContent({ ...urlContent, url: e.target.value })}
                                 />
-                                <TextField
-                                    select
-                                    label="Knowledge Type"
-                                    value={urlContent.knowledgeType}
-                                    onChange={(e) => setUrlContent({ ...urlContent, knowledgeType: e.target.value })}
-                                    sx={{ flex: 1 }}
-                                >
-                                    <MenuItem value="technical">Technical</MenuItem>
-                                    <MenuItem value="general">General</MenuItem>
-                                    <MenuItem value="documentation">Documentation</MenuItem>
-                                </TextField>
-                            </Box>
-                            <TextField
-                                fullWidth
-                                label="Update Frequency"
-                                select
-                                margin="normal"
-                                value={urlContent.updateFrequency}
-                                onChange={(e) => setUrlContent({ ...urlContent, updateFrequency: e.target.value as UpdateFrequency })}
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    mb: 3,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            >
-                                <MenuItem value={UpdateFrequency.NEVER}>Never</MenuItem>
-                                <MenuItem value={UpdateFrequency.DAILY}>Daily</MenuItem>
-                                <MenuItem value={UpdateFrequency.WEEKLY}>Weekly</MenuItem>
-                                <MenuItem value={UpdateFrequency.MONTHLY}>Monthly</MenuItem>
-                            </TextField>
-                            {urlProcessingStatus.isProcessing ? (
-                                <Box sx={{ width: '100%', mt: 2, mb: 2 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                        <CircularProgress size={20} sx={{ color: '#00F3FF', mr: 1 }} />
-                                        <Typography variant="body2" sx={{ color: '#00F3FF' }}>
-                                            {urlProcessingStatus.crawlStrategy.toUpperCase()} Crawl: {urlProcessingStatus.statusMessage || 'Starting...'}
-                                        </Typography>
-                                    </Box>
-                                    <LinearProgress 
-                                        variant="determinate" 
-                                        value={urlProcessingStatus.progress} 
-                                        sx={{
-                                            bgcolor: 'rgba(255, 255, 255, 0.1)',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                            '& .MuiLinearProgress-bar': {
-                                                backgroundColor: '#00F3FF',
-                                                transition: 'transform 0.4s linear'
-                                            }
-                                        }}
+                            </div>
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">Description (Optional)</label>
+                                <textarea
+                                    className="kim-form-textarea"
+                                    style={{ minHeight: '80px' }}
+                                    placeholder="Add a description for this URL..."
+                                    value={urlContent.description}
+                                    onChange={(e) => setUrlContent({ ...urlContent, description: e.target.value })}
+                                />
+                            </div>
+                            <div className="kim-form-row">
+                                <div className="kim-form-group" style={{ marginBottom: 0 }}>
+                                    <label className="kim-form-label">Max Depth</label>
+                                    <input
+                                        type="number"
+                                        className="kim-form-input"
+                                        min={1}
+                                        max={5}
+                                        value={urlContent.maxDepth}
+                                        onChange={(e) => setUrlContent({ ...urlContent, maxDepth: parseInt(e.target.value) || 2 })}
                                     />
-                                    
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                            {urlProcessingStatus.progress}% - {urlProcessingStatus.pagesProcessed}/{urlProcessingStatus.totalPages} pages
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                                            {urlProcessingStatus.chunksStored} chunks • {urlProcessingStatus.codeExamplesCount} code examples
-                                        </Typography>
-                                    </Box>
+                                </div>
+                                <div className="kim-form-group" style={{ marginBottom: 0 }}>
+                                    <label className="kim-form-label">Knowledge Type</label>
+                                    <select
+                                        className="kim-form-select"
+                                        value={urlContent.knowledgeType}
+                                        onChange={(e) => setUrlContent({ ...urlContent, knowledgeType: e.target.value })}
+                                    >
+                                        <option value="technical">Technical</option>
+                                        <option value="general">General</option>
+                                        <option value="documentation">Documentation</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">Update Frequency</label>
+                                <select
+                                    className="kim-form-select"
+                                    value={urlContent.updateFrequency}
+                                    onChange={(e) => setUrlContent({ ...urlContent, updateFrequency: e.target.value as UpdateFrequency })}
+                                >
+                                    <option value={UpdateFrequency.NEVER}>Never</option>
+                                    <option value={UpdateFrequency.DAILY}>Daily</option>
+                                    <option value={UpdateFrequency.WEEKLY}>Weekly</option>
+                                    <option value={UpdateFrequency.MONTHLY}>Monthly</option>
+                                </select>
+                            </div>
+                            {urlProcessingStatus.isProcessing ? (
+                                <div className="kim-progress-container">
+                                    <div className="kim-progress-header">
+                                        <div className="kim-progress-spinner"></div>
+                                        <span className="kim-progress-text">
+                                            {urlProcessingStatus.crawlStrategy.toUpperCase()} Crawl: {urlProcessingStatus.statusMessage || 'Starting...'}
+                                        </span>
+                                    </div>
+                                    <div className="kim-progress-bar">
+                                        <div
+                                            className="kim-progress-fill"
+                                            style={{ width: `${urlProcessingStatus.progress}%` }}
+                                        ></div>
+                                    </div>
+                                    <div className="kim-progress-details">
+                                        <span>{urlProcessingStatus.progress}% - {urlProcessingStatus.pagesProcessed}/{urlProcessingStatus.totalPages} pages</span>
+                                        <span>{urlProcessingStatus.chunksStored} chunks • {urlProcessingStatus.codeExamplesCount} code examples</span>
+                                    </div>
                                     {urlProcessingStatus.currentPage && (
-                                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.7rem' }}>
-                                            Current: {urlProcessingStatus.currentPage}
-                                        </Typography>
+                                        <p className="kim-progress-current">Current: {urlProcessingStatus.currentPage}</p>
                                     )}
-                                </Box>
+                                </div>
                             ) : (
-                                <Button
-                                    variant="contained"
+                                <button
+                                    className="kim-submit-btn"
                                     onClick={handleAddUrl}
                                     disabled={loading}
-                                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
-                                    sx={{
-                                        bgcolor: '#00F3FF',
-                                        color: '#000000',
-                                        '&:hover': {
-                                            bgcolor: '#00D4E0'
-                                        }
-                                    }}
                                 >
+                                    {loading ? <CircularProgress size={20} color="inherit" /> : <LinkIcon />}
                                     Add URL
-                                </Button>
+                                </button>
                             )}
                         </div>
-                    </TabPanel>
-                    
-                    <TabPanel value={tabValue} index={3}>
-                        <div className="scrollable-form-container">
-                            <Typography variant="h6" gutterBottom>
-                                Upload File
-                            </Typography>
+                    )}
+
+                    {tabValue === 3 && (
+                        <div className="kim-form-section">
+                            <h3 className="kim-form-title">
+                                <UploadIcon /> Upload File
+                            </h3>
                             <input
                                 type="file"
                                 ref={fileInputRef}
@@ -941,141 +800,97 @@ export const KnowledgeItemManager: React.FC<KnowledgeItemManagerProps> = ({ cate
                                 onChange={handleFileSelect}
                                 multiple
                             />
-                            <Box 
-                                sx={{ 
-                                    border: '2px dashed rgba(255, 255, 255, 0.2)',
-                                    borderRadius: 2,
-                                    p: 3,
-                                    textAlign: 'center',
-                                    mb: 3,
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                        borderColor: '#00F3FF',
-                                        bgcolor: 'rgba(0, 243, 255, 0.05)'
-                                    }
-                                }}
-                                onClick={triggerFileInput}
-                            >
+                            <div className="kim-upload-area" onClick={triggerFileInput}>
                                 {selectedFiles.length > 0 ? (
                                     <>
-                                        <FileIcon sx={{ fontSize: 40, color: '#00F3FF', mb: 1 }} />
-                                        <Typography variant="body1" gutterBottom>
-                                            {selectedFiles.length === 1 
-                                                ? selectedFiles[0].name 
+                                        <div className="kim-upload-icon">
+                                            <FileIcon />
+                                        </div>
+                                        <h4 className="kim-upload-title kim-upload-selected">
+                                            {selectedFiles.length === 1
+                                                ? selectedFiles[0].name
                                                 : `${selectedFiles.length} files selected`}
-                                        </Typography>
-                                        {selectedFiles.length === 1 ? (
-                                            <Typography variant="body2" color="textSecondary">
-                                                {(selectedFiles[0].size / 1024).toFixed(2)} KB
-                                            </Typography>
-                                        ) : (
-                                            <Typography variant="body2" color="textSecondary">
-                                                {selectedFiles.map(f => f.name).join(', ')}
-                                            </Typography>
-                                        )}
+                                        </h4>
+                                        <p className="kim-upload-text">
+                                            {selectedFiles.length === 1
+                                                ? `${(selectedFiles[0].size / 1024).toFixed(2)} KB`
+                                                : selectedFiles.map(f => f.name).join(', ')}
+                                        </p>
                                     </>
                                 ) : (
                                     <>
-                                        <UploadIcon sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.5)', mb: 1 }} />
-                                        <Typography variant="body1" gutterBottom>
-                                            Click to select files
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                                        <div className="kim-upload-icon">
+                                            <UploadIcon />
+                                        </div>
+                                        <h4 className="kim-upload-title">Click to select files</h4>
+                                        <p className="kim-upload-text">
                                             Supports PDF, DOCX, TXT, and more. Select multiple files by holding Ctrl/Cmd.
-                                        </Typography>
+                                        </p>
                                     </>
                                 )}
-                            </Box>
-                            
-                            <TextField
-                                fullWidth
-                                label="Description (Optional)"
-                                margin="normal"
-                                value={fileDescription}
-                                onChange={(e) => setFileDescription(e.target.value)}
-                                InputLabelProps={{
-                                    sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                                sx={{
-                                    mb: 3,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: '#FFFFFF',
-                                        '& fieldset': {
-                                            borderColor: 'rgba(255, 255, 255, 0.2)'
-                                        },
-                                        '&:hover fieldset': {
-                                            borderColor: 'rgba(0, 243, 255, 0.5)'
-                                        },
-                                        '&.Mui-focused fieldset': {
-                                            borderColor: '#00F3FF'
-                                        }
-                                    }
-                                }}
-                            />
-                            
-                            <Button
-                                variant="contained"
+                            </div>
+                            <div className="kim-form-group">
+                                <label className="kim-form-label">Description (Optional)</label>
+                                <input
+                                    type="text"
+                                    className="kim-form-input"
+                                    placeholder="Add a description for this file..."
+                                    value={fileDescription}
+                                    onChange={(e) => setFileDescription(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                className="kim-submit-btn"
                                 onClick={handleUploadFile}
                                 disabled={loading || selectedFiles.length === 0}
-                                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
-                                sx={{
-                                    bgcolor: '#00F3FF',
-                                    color: '#000000',
-                                    '&:hover': {
-                                        bgcolor: '#00D4E0'
-                                    }
-                                }}
                             >
+                                {loading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
                                 Upload {selectedFiles.length > 1 ? `${selectedFiles.length} Files` : 'File'}
-                            </Button>
+                            </button>
                         </div>
-                    </TabPanel>
-                </Box>
-            </Paper>
-            
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-                open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
-                PaperProps={{
-                    sx: {
-                        bgcolor: '#1A1A1A',
-                        color: '#FFFFFF',
-                        borderRadius: '8px'
-                    }
-                }}
-            >
-                <DialogTitle>Confirm Deletion</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        Are you sure you want to delete this knowledge item?
-                        This action cannot be undone.
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 3 }}>
-                    <Button 
-                        onClick={() => setDeleteDialogOpen(false)}
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={handleDeleteItem}
-                        variant="contained"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-                        sx={{
-                            bgcolor: '#f44336',
-                            '&:hover': {
-                                bgcolor: '#d32f2f'
-                            }
-                        }}
-                    >
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+                    )}
+                </div>
+            </div>
+
+            {deleteDialogOpen && (
+                <div className="kim-dialog-overlay" onClick={() => setDeleteDialogOpen(false)}>
+                    <div className="kim-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="kim-dialog-header">
+                            <h3 className="kim-dialog-title">Confirm Deletion</h3>
+                            <button className="kim-dialog-close" onClick={() => setDeleteDialogOpen(false)}>
+                                ×
+                            </button>
+                        </div>
+                        <div className="kim-dialog-content">
+                            <p className="kim-dialog-text">
+                                Are you sure you want to delete this knowledge item?
+                            </p>
+                            <div className="kim-dialog-warning">
+                                <DeleteIcon className="kim-dialog-warning-icon" />
+                                <p className="kim-dialog-warning-text">
+                                    This action cannot be undone. The knowledge item will be permanently removed from this category.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="kim-dialog-footer">
+                            <button
+                                className="kim-btn kim-btn-cancel"
+                                onClick={() => setDeleteDialogOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="kim-btn kim-btn-danger"
+                                onClick={handleDeleteItem}
+                                disabled={loading}
+                            >
+                                {loading ? 'Deleting...' : 'Delete Item'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

@@ -95,7 +95,18 @@ export const ReviewScoreModal: React.FC<ReviewModalProps> = ({ show, onClose, qu
             </div>
             <div>
               <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-purple-400' : 'text-purple-700'}`}>Quality Review Score</h3>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Score: {qualityScore}%</p>
+              <div className="flex items-center gap-2">
+                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Score: {qualityScore}%</p>
+                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                  qualityScore >= 90 ? 'bg-green-500/20 text-green-400' :
+                  qualityScore >= 80 ? 'bg-emerald-500/20 text-emerald-400' :
+                  qualityScore >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
+                  qualityScore >= 60 ? 'bg-orange-500/20 text-orange-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {qualityScore >= 90 ? 'Excellent' : qualityScore >= 80 ? 'Good' : qualityScore >= 70 ? 'Acceptable' : qualityScore >= 60 ? 'Needs Review' : 'Poor'}
+                </span>
+              </div>
             </div>
           </div>
           <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-purple-500/10 text-gray-400 hover:text-purple-400' : 'hover:bg-gray-100 text-gray-600'}`}>

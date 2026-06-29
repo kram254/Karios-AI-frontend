@@ -15,24 +15,29 @@ export class ApiService {
         
         this.api = axios.create({
             baseURL,
+            timeout: 300000,
+            maxContentLength: 50 * 1024 * 1024,
+            maxBodyLength: 50 * 1024 * 1024,
             headers: {
                 'Content-Type': 'application/json',
             }
         });
         
-        // Add a development token for authentication bypass
-        const devToken = 'fake_token_for_development';
-        localStorage.setItem('token', devToken);
-        this.api.defaults.headers.common['Authorization'] = `Bearer ${devToken}`;
+        const token = localStorage.getItem('token');
+        if (token) {
+            this.api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
         
         // Add response interceptor
         this.api.interceptors.response.use(
             response => response,
             error => {
-                // Handle 401 errors without redirecting
                 if (error.response && error.response.status === 401) {
-                    console.error('Authentication error:', error);
-                    // Don't redirect, just log the error
+                    localStorage.removeItem('token');
+                    const preservedSearch = window.location.search.includes('google_token=') || window.location.search.includes('token=')
+                        ? window.location.search
+                        : '';
+                    window.location.href = `/login${preservedSearch}`;
                 } else {
                     console.error('API error:', error);
                     console.error('Request details:', {

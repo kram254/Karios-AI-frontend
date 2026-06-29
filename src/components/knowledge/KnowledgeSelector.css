@@ -1,8 +1,8 @@
 .knowledge-selector {
-    background-color: #1A1A1A;
-    border: 1px solid rgba(0, 243, 255, 0.2);
-    border-radius: 8px;
-    padding: 1.5rem;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
     color: #FFFFFF;
 }
 
@@ -24,18 +24,69 @@
 
 .search-input {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.75rem 1rem;
     padding-left: 2.5rem;
-    background-color: #2A2A2A;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    color: #FFFFFF;
-    font-size: 1rem;
+    background-color: rgba(17, 24, 39, 0.9);
+    border: 1px solid rgba(0, 243, 255, 0.1);
+    border-radius: 9999px;
+    color: #E5E7EB;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
 }
 
 .search-input:focus {
     outline: none;
-    border-color: #00F3FF;
+    border-color: rgba(0, 243, 255, 0.5);
+    box-shadow: 
+        0 0 0 1px rgba(0, 243, 255, 0.15),
+        0 0 15px rgba(0, 243, 255, 0.1);
+    background-color: rgba(17, 24, 39, 0.95);
+}
+
+.search-input::placeholder {
+    color: rgba(156, 163, 175, 1);
+}
+
+.empty-container {
+    margin-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: rgba(156, 163, 175, 1);
+}
+
+.empty-icon {
+    width: 64px;
+    height: 80px;
+    border-radius: 12px;
+    border: 1px solid rgba(75, 85, 99, 0.6);
+    background-color: rgba(15, 23, 42, 0.9);
+}
+
+.empty-title {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.create-kb-button {
+    margin-top: 0.5rem;
+    padding: 0.6rem 1.6rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    background-color: transparent;
+    color: #E5E7EB;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.create-kb-button:hover {
+    border-color: rgba(0, 243, 255, 0.6);
+    color: #00F3FF;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.15);
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
 }
 
 .loading-container {
@@ -70,21 +121,45 @@
 
 .knowledge-item {
     margin-bottom: 0.5rem;
-    border-radius: 4px;
+    border-radius: 8px;
     overflow: hidden;
+    border: 1px solid rgba(0, 243, 255, 0.06);
+    transition: all 0.3s ease;
+}
+
+.knowledge-item:hover {
+    border-color: rgba(0, 243, 255, 0.15);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 243, 255, 0.2);
 }
 
 .knowledge-header {
     display: flex;
     align-items: center;
     padding: 0.75rem;
-    background-color: #2A2A2A;
+    background-color: rgba(30, 35, 48, 0.8);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.knowledge-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, #00F3FF, #00B4C8);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .knowledge-header:hover {
-    background-color: rgba(0, 243, 255, 0.1);
+    background-color: rgba(0, 243, 255, 0.08);
+}
+
+.knowledge-header:hover::before {
+    opacity: 1;
 }
 
 .checkbox-container {
@@ -101,17 +176,24 @@
 .checkmark {
     width: 20px;
     height: 20px;
-    border: 2px solid rgba(0, 243, 255, 0.5);
+    border: 2px solid rgba(0, 243, 255, 0.3);
     border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    background: rgba(0, 243, 255, 0.03);
+}
+
+.checkbox-container:hover .checkmark {
+    border-color: rgba(0, 243, 255, 0.5);
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
 }
 
 .checkbox-container input:checked + .checkmark {
-    background-color: #00F3FF;
+    background: linear-gradient(135deg, #00F3FF, #00B4C8);
     border-color: #00F3FF;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
 }
 
 .checkbox-container input:checked + .checkmark::after {
@@ -153,23 +235,26 @@
 .expand-button {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     padding: 0.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s;
+    transition: all 0.3s ease;
+    border-radius: 4px;
 }
 
 .expand-button:hover {
     color: #00F3FF;
+    text-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
+    background: rgba(0, 243, 255, 0.1);
 }
 
 .knowledge-details {
     padding: 1rem;
-    background-color: #2A2A2A;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(25, 30, 42, 0.9);
+    border-top: 1px solid rgba(0, 243, 255, 0.08);
 }
 
 .knowledge-details p {

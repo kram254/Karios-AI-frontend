@@ -19,6 +19,7 @@ import { useLanguage } from './LanguageContext';
 import { checkApiEndpoint } from '../utils/apiUtils';
 import { filterDisclaimerMessages } from '../utils/messageFilters';
 import { stateManager } from '../services/stateManager.service';
+import { useAnonymousAuth } from './AnonymousAuthContext';
 
 interface Attachment {
   id?: string;
@@ -75,7 +76,7 @@ interface ChatContextType {
   error: string | null;
   createNewChat: (customTitle?: string) => Promise<Chat | null>;
   createAgentChat: (agent?: Agent) => Promise<Chat | null>;
-  setCurrentChat: (chat: Chat) => void;
+  setCurrentChat: React.Dispatch<React.SetStateAction<Chat | null>>;
   addMessage: (message: { role: 'user' | 'assistant' | 'system'; content: string; chatId?: string }) => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
@@ -118,6 +119,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [errorState, setError] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const { language } = useLanguage();
+  const { isAnonymous, incrementMessageCount, requiresAuthentication } = useAnonymousAuth();
   
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -133,7 +135,12 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    loadChats();
+    const token = localStorage.getItem('token');
+    if (token) {
+      loadChats();
+    } else {
+      setLoading(false);
+    }
     
     const savedInternetChatIds = stateManager.load<string[]>({
       key: 'internet_enabled_chats',
@@ -148,8 +155,22 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       version: 1
     });
     if (savedCurrentChatId) {
-      console.log('[ChatContext] Restoring last active chat:', savedCurrentChatId);
+      if (import.meta.env.DEV) { console.log('[ChatContext] Restoring last active chat:', savedCurrentChatId); }
     }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token') {
+        if (e.newValue) {
+          loadChats();
+        } else {
+          setChats([]);
+          setCurrentChat(null);
+          setLoading(false);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
   
   // Update internet search state when current chat changes
@@ -196,8 +217,24 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       const response = await chatService.getChats();
-      console.log('Chats loaded:', response.data);
+      if (import.meta.env.DEV) { console.log('Chats loaded:', response.data); }
       setChats(response.data);
+
+      const savedCurrentChatId = stateManager.load<string>({
+        key: 'current_chat_id',
+        version: 1
+      });
+      if (savedCurrentChatId && !response.data.some(c => c.id === savedCurrentChatId)) {
+        stateManager.clear('current_chat_id');
+        const checkpoint = stateManager.load<{ currentChatId: string | null }>({
+          key: 'recovery_checkpoint',
+          version: 1
+        });
+        if (checkpoint && checkpoint.currentChatId === savedCurrentChatId) {
+          stateManager.clear('recovery_checkpoint');
+        }
+        setCurrentChat(null);
+      }
       
       // Don't automatically set the first chat as current to allow welcome screen to show
       // Only uncomment this if you want to auto-load the first chat
@@ -209,6 +246,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (err: unknown) {
       console.error('Error loading chats:', err);
       console.error('Error details:', (err as { response?: { data: string } }).response?.data || (err as { message: string }).message);
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 401) {
+        localStorage.removeItem('token');
+        const preservedSearch = window.location.search.includes('google_token=') || window.location.search.includes('token=')
+          ? window.location.search
+          : '';
+        window.location.href = `/login${preservedSearch}`;
+        return;
+      }
       setError('Failed to load chats');
       toast.error('Failed to load chats');
     } finally {
@@ -225,15 +271,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // was already set (e.g., after creating a new chat or adding a message).
         // A more robust check might involve looking at a `messages_loaded_fully` flag if available.
         if (currentChat.messages && currentChat.messages.length > 0) {
-          console.log(`[ChatContext][useEffect] Chat ${currentChat.id} already has ${currentChat.messages.length} messages in state. Optimization: Skipping fetch. First message ID: ${currentChat.messages[0]?.id}`);
+          if (import.meta.env.DEV) { console.log(`[ChatContext][useEffect] Chat ${currentChat.id} already has ${currentChat.messages.length} messages in state. Optimization: Skipping fetch. First message ID: ${currentChat.messages[0]?.id}`); }
           return;
         }
 
-        console.log(`[ChatContext][useEffect] Chat ${currentChat.id} has no messages or messages are empty. Fetching full details... Current messages count: ${currentChat.messages?.length || 0}`);
+        if (import.meta.env.DEV) { console.log(`[ChatContext][useEffect] Chat ${currentChat.id} has no messages or messages are empty. Fetching full details... Current messages count: ${currentChat.messages?.length || 0}`); }
         setLoading(true);
         try {
           const freshChatResponse = await chatService.getChat(currentChat.id);
-          console.log(`[ChatContext][useEffect] Full chat ${currentChat.id} loaded:`, freshChatResponse.data);
+          if (import.meta.env.DEV) { console.log(`[ChatContext][useEffect] Full chat ${currentChat.id} loaded:`, freshChatResponse.data); }
           const loadedChat = freshChatResponse.data;
           
           if (loadedChat.agent_id && !loadedChat.agent_actions) {
@@ -247,10 +293,31 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           
           setCurrentChat(loadedChat);
-          console.log(`[ChatContext][useEffect] Successfully fetched and set messages for chat ${currentChat.id}. New messages count: ${loadedChat.messages?.length || 0}. Messages:`, loadedChat.messages);
+          if (import.meta.env.DEV) { console.log(`[ChatContext][useEffect] Successfully fetched and set messages for chat ${currentChat.id}. New messages count: ${loadedChat.messages?.length || 0}. Messages:`, loadedChat.messages); }
           setError(null);
         } catch (err: unknown) {
           console.error(`Error loading messages for chat ${currentChat.id}:`, err);
+          const status = (err as { response?: { status?: number } }).response?.status;
+          if (status === 404) {
+            const staleChatId = currentChat.id;
+            const savedCurrentChatId = stateManager.load<string>({
+              key: 'current_chat_id',
+              version: 1
+            });
+            if (savedCurrentChatId === staleChatId) {
+              stateManager.clear('current_chat_id');
+            }
+            const checkpoint = stateManager.load<{ currentChatId: string | null }>({
+              key: 'recovery_checkpoint',
+              version: 1
+            });
+            if (checkpoint && checkpoint.currentChatId === staleChatId) {
+              stateManager.clear('recovery_checkpoint');
+            }
+            setChats(prev => prev.filter(c => c.id !== staleChatId));
+            setCurrentChat(null);
+            return;
+          }
           setError(`Failed to load messages for chat ${currentChat.title || 'the selected chat'}`);
           toast.error(`Failed to load messages for ${currentChat.title || 'the selected chat'}`);
         } finally {
@@ -265,7 +332,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createNewChat = async (customTitle?: string) => {
     try {
       setLoading(true);
-      console.log('Attempting to create a new chat with title:', customTitle || 'New Conversation');
+      if (import.meta.env.DEV) { console.log('Attempting to create a new chat with title:', customTitle || 'New Conversation'); }
       
       // Format title appropriately if it's a search query
       let finalTitle = customTitle || 'New Conversation';
@@ -280,11 +347,34 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await chatService.createChat({
         title: finalTitle,
         chat_type: internetSearchEnabled ? 'internet_search' : 'default',
-        language: language.code // Include the selected language
+        language: language.code
       });
-      console.log('Chat created response:', response);
+      if (import.meta.env.DEV) { console.log('Chat created response:', response); }
       
       const newChat = response.data;
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      try {
+        const verifyResponse = await chatService.getChat(newChat.id);
+        if (import.meta.env.DEV) { console.log('Chat verification successful:', verifyResponse.data); }
+      } catch (verifyError) {
+        console.error('Chat verification failed, retrying creation:', verifyError);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const retryResponse = await chatService.createChat({
+          title: finalTitle,
+          chat_type: internetSearchEnabled ? 'internet_search' : 'default',
+          language: language.code
+        });
+        const retriedChat = retryResponse.data;
+        setChats(prev => [retriedChat, ...prev]);
+        setCurrentChat(retriedChat);
+        toast.success('New chat created');
+        setError(null);
+        setLoading(false);
+        return retriedChat;
+      }
+      
       setChats(prev => [newChat, ...prev]);
       setCurrentChat(newChat);
       
@@ -313,7 +403,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       setLoading(true);
-      console.log(`Creating a new chat with agent ${agentToUse.id}...`);
+      if (import.meta.env.DEV) { console.log(`Creating a new chat with agent ${agentToUse.id}...`); }
       
       // Update selectedAgent state if an agent was provided
       if (agent) {
@@ -447,6 +537,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addMessage = async ({ role, content, chatId }: { role: 'user' | 'assistant' | 'system'; content: string; chatId?: string }) => {
+    if (isAnonymous && role === 'user') {
+      incrementMessageCount();
+    }
+    
+    if (requiresAuthentication && role === 'user') {
+      toast.error('Please sign in to continue chatting');
+      return;
+    }
+    
     let chatToUse = currentChat;
 
     // If a specific chatId is provided, route the message there
@@ -524,6 +623,20 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           messages: [...prev.messages, tempMessage]
         };
       });
+    } else if (!currentChat && chatToUse) {
+      setCurrentChat(prev => {
+        if (prev && prev.id === chatToUse!.id) {
+          return {
+            ...prev,
+            messages: [...prev.messages, tempMessage]
+          };
+        }
+        return {
+          ...chatToUse!,
+          messages: [...(chatToUse!.messages || []), tempMessage]
+        };
+      });
+      setChats(prev => prev.map(c => c.id === chatToUse!.id ? { ...c, messages: [...(c.messages || []), tempMessage] } : c));
     } else if (chatToUse) {
       setChats(prev => prev.map(c => c.id === chatToUse!.id ? { ...c, messages: [...(c.messages || []), tempMessage] } : c));
     }
@@ -577,7 +690,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log(`[ChatContext][addMessage] Successfully refetched chat ${activeChatId}. Full data:`, fullyUpdatedChat);
         console.log(`[ChatContext][addMessage] Messages in refetched chat:`, fullyUpdatedChat.messages);
         
-        // Check for multi-agent task metadata in the response
         if (fullyUpdatedChat.is_multi_agent_task) {
           console.log('🔥 CHATCONTEXT - Multi-agent task detected:', {
             taskId: fullyUpdatedChat.task_id,
@@ -586,7 +698,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             workflowStage: fullyUpdatedChat.workflow_stage
           });
           
-          // Dispatch custom event with multi-agent task data
           const multiAgentEvent = new CustomEvent('multi-agent-task-created', {
             detail: {
               chatId: activeChatId,
@@ -599,13 +710,28 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           window.dispatchEvent(multiAgentEvent);
         }
         
-        if (currentChat?.id === activeChatId) {
-          setCurrentChat(fullyUpdatedChat);
-        }
+        setCurrentChat(prev => {
+          if (!prev) return fullyUpdatedChat;
+          if (prev.id !== activeChatId) return prev;
+          const filteredMessages = prev.messages.filter(msg => msg.id !== tempId);
+          return {
+            ...fullyUpdatedChat,
+            messages: [...filteredMessages, ...fullyUpdatedChat.messages.filter(msg => 
+              !filteredMessages.some(fm => fm.id === msg.id)
+            )]
+          };
+        });
         setChats(prevChats =>
-          prevChats.map(chat =>
-            chat.id === activeChatId ? fullyUpdatedChat : chat
-          )
+          prevChats.map(chat => {
+            if (chat.id !== activeChatId) return chat;
+            const filteredMessages = chat.messages.filter(msg => msg.id !== tempId);
+            return {
+              ...fullyUpdatedChat,
+              messages: [...filteredMessages, ...fullyUpdatedChat.messages.filter(msg => 
+                !filteredMessages.some(fm => fm.id === msg.id)
+              )]
+            };
+          })
         );
         if (role === 'user' && 
             fullyUpdatedChat.title === 'New Chat' && 
@@ -613,7 +739,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const generatedTitle = generateTitleFromMessage(content);
           await updateChatTitle(activeChatId, generatedTitle);
         }
-      } catch (e) {
+      } catch (e: unknown) {
+        const status = (e as { response?: { status?: number } }).response?.status;
+        if (status === 404) {
+          const staleChatId = activeChatId;
+          stateManager.clear('current_chat_id');
+          setChats(prev => prev.filter(c => c.id !== staleChatId));
+          setCurrentChat(null);
+        } else {
+          setCurrentChat(prev => {
+            if (!prev || prev.id !== activeChatId) return prev;
+            return { ...prev, messages: prev.messages.filter(msg => msg.id !== tempId) };
+          });
+        }
       }
     }
   };
@@ -623,6 +761,35 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await chatService.deleteChat(chatId);
       
       setChats(prev => prev.filter(chat => chat.id !== chatId));
+
+      setInternetEnabledChatIds(prev => {
+        if (!prev.has(chatId)) return prev;
+        const next = new Set(prev);
+        next.delete(chatId);
+        return next;
+      });
+
+      const savedCurrentChatId = stateManager.load<string>({
+        key: 'current_chat_id',
+        version: 1
+      });
+      if (savedCurrentChatId === chatId) {
+        stateManager.clear('current_chat_id');
+      }
+      const savedLastActiveChatId = stateManager.load<string>({
+        key: 'last_active_chat',
+        version: 1
+      });
+      if (savedLastActiveChatId === chatId) {
+        stateManager.clear('last_active_chat');
+      }
+      const checkpoint = stateManager.load<{ currentChatId: string | null }>({
+        key: 'recovery_checkpoint',
+        version: 1
+      });
+      if (checkpoint && checkpoint.currentChatId === chatId) {
+        stateManager.clear('recovery_checkpoint');
+      }
       
       if (currentChat?.id === chatId) {
         const remainingChats = chats.filter(chat => chat.id !== chatId);
@@ -639,6 +806,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateChatTitle = async (chatId: string, title: string) => {
     try {
+      setChats(prev =>
+        prev.map(chat => chat.id === chatId ? { ...chat, title } : chat)
+      );
+
+      if (currentChat?.id === chatId) {
+        setCurrentChat(prev => prev ? { ...prev, title } : prev);
+      }
+
       const response = await chatService.updateChatTitle(chatId, title);
       const updatedChat = response.data as Chat;
       
@@ -807,9 +982,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       // Only perform direct API search for new chats or non-internet-search chats
       console.log(`📍 [SEARCH][${searchId}] Checking API endpoint status before search...`);
-      // Updated to use the correct production endpoint
-      const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
-      console.log(`🔌 [SEARCH][${searchId}] Using primary API endpoint: ${renderEndpoint}`);
+      const renderEndpoint = import.meta.env.VITE_BACKEND_URL ?? '';
       const isApiAlive = await checkApiEndpoint(renderEndpoint);
       console.log(`🔌 [SEARCH][${searchId}] API status check result: ${isApiAlive ? 'ONLINE' : 'OFFLINE'}`);
 
@@ -836,7 +1009,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // If the main API is not available, try various fallback options
         console.log('❗ Render API is not responding, using fallback URLs');
         
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           baseUrl = 'http://localhost:8000';
           console.log('🔧 Development environment detected, using:', baseUrl);
         } else {
@@ -1169,7 +1342,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSearchResults([]);
         
         // If there are no results but the API didn't report an error, we'll use mock data in development mode
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.log(`💭 [SEARCH][${searchId}] Using mock search results for development`);
           // Mock search results for development
           const mockResults: SearchResult[] = [

@@ -17,6 +17,7 @@ export type TranslationKey =
   | 'search'
   | 'send_message'
   | 'type_message'
+
   // Settings
   | 'language'
   | 'notifications'
@@ -38,6 +39,14 @@ export type TranslationKey =
   | 'get_notified_about_new_messages'
   | 'auto_save_conversations'
   | 'save_chat_history_automatically'
+  | 'byok'
+  | 'agent_integrations'
+  | 'claude_code'
+  | 'codex'
+  | 'pi_agent'
+  | 'opencode_agent'
+  | 'hermes_agent'
+  
   // Agent creation
   | 'create_agent'
   | 'agent_name'
@@ -82,6 +91,13 @@ export const translations: Translations = {
     privacy: 'Privacy',
     auto_save: 'Auto-save Conversations',
     save_chat_history: 'Save chat history automatically',
+    byok: 'BYOK',
+    agent_integrations: 'Agent Integrations',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: 'Cancel',
     save_changes: 'Save Changes',
     create_agent: 'Create Agent',
@@ -118,6 +134,11 @@ export const translations: Translations = {
     privacy: 'Privacidad',
     auto_save: 'Guardar Conversaciones Automaticamente',
     save_chat_history: 'Guardar historial de chat automáticamente',
+    byok: 'BYOK',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
     cancel: 'Cancelar',
     save_changes: 'Guardar Cambios',
     create_agent: 'Crear Agente',
@@ -154,6 +175,11 @@ export const translations: Translations = {
     privacy: 'Privacy',
     auto_save: 'Salvataggio Automatico Conversazioni',
     save_chat_history: 'Salva automaticamente la cronologia chat',
+    byok: 'BYOK',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
     cancel: 'Annulla',
     save_changes: 'Salva Modifiche',
     create_agent: 'Crea Agente',
@@ -190,6 +216,13 @@ export const translations: Translations = {
     privacy: 'Privacidade',
     auto_save: 'Salvar Conversas Automaticamente',
     save_chat_history: 'Salvar histórico de conversas automaticamente',
+    byok: 'BYOK',
+    agent_integrations: 'Integrações de Agentes',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: 'Cancelar',
     save_changes: 'Salvar Alterações',
     create_agent: 'Criar Agente',
@@ -226,6 +259,13 @@ export const translations: Translations = {
     privacy: 'Απόρρητο',
     auto_save: 'Αυτόματη Αποθήκευση Συνομιλιών',
     save_chat_history: 'Αυτόματη αποθήκευση ιστορικού συνομιλιών',
+    byok: 'BYOK',
+    agent_integrations: 'Ενσωματώσεις Πράκτορα',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: 'Ακύρωση',
     save_changes: 'Αποθήκευση Αλλαγών',
     create_agent: 'Δημιουργία Πράκτορα',
@@ -262,6 +302,13 @@ export const translations: Translations = {
     privacy: '隐私',
     auto_save: '自动保存对话',
     save_chat_history: '自动保存聊天历史',
+    byok: 'BYOK',
+    agent_integrations: '代理集成',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: '取消',
     save_changes: '保存更改',
     create_agent: '创建代理',
@@ -298,6 +345,13 @@ export const translations: Translations = {
     privacy: '개인 정보',
     auto_save: '대화 자동 저장',
     save_chat_history: '채팅 기록 자동 저장',
+    byok: 'BYOK',
+    agent_integrations: '에이전트 통합',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: '취소',
     save_changes: '변경 사항 저장',
     create_agent: '에이전트 생성',
@@ -334,6 +388,13 @@ export const translations: Translations = {
     privacy: 'Confidentialité',
     auto_save: 'Sauvegarde Automatique des Conversations',
     save_chat_history: 'Sauvegarder automatiquement l\'historique des discussions',
+    byok: 'BYOK',
+    agent_integrations: 'Intégrations d\'Agents',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: 'Annuler',
     save_changes: 'Enregistrer les Modifications',
     create_agent: 'Créer un Agent',
@@ -370,6 +431,13 @@ export const translations: Translations = {
     privacy: 'Конфиденциальность',
     auto_save: 'Автоматическое Сохранение Разговоров',
     save_chat_history: 'Автоматически сохранять историю чата',
+    byok: 'BYOK',
+    agent_integrations: 'Интеграции Агентов',
+    claude_code: 'Claude Code',
+    codex: 'OpenAI Codex',
+    pi_agent: 'Pi Agent',
+    opencode_agent: 'OpenCode',
+    hermes_agent: 'Hermes Agent',
     cancel: 'Отмена',
     save_changes: 'Сохранить Изменения',
     create_agent: 'Создать Агента',

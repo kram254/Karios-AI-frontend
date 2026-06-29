@@ -18,6 +18,10 @@ export const ProductionDebugConsole: React.FC = () => {
   const maxLogs = 500;
 
   useEffect(() => {
+    if (import.meta.env.PROD) {
+      return;
+    }
+    
     const originalLog = console.log;
     const originalWarn = console.warn;
     const originalError = console.error;

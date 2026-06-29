@@ -10,6 +10,13 @@ interface WorkflowState {
   automationActive: boolean;
   pendingTask: string | null;
   lastUpdate: number;
+  stepProgress?: any[];
+  agentThoughts?: any[];
+  liveExecution?: any;
+  workflowCompleted?: Record<string, boolean>;
+  executionSnapshotsByTask?: Record<string, Record<string, any>>;
+  latestExecutionSnapshot?: Record<string, any> | null;
+  lastWorkflowEventSeqByTask?: Record<string, number>;
 }
 
 interface SyncedWorkflowStates {

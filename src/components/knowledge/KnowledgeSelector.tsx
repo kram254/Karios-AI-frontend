@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import './KnowledgeSelector.css';
 import { categoryService } from '../../services/api/category.service';
@@ -27,6 +28,7 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
     const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
     const [expandedItems, setExpandedItems] = useState<number[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchKnowledgeBases();
@@ -117,6 +119,16 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
         );
     };
 
+    const handleCreateKnowledgeBase = () => {
+        try {
+            sessionStorage.setItem(
+                'agent_creation_wizard_resume_from_knowledge_v1',
+                JSON.stringify({ step: 4, savedAt: Date.now(), source: 'knowledge_selector' })
+            );
+        } catch {}
+        navigate('/knowledge', { state: { fromAgentWizard: true } });
+    };
+
     const filteredKnowledgeBases = knowledgeBases.filter(kb =>
         kb.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         kb.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -142,13 +154,17 @@ export const KnowledgeSelector: React.FC<KnowledgeSelectorProps> = ({
                     <div className="loading-spinner"></div>
                     <span>Loading knowledge categories...</span>
                 </div>
-            ) : error ? (
-                <div className="error-container">
-                    <p>{error}</p>
-                </div>
             ) : filteredKnowledgeBases.length === 0 ? (
                 <div className="empty-container">
-                    <p>No knowledge categories found. Please create some in the Knowledge Management section first.</p>
+                    <div className="empty-icon"></div>
+                    <p className="empty-title">No knowledge bases available</p>
+                    <button
+                        type="button"
+                        className="create-kb-button"
+                        onClick={handleCreateKnowledgeBase}
+                    >
+                        Create Knowledge Base
+                    </button>
                 </div>
             ) : (
                 <div className="knowledge-list">

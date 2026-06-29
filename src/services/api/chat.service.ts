@@ -149,7 +149,7 @@ export const chatService = {
     return api.delete(`/api/chat/chats/${chatId}/messages/${messageId}`);
   },
   
-  addMessage: (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean; searchModeActive?: boolean }, signal?: AbortSignal) => {
+  addMessage: async (chatId: string, content: string | ChatMessage | { content: string; role: 'user' | 'assistant' | 'system'; suppressAiResponse?: boolean; searchModeActive?: boolean }, signal?: AbortSignal) => {
     console.log(`Adding message to chat ${chatId}`);
     let payload;
     
@@ -179,7 +179,39 @@ export const chatService = {
     }
     
     console.log(`Message payload with role=${payload.role}, suppress_ai_response=${payload.suppress_ai_response}, search_mode=${searchModeActive}`);
-    return api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload, signal ? { signal } : undefined);
+    
+    const maxRetries = 3;
+    let lastError;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms delay`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        return await api.post<Chat>(`/api/chat/chats/${chatId}/messages`, payload, signal ? { signal } : undefined);
+      } catch (error: any) {
+        lastError = error;
+        
+        if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+          throw error;
+        }
+        
+        const isNetworkError = error.code === 'ERR_NETWORK' || !error.response;
+        const is5xxError = error.response?.status >= 500;
+        
+        if (attempt < maxRetries - 1 && (isNetworkError || is5xxError)) {
+          console.warn(`Network/server error on attempt ${attempt + 1}, retrying...`, error.message);
+          continue;
+        }
+        
+        throw error;
+      }
+    }
+    
+    throw lastError;
   },
   
   addMessageWithAttachments: async (
@@ -210,7 +242,7 @@ export const chatService = {
   // Agent and Knowledge Integration
   chatWithAgent: (agentId: number | string, input: string) => {
     console.log(`Chatting with agent ${agentId} with input: ${input}`);
-    return api.post(`/api/v1/agents/${agentId}/chat`, { input });
+    return api.post(`/api/v1/agents/${agentId}/chat`, { query: input });
   },
   
   queryWithKnowledge: (chatId: string, input: string, categories: number[]) => {

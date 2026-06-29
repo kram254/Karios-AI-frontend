@@ -48,6 +48,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [activeChatId, setActiveChatId] = useState<string | undefined>(chatId);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +58,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
     
     // If chatId is provided, load chat history
     if (chatId) {
+      setActiveChatId(chatId);
       fetchChatHistory(chatId);
     }
     // No initial system message as requested
@@ -100,15 +102,17 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
+
+    const messageText = input;
+    const tempUserId = `temp-user-${Date.now()}`;
     
     const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: tempUserId,
       role: 'user',
-      content: input,
+      content: messageText,
       created_at: new Date().toISOString()
     };
     
-    // Update UI immediately
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -116,50 +120,24 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
     
     try {
       let response;
+      let resolvedChatId = activeChatId || chatId;
       
       // If agent ID is provided, use agent-specific endpoint
       if (agentId) {
-        // First create an agent chat if we don't have a chatId
-        if (!chatId) {
+        if (!resolvedChatId) {
           try {
-            // Create a proper agent chat with the correct chat_type
             const newChatResponse = await chatService.createAgentChat({
               agent_id: agentId.toString(),
-              title: `Agent Chat - ${input.substring(0, 30)}${input.length > 30 ? '...' : ''}`
+              title: `Agent Chat - ${messageText.substring(0, 30)}${messageText.length > 30 ? '...' : ''}`
             });
-            
-            // Add the user message to the new chat
-            await chatService.addMessage(newChatResponse.data.id, { ...userMessage });
-            
-            // Update the URL without reloading the page (if needed)
-            // This is optional but helps maintain the chat in history
+
+            resolvedChatId = newChatResponse.data.id;
+            setActiveChatId(resolvedChatId);
+
             if (window.history && window.history.pushState) {
               const newUrl = new URL(window.location.href);
-              newUrl.searchParams.set('chat', newChatResponse.data.id);
+              newUrl.searchParams.set('chat', resolvedChatId);
               window.history.pushState({}, '', newUrl.toString());
-            }
-            
-            // Now chat with the agent using the new chat - pass knowledge categories if selected
-            if (selectedCategories.length > 0) {
-              // If categories are selected, use queryWithKnowledge for agent as well
-              response = await chatService.queryWithKnowledge(
-                newChatResponse.data.id,
-                input,
-                selectedCategories
-              );
-            } else {
-              // Otherwise use regular agent endpoint
-              response = await chatService.chatWithAgent(agentId, input);
-            }
-            
-            // Add the response to the chat
-            if (response.data && response.data.content) {
-              await chatService.addMessage(newChatResponse.data.id, {
-                id: `assistant-${Date.now()}`,
-                role: 'assistant',
-                content: response.data.content,
-                created_at: new Date().toISOString()
-              });
             }
           } catch (err) {
             console.error('Error creating agent chat:', err);
@@ -167,47 +145,47 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
             setLoading(false);
             return;
           }
-        } else {
-          // If we already have a chatId, use agent endpoint or knowledge query based on categories
-          if (selectedCategories.length > 0) {
-            // If categories are selected, use queryWithKnowledge for agent as well
-            response = await chatService.queryWithKnowledge(
-              chatId,
-              input,
-              selectedCategories
-            );
-          } else {
-            // Otherwise use regular agent endpoint
-            response = await chatService.chatWithAgent(agentId, input);
-          }
-          
-          // Make sure to add the message to the existing chat
-          if (response.data && chatId) {
-            await chatService.addMessage(chatId, {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              content: response.data.content || JSON.stringify(response.data),
-              created_at: new Date().toISOString()
-            });
-          }
         }
+
+        response = await chatService.addMessage(resolvedChatId, {
+          content: messageText,
+          role: 'user',
+          suppressAiResponse: false,
+          searchModeActive: false
+        });
       } 
       // Otherwise use knowledge-based query
-      else if (chatId) {
-        // If we have a chat ID, query with knowledge
-        response = await chatService.queryWithKnowledge(
-          chatId,
-          input, 
-          selectedCategories.length > 0 ? selectedCategories : []
-        );
-      } else {
-        // Handle the case where we don't have a chatId yet
-        // We'll create a chat after getting the response
-        // For now, let's just use a direct API call since the interface doesn't match our need
-        response = await api.post('/api/chat/query', {
-          query: input,
-          category_ids: selectedCategories.length > 0 ? selectedCategories : undefined
-        });
+      else {
+        if (!resolvedChatId) {
+          try {
+            const newChat = await chatService.createChat({
+              title: messageText.substring(0, 30) + (messageText.length > 30 ? '...' : '')
+            });
+            resolvedChatId = newChat.data.id;
+            setActiveChatId(resolvedChatId);
+          } catch (err) {
+            console.error('Error creating new chat:', err);
+          }
+        }
+
+        if (resolvedChatId) {
+          response = await chatService.addMessage(resolvedChatId, {
+            content: messageText,
+            role: 'user',
+            suppressAiResponse: false,
+            searchModeActive: false
+          });
+        } else {
+          response = await api.post('/api/chat/query', {
+            query: messageText,
+            category_ids: selectedCategories.length > 0 ? selectedCategories : undefined
+          });
+        }
+      }
+
+      if (response && response.data && typeof response.data === 'object' && 'messages' in response.data && Array.isArray((response.data as any).messages)) {
+        setMessages((response.data as any).messages);
+        return;
       }
       
       // Extract the response content safely
@@ -234,29 +212,14 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
       };
       
       // Add assistant message to chat
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      // If this is a new chat, we should create it in the backend
-      if (!chatId) {
-        try {
-          const newChat = await chatService.createChat({
-            title: input.substring(0, 30) + (input.length > 30 ? '...' : '')
-          });
-          
-          // Add both messages to the new chat
-          await chatService.addMessage(newChat.data.id, { ...userMessage });
-          await chatService.addMessage(newChat.data.id, { ...assistantMessage });
-        } catch (err) {
-          console.error('Error creating new chat:', err);
-        }
-      } else {
-        // Add messages to existing chat
-        await chatService.addMessage(chatId, { ...userMessage });
-        await chatService.addMessage(chatId, { ...assistantMessage });
-      }
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== tempUserId);
+        return [...filtered, assistantMessage];
+      });
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to get a response. Please try again.');
+      setMessages(prev => prev.filter(msg => msg.id !== tempUserId));
     } finally {
       setLoading(false);
     }
@@ -491,7 +454,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2 }}>
             <CircularProgress size={24} sx={{ color: '#00F3FF', mr: 1.5 }} />
             <Typography variant="body2" sx={{ color: '#00F3FF' }}>
-              Thinking...
+              Working on it...
             </Typography>
           </Box>
         )}
@@ -526,7 +489,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
               fullWidth
               multiline
               maxRows={4}
-              placeholder={loading ? "Thinking..." : "Type your message here..."}
+              placeholder={loading ? "Working on it..." : "Type your message here..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -568,7 +531,7 @@ export const KnowledgeEnabledChat: React.FC<KnowledgeEnabledChatProps> = ({ chat
                 <Box sx={{ display: 'flex', alignItems: 'center', px: 2 }}>
                   <CircularProgress size={20} sx={{ color: '#000000', mr: 1 }} />
                   <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                    Thinking...
+                    Working on it...
                   </Typography>
                 </Box> : 
                 <SendIcon />

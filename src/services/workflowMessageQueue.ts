@@ -5,6 +5,8 @@ interface QueuedMessage {
   status: string;
   message: string;
   timestamp: string;
+  eventId?: string;
+  eventSeq?: number;
   data?: any;
   received: boolean;
   rendered: boolean;
@@ -15,6 +17,7 @@ class WorkflowMessageQueue {
   private nextSequence: Map<string, number> = new Map();
   private renderCallbacks: Map<string, ((messages: QueuedMessage[]) => void)[]> = new Map();
   private persistenceKey = 'workflow_message_queue';
+  private saveTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     this.loadFromStorage();
@@ -28,11 +31,15 @@ class WorkflowMessageQueue {
         const data = JSON.parse(stored);
         this.queue = new Map(Object.entries(data.queue).map(([k, v]) => [k, v as QueuedMessage[]]));
         this.nextSequence = new Map(Object.entries(data.nextSequence).map(([k, v]) => [k, v as number]));
-        console.log('📦 MESSAGE QUEUE - Loaded from storage:', this.queue.size, 'tasks');
+        if (import.meta.env.DEV) {
+          console.log('📦 MESSAGE QUEUE - Loaded from storage:', this.queue.size, 'tasks');
+        }
         
         let totalMessages = 0;
         this.queue.forEach(messages => totalMessages += messages.length);
-        console.log('📦 MESSAGE QUEUE - Total messages in storage:', totalMessages);
+        if (import.meta.env.DEV) {
+          console.log('📦 MESSAGE QUEUE - Total messages in storage:', totalMessages);
+        }
       }
     } catch (error) {
       console.error('📦 MESSAGE QUEUE - Failed to load from storage:', error);
@@ -49,7 +56,9 @@ class WorkflowMessageQueue {
       };
       const serialized = JSON.stringify(data);
       sessionStorage.setItem(this.persistenceKey, serialized);
-      console.log('📦 MESSAGE QUEUE - Saved to storage (' + (serialized.length / 1024).toFixed(2) + ' KB)');
+      if (import.meta.env.DEV) {
+        console.log('📦 MESSAGE QUEUE - Saved to storage (' + (serialized.length / 1024).toFixed(2) + ' KB)');
+      }
     } catch (error) {
       console.error('📦 MESSAGE QUEUE - Failed to save to storage:', error);
       if (error instanceof Error && error.name === 'QuotaExceededError') {
@@ -63,6 +72,16 @@ class WorkflowMessageQueue {
     }
   }
 
+  private scheduleSaveToStorage() {
+    if (this.saveTimer) {
+      return;
+    }
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      this.saveToStorage();
+    }, 250);
+  }
+
   addMessage(taskId: string, message: any): number {
     try {
       if (!taskId) {
@@ -73,11 +92,19 @@ class WorkflowMessageQueue {
       if (!this.queue.has(taskId)) {
         this.queue.set(taskId, []);
         this.nextSequence.set(taskId, 1);
-        console.log(`📦 MESSAGE QUEUE - Initialized queue for new task ${taskId.slice(0, 8)}`);
+        if (import.meta.env.DEV) {
+          console.log(`📦 MESSAGE QUEUE - Initialized queue for new task ${taskId.slice(0, 8)}`);
+        }
       }
 
       const sequence = this.nextSequence.get(taskId)!;
       this.nextSequence.set(taskId, sequence + 1);
+
+      const rawEventId = message?.event_id ?? message?.eventId;
+      const normalizedEventId = rawEventId === undefined || rawEventId === null ? '' : `${rawEventId}`.trim();
+      const rawEventSeq = message?.event_seq ?? message?.eventSeq;
+      const parsedEventSeq = Number(rawEventSeq);
+      const normalizedEventSeq = Number.isFinite(parsedEventSeq) && parsedEventSeq > 0 ? parsedEventSeq : undefined;
 
       const queuedMessage: QueuedMessage = {
         sequence,
@@ -86,32 +113,46 @@ class WorkflowMessageQueue {
         status: message.status || 'unknown',
         message: message.message || '',
         timestamp: message.timestamp || new Date().toISOString(),
+        eventId: normalizedEventId || undefined,
+        eventSeq: normalizedEventSeq,
         data: message.data,
         received: true,
         rendered: false
       };
 
       const taskQueue = this.queue.get(taskId)!;
-      const isDuplicate = taskQueue.some(msg => 
-        msg.agentType === queuedMessage.agentType &&
-        msg.status === queuedMessage.status &&
-        msg.timestamp === queuedMessage.timestamp
-      );
+      const isDuplicate = taskQueue.some(msg => {
+        if (queuedMessage.eventId && msg.eventId) {
+          return msg.eventId === queuedMessage.eventId;
+        }
+        if (queuedMessage.eventSeq !== undefined && msg.eventSeq !== undefined) {
+          return msg.eventSeq === queuedMessage.eventSeq;
+        }
+        return (
+          msg.agentType === queuedMessage.agentType &&
+          msg.status === queuedMessage.status &&
+          msg.timestamp === queuedMessage.timestamp
+        );
+      });
 
       if (isDuplicate) {
-        console.warn(`📦 MESSAGE QUEUE - Duplicate message detected, skipping:`, queuedMessage);
+        if (import.meta.env.DEV) {
+          console.warn(`📦 MESSAGE QUEUE - Duplicate message detected, skipping:`, queuedMessage);
+        }
         return sequence;
       }
 
       taskQueue.push(queuedMessage);
       
-      console.log(`📦 MESSAGE QUEUE - Added message #${sequence} for task ${taskId.slice(0, 8)}:`, {
-        agent: queuedMessage.agentType,
-        status: queuedMessage.status,
-        totalMessages: taskQueue.length
-      });
+      if (import.meta.env.DEV) {
+        console.log(`📦 MESSAGE QUEUE - Added message #${sequence} for task ${taskId.slice(0, 8)}:`, {
+          agent: queuedMessage.agentType,
+          status: queuedMessage.status,
+          totalMessages: taskQueue.length
+        });
+      }
 
-      this.saveToStorage();
+      this.scheduleSaveToStorage();
       this.notifyCallbacks(taskId);
 
       return sequence;
@@ -136,8 +177,10 @@ class WorkflowMessageQueue {
       const message = messages.find(msg => msg.sequence === sequence);
       if (message) {
         message.rendered = true;
-        console.log(`📦 MESSAGE QUEUE - Marked message #${sequence} as rendered`);
-        this.saveToStorage();
+        if (import.meta.env.DEV) {
+          console.log(`📦 MESSAGE QUEUE - Marked message #${sequence} as rendered`);
+        }
+        this.scheduleSaveToStorage();
       }
     }
   }
@@ -146,8 +189,10 @@ class WorkflowMessageQueue {
     const messages = this.queue.get(taskId);
     if (messages) {
       messages.forEach(msg => msg.rendered = true);
-      console.log(`📦 MESSAGE QUEUE - Marked all ${messages.length} messages as rendered for task ${taskId.slice(0, 8)}`);
-      this.saveToStorage();
+      if (import.meta.env.DEV) {
+        console.log(`📦 MESSAGE QUEUE - Marked all ${messages.length} messages as rendered for task ${taskId.slice(0, 8)}`);
+      }
+      this.scheduleSaveToStorage();
     }
   }
 
@@ -206,7 +251,9 @@ class WorkflowMessageQueue {
     this.nextSequence.delete(taskId);
     this.renderCallbacks.delete(taskId);
     this.saveToStorage();
-    console.log(`📦 MESSAGE QUEUE - Cleared queue for task ${taskId.slice(0, 8)}`);
+    if (import.meta.env.DEV) {
+      console.log(`📦 MESSAGE QUEUE - Cleared queue for task ${taskId.slice(0, 8)}`);
+    }
   }
 
   getAllTasks(): string[] {

@@ -18,6 +18,8 @@ interface EnhancedWorkflowProps {
   compact?: boolean;
   browserHeadlessMode?: boolean;
   browserCurrentAction?: string;
+  agentThoughts?: Array<{id: string; agent: string; thought: string; timestamp: string; metadata?: any}>;
+  stepProgress?: any[];
 }
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -34,12 +36,14 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   theme = 'dark',
   compact = false,
   browserHeadlessMode = false,
-  browserCurrentAction = ''
+  browserCurrentAction = '',
+  agentThoughts = [],
+  stepProgress = []
 }) => {
   const [isCanvasMode, setIsCanvasMode] = useState(false);
   const [phases, setPhases] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
-  const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set(['PROMPT_REFINER', 'PLANNER', 'TASK_EXECUTOR', 'REVIEWER', 'FORMATTER']));
+  const [collapsedAgents, setCollapsedAgents] = useState<Set<string>>(new Set(['PROMPT_REFINER', 'PLANNER', 'REVIEWER', 'FORMATTER']));
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [editingPlan, setEditingPlan] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState('');
@@ -51,11 +55,27 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   const [showExecutionModal, setShowExecutionModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showFormatterModal, setShowFormatterModal] = useState(false);
+  const [planExpanded, setPlanExpanded] = useState(true);
   const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set());
   const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const evalsEnabled = (import.meta as any).env.VITE_ENABLE_EVALS_FOR_AGENTS === 'true';
   const [evalTraces, setEvalTraces] = useState<any[]>([]);
   const [loadingTraces, setLoadingTraces] = useState(false);
+  const [thinkingStartTime, setThinkingStartTime] = useState<number | null>(null);
+  const [thinkingDuration, setThinkingDuration] = useState<number>(0);
+
+  useEffect(() => {
+    if (!thinkingStartTime && agentUpdates.length > 0) {
+      setThinkingStartTime(Date.now());
+    }
+    
+    if (thinkingStartTime && workflowStage !== 'completed' && workflowStage !== 'failed') {
+      const interval = setInterval(() => {
+        setThinkingDuration(Math.floor((Date.now() - thinkingStartTime) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [thinkingStartTime, workflowStage, agentUpdates.length]);
 
   useEffect(() => {
     if (updateDebounceRef.current) {
@@ -226,14 +246,14 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
   };
 
   const getStatusIcon = (stage: string) => {
-    if (stage.includes('Completed')) {
-      return (
-        <div className="w-5 h-5 rounded-full border-2 border-green-500 flex items-center justify-center" style={{boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'}}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M2 6L5 9L10 3" stroke="rgb(34, 197, 94)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-      );
+    if (stage === 'completed') {
+      return <CheckCircle className="w-5 h-5 text-green-500" />;
+    }
+    if (stage === 'failed') {
+      return <AlertCircle className="w-5 h-5 text-red-500" />;
+    }
+    if (stage === 'running') {
+      return <Clock className="w-5 h-5 text-[#00F3FF]" />;
     }
     if (stage.includes('Processing')) {
       return (
@@ -252,6 +272,30 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
     return <div className="w-5 h-5 rounded-full border-2 border-gray-500"></div>;
   };
 
+  const normalizeEditedPlan = (value: any) => {
+    let planValue = value;
+    if (typeof planValue === 'string') {
+      try {
+        planValue = JSON.parse(planValue);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    if (Array.isArray(planValue)) {
+      return { execution_steps: planValue };
+    }
+
+    if (planValue && typeof planValue === 'object') {
+      const pv: any = planValue;
+      if (Array.isArray(pv.execution_steps)) return pv;
+      if (Array.isArray(pv.steps)) return { ...pv, execution_steps: pv.steps };
+      return pv;
+    }
+
+    return null;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -259,37 +303,142 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
       className={`bg-[#0A0A0A]/80 border border-[#00F3FF]/30 rounded-lg shadow-lg mb-6 backdrop-blur-sm transition-all duration-300 ${compact ? 'max-w-md' : ''}`}
     >
       <div className={`${compact ? 'p-3' : 'p-6'} border-b border-[#00F3FF]/20 transition-all duration-300`}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className={`${compact ? 'p-1' : 'p-2'} bg-[#00F3FF]/10 rounded-lg border border-[#00F3FF]/30`}>
               <Brain className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} text-[#00F3FF]`} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className={`${compact ? 'text-base' : 'text-xl'} font-semibold text-[#00F3FF]`}>Multi-Agent Workflow</h2>
-                {agentUpdates.length > 0 && (
-                  <motion.span 
-                    key={lastUpdateTime}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="px-2 py-1 bg-[#00F3FF]/20 text-[#00F3FF] text-xs font-bold rounded-full"
-                  >
-                    {agentUpdates.length} updates
-                  </motion.span>
-                )}
+                <h2 className={`${compact ? 'text-base' : 'text-xl'} font-semibold text-[#00F3FF]`}>Task Progress</h2>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                {getStatusIcon(workflowStage)}
-                <span className="text-sm text-gray-300">{workflowStage}</span>
-              </div>
+              {workflowStage !== 'completed' && workflowStage !== 'failed' && workflowStage && (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-[#00F3FF] animate-pulse"></div>
+                  <span className="text-sm text-gray-400">Working on your request...</span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-400">Task ID</p>
-            <p className="text-sm font-mono text-[#00F3FF]">{taskId.slice(0, 8)}...</p>
-            <p className="text-xs text-gray-500 mt-1">Last: {new Date(lastUpdateTime).toLocaleTimeString()}</p>
-          </div>
         </div>
+        
+        {planSteps && planSteps.length > 0 && (
+          <div className="mb-4 bg-[#0D0D0D] rounded-lg border border-[#00F3FF]/20 p-4">
+            <div className="flex items-center justify-between mb-4 cursor-pointer select-none" onClick={() => setPlanExpanded(v => !v)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanExpanded(v => !v); }}}>
+              <div className="flex items-center gap-3">
+                {planExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-[#00F3FF]" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-[#00F3FF]" />
+                )}
+                <ClipboardList className="w-5 h-5 text-[#00F3FF]" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-white">
+                    {(() => {
+                      const total = planSteps.length;
+                      if (stepProgress && stepProgress.length > 0) {
+                        const completed = stepProgress.filter((s: any) => (s?.status || '').toString().toLowerCase() === 'completed').length;
+                        return `${completed} / ${total} tasks done`;
+                      }
+                      const completed = executionItems.filter((item: any) => 
+                        item.status === 'completed' || item.agent_type === 'FORMATTER' && item.status === 'completed'
+                      ).length;
+                      return `${completed} / ${total} tasks done`;
+                    })()}
+                  </span>
+                  <div className="w-32 h-1.5 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#00F3FF] to-green-400 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${(() => {
+                          const total = planSteps.length;
+                          if (stepProgress && stepProgress.length > 0) {
+                            const completed = stepProgress.filter((s: any) => (s?.status || '').toString().toLowerCase() === 'completed').length;
+                            return (completed / total) * 100;
+                          }
+                          const completed = executionItems.filter((item: any) => 
+                            item.status === 'completed' || item.agent_type === 'FORMATTER' && item.status === 'completed'
+                          ).length;
+                          return (completed / total) * 100;
+                        })()}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {getStatusIcon(workflowStage)}
+            </div>
+            {planExpanded && (
+              <div className="space-y-3 pl-2">
+                {planSteps.map((step: any, idx: number) => {
+                const stepNumber = (step?.step_number ?? (idx + 1)) as number;
+                const sp = (stepProgress && stepProgress.length > 0) ? stepProgress.find((s: any) => s?.step_number === stepNumber) : null;
+                const spStatus = (sp?.status || '').toString().toLowerCase();
+                const stepComplete = (sp != null)
+                  ? spStatus === 'completed'
+                  : executionItems.some((item: any) => 
+                      item.data?.step_number === stepNumber && (item.status === 'completed' || item.status === 'success')
+                    );
+                const stepRunning = (sp != null)
+                  ? (spStatus === 'starting' || spStatus === 'started' || spStatus === 'running' || spStatus === 'processing')
+                  : executionItems.some((item: any) => 
+                      item.data?.step_number === stepNumber && (item.status === 'started' || item.status === 'running' || item.status === 'processing')
+                    );
+                
+                return (
+                  <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg transition-all ${stepRunning ? 'bg-[#00F3FF]/5 border border-[#00F3FF]/20' : ''}`}>
+                    <div className="mt-0.5 flex-shrink-0">
+                      {stepComplete ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-green-500 flex items-center justify-center bg-green-500/20" style={{boxShadow: '0 0 8px rgba(34, 197, 94, 0.4)'}}>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6L5 9L10 3" stroke="rgb(34, 197, 94)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      ) : stepRunning ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-[#00F3FF] flex items-center justify-center animate-pulse" style={{boxShadow: '0 0 12px rgba(0, 243, 255, 0.5)'}}>
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#00F3FF]"></div>
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-600 bg-gray-800/50"></div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm ${stepComplete ? 'text-gray-500 line-through' : stepRunning ? 'text-[#00F3FF] font-semibold' : 'text-gray-300'}`}>
+                        {step.description || step.action}
+                      </p>
+                      {false && step.tool_name && (
+                        <p className={`text-xs mt-1 ${stepRunning ? 'text-[#00F3FF]/70' : 'text-gray-500'}`}>
+                          {stepRunning ? '🔧 Running: ' : 'Using '}{step.tool_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {false && agentThoughts && agentThoughts.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-[#00F3FF]/20">
+            <div className="flex items-center gap-2 mb-3">
+              <Brain className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-semibold text-gray-300">Agent Reasoning Stream</span>
+            </div>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+              {agentThoughts.slice(-5).map((thought) => (
+                <div key={thought.id} className="flex items-start gap-2 bg-purple-500/5 border border-purple-500/20 rounded p-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-400 mt-1.5 flex-shrink-0"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-purple-300 mb-0.5">{thought.agent}</div>
+                    <div className="text-xs text-gray-300">{thought.thought}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
       {browserHeadlessMode && browserCurrentAction && (
@@ -305,16 +454,16 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
         <div className="p-6 border-b border-[#00F3FF]/20">
           <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
             <span className="w-2 h-2 bg-[#00F3FF] rounded-full animate-pulse"></span>
-            Live Workflow Progress ({agentUpdates.length} steps) - Updated: {new Date(lastUpdateTime).toLocaleTimeString()}
+            Progress
           </h3>
           <div className={`space-y-3 ${compact ? 'max-h-[300px]' : 'max-h-[500px]'} overflow-y-auto pr-2`}>
             {(() => {
               const agentMap: { [key: string]: string } = {
-                'PROMPT_REFINER': 'Prompt Refiner',
-                'PLANNER': 'Planner',
-                'TASK_EXECUTOR': 'Task Executor',
-                'REVIEWER': 'Reviewer',
-                'FORMATTER': 'Formatter'
+                'PROMPT_REFINER': 'Understanding request',
+                'PLANNER': 'Creating plan',
+                'TASK_EXECUTOR': 'Executing tasks',
+                'REVIEWER': 'Reviewing results',
+                'FORMATTER': 'Preparing output'
               };
 
               const grouped = agentUpdates.reduce((acc, update, index) => {
@@ -409,9 +558,9 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                         }`}>
                           {agentName}
                         </span>
-                        <span className={theme === 'dark' ? "text-xs text-gray-500 ml-2" : "text-xs text-gray-600 ml-2"}>
+                        {false && <span className={theme === 'dark' ? "text-xs text-gray-500 ml-2" : "text-xs text-gray-600 ml-2"}>
                           {updates.length} {updates.length === 1 ? 'update' : 'updates'}
-                        </span>
+                        </span>}
                       </div>
                       {agentType === 'PROMPT_REFINER' && showPromptCard && allCompleted && (
                         <button
@@ -524,7 +673,7 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                               <div className="w-6 h-6 flex-shrink-0 rounded-full border-2 border-gray-500"></div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              {false && <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
                                   theme === 'dark'
                                     ? isCompleted 
@@ -553,9 +702,9 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                                     })}
                                   </span>
                                 )}
-                              </div>
+                              </div>}
                               <p className={theme === 'dark' ? "text-sm text-gray-300 leading-relaxed" : "text-sm text-gray-800 leading-relaxed"}>{update.message}</p>
-                              {update.data && Object.keys(update.data).length > 0 && (
+                              {false && update.data && Object.keys(update.data).length > 0 && (
                                 <div className={theme === 'dark'
                                   ? "mt-1 text-xs text-gray-500 bg-black/20 rounded px-2 py-1 font-mono"
                                   : "mt-1 text-xs text-gray-600 bg-gray-100 rounded px-2 py-1 font-mono"
@@ -746,13 +895,15 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                                         <button
                                           onClick={async () => {
                                             try {
+                                              const normalizedPlan = normalizeEditedPlan(editedPlan);
+                                              if (!normalizedPlan) return;
                                               const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-plan`, {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
                                                   task_id: taskId,
                                                   approved: true,
-                                                  edited_plan: editedPlan
+                                                  edited_plan: normalizedPlan
                                                 })
                                               });
                                               if (response.ok) {
@@ -830,7 +981,7 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
         </div>
       )}
 
-      {evalsEnabled && (
+      {false && evalsEnabled && (
         <div className="p-6 border-b border-[#00F3FF]/20">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
@@ -892,9 +1043,12 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
             className="p-6 bg-orange-500/10 border-b border-orange-500/30"
           >
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-orange-400 mt-1" />
+              <AlertCircle className="w-5 h-5 text-orange-400 mt-1 animate-pulse" />
               <div className="flex-1">
-                <h3 className="font-semibold text-orange-300 mb-2">Clarification Required</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-semibold text-orange-300">Clarification Required</h3>
+                  <span className="px-2 py-0.5 text-xs font-bold bg-orange-500 text-white rounded-full animate-pulse">Your Response Needed</span>
+                </div>
                 <p className="text-orange-200 mb-4">{clarificationRequest.clarification_request}</p>
                 <div className="flex gap-3">
                   <textarea
@@ -1100,12 +1254,14 @@ const EnhancedMultiAgentWorkflowCardComponent: React.FC<EnhancedWorkflowProps> =
                     <button
                       onClick={async () => {
                         try {
+                          const normalizedPlan = normalizeEditedPlan(editedPlan);
+                          if (!normalizedPlan) return;
                           const response = await fetch(`${API_BASE_URL}/api/multi-agent/task/approve-plan`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                               task_id: taskId,
-                              edited_plan: editedPlan
+                              edited_plan: normalizedPlan
                             })
                           });
                           const result = await response.json();

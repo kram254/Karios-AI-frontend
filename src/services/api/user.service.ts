@@ -4,24 +4,25 @@ import { User, UserStatus } from '../../types/user';
 interface LoginResponse {
     access_token: string;
     token_type: string;
+    refresh_token?: string;
 }
 
 interface RegisterResponse {
     access_token: string;
     token_type: string;
+    refresh_token?: string;
 }
 
 export const userService = {
     // Authentication
-    login: (username: string, password: string) => {
-        console.log('Login attempt for:', username);
+    login: (username: string, password: string, rememberMe: boolean = false) => {
+        console.log('Login attempt for:', username, 'rememberMe:', rememberMe);
         
-        // Format the data as x-www-form-urlencoded for OAuth2 compatibility
         const formData = new URLSearchParams();
         formData.append('username', username.trim());
         formData.append('password', password);
         
-        return api.post<LoginResponse>('/api/v1/users/login', formData.toString(), {
+        return api.post<LoginResponse>(`/api/v1/users/login?remember_me=${rememberMe}`, formData.toString(), {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -43,8 +44,8 @@ export const userService = {
         email: string;
         password: string;
         username: string;
-    }) =>
-        api.post<RegisterResponse>('/api/v1/users/register', data),
+    }, rememberMe: boolean = false) =>
+        api.post<RegisterResponse>(`/api/v1/users/register?remember_me=${rememberMe}`, data),
 
     // User Hierarchy
     getUserHierarchy: () =>
@@ -103,6 +104,12 @@ export const userService = {
     
     logout: () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
         return api.post('/api/v1/users/logout');
-    }
+    },
+
+    refreshToken: (refreshToken: string) =>
+        api.post<LoginResponse>('/api/v1/users/refresh', null, {
+            params: { refresh_token: refreshToken }
+        })
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader, ArrowLeft, ArrowRight, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { wsUrl } from '../config/env';
 
 interface BrowserAutomationCanvasProps {
   isActive: boolean;
@@ -51,7 +52,7 @@ export const BrowserAutomationCanvas: React.FC<BrowserAutomationCanvasProps> = (
   useEffect(() => {
     if (!isActive || !sessionId) return;
 
-    const ws = new WebSocket(`ws://localhost:8000/api/web-automation/ws/${sessionId}`);
+    const ws = new WebSocket(wsUrl(`/api/web-automation/ws/${sessionId}`));
 
     ws.onopen = () => {
       console.log('🌐 Browser canvas WebSocket connected');

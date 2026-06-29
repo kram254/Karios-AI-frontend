@@ -96,6 +96,77 @@ export const NODE_TYPE_SCHEMAS: Record<NodeType, NodeIOSchema> = {
     inputs: [],
     outputs: [],
   },
+  'condition': {
+    inputs: [
+      { name: 'value', type: 'any', required: true, description: 'Value to evaluate' }
+    ],
+    outputs: [
+      { name: 'result', type: 'boolean', description: 'Condition result' }
+    ],
+  },
+  'loop': {
+    inputs: [
+      { name: 'value', type: 'any', required: true, description: 'Value to evaluate' }
+    ],
+    outputs: [
+      { name: 'result', type: 'boolean', description: 'Loop condition result' },
+      { name: 'iteration', type: 'number', description: 'Current iteration' }
+    ],
+  },
+  'guardrail': {
+    inputs: [
+      { name: 'text', type: 'string', required: false, description: 'Text to validate' }
+    ],
+    outputs: [
+      { name: 'passed', type: 'boolean', description: 'Guardrail result' },
+      { name: 'details', type: 'object', description: 'Validation details' }
+    ],
+  },
+  'guardrails': {
+    inputs: [
+      { name: 'text', type: 'string', required: false, description: 'Text to validate' }
+    ],
+    outputs: [
+      { name: 'passed', type: 'boolean', description: 'Guardrail result' },
+      { name: 'details', type: 'object', description: 'Validation details' }
+    ],
+  },
+  'set-state': {
+    inputs: [
+      { name: 'value', type: 'any', required: false, description: 'Value to store' }
+    ],
+    outputs: [
+      { name: 'state', type: 'object', description: 'Updated state' }
+    ],
+  },
+  'file-search': {
+    inputs: [
+      { name: 'query', type: 'string', required: true, description: 'Search query' }
+    ],
+    outputs: [
+      { name: 'results', type: 'array', description: 'Search results' }
+    ],
+  },
+  'webhook-trigger': {
+    inputs: [],
+    outputs: [
+      { name: 'payload', type: 'object', description: 'Webhook payload' }
+    ],
+  },
+  'schedule-trigger': {
+    inputs: [],
+    outputs: [
+      { name: 'tick', type: 'object', description: 'Schedule trigger payload' }
+    ],
+  },
+  'integration': {
+    inputs: [
+      { name: 'params', type: 'object', required: false, description: 'Integration parameters' }
+    ],
+    outputs: [
+      { name: 'result', type: 'any', description: 'Integration result' }
+    ],
+  },
 };
 
 export function areTypesCompatible(sourceType: DataType, targetType: DataType): boolean {
@@ -115,6 +186,9 @@ export function validateConnection(
   sourceHandle?: string,
   targetHandle?: string
 ): { valid: boolean; message?: string } {
+  if (sourceHandle === 'error') {
+    return { valid: true };
+  }
   const sourceSchema = NODE_TYPE_SCHEMAS[sourceNodeType];
   const targetSchema = NODE_TYPE_SCHEMAS[targetNodeType];
 
@@ -126,8 +200,10 @@ export function validateConnection(
     return { valid: false, message: 'Target node has no inputs' };
   }
 
-  const sourceOutput = sourceSchema.outputs[0];
-  const targetInput = targetSchema.inputs[0];
+  const sourceOutput =
+    (sourceHandle ? sourceSchema.outputs.find((o) => o.name === sourceHandle) : null) || sourceSchema.outputs[0];
+  const targetInput =
+    (targetHandle ? targetSchema.inputs.find((i) => i.name === targetHandle) : null) || targetSchema.inputs[0];
 
   if (targetInput && !areTypesCompatible(sourceOutput.type, targetInput.type)) {
     return {

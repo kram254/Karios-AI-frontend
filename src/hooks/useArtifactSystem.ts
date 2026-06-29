@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { artifactDetectionService } from '../services/artifactDetection.service';
 import { artifactManager, Artifact, ArtifactState } from '../services/artifactManager.service';
 import { scrollSyncService } from '../services/scrollSync.service';
@@ -6,19 +6,38 @@ import { scrollSyncService } from '../services/scrollSync.service';
 export const useArtifactSystem = (chatId: string) => {
   const [artifactState, setArtifactState] = useState<ArtifactState>(artifactManager.getState());
   const [activeArtifact, setActiveArtifact] = useState<Artifact | null>(null);
+  const [isChatFullscreen, setIsChatFullscreen] = useState<boolean>(false);
+  const [fullscreenArtifact, setFullscreenArtifact] = useState<Artifact | null>(null);
+  /** True when the message list scroll position is within 120px of the bottom. */
+  const [isAtBottom, setIsAtBottom] = useState<boolean>(true);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const artifactScrollRef = useRef<HTMLDivElement>(null);
+  const previousChatIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = artifactManager.subscribe((state) => {
       setArtifactState(state);
-      setActiveArtifact(artifactManager.getActiveArtifact());
+      const active = artifactManager.getActiveArtifact();
+      if (active && active.chatId === chatId) {
+        setActiveArtifact(active);
+      } else if (active && active.chatId !== chatId) {
+        setActiveArtifact(null);
+      } else {
+        setActiveArtifact(active);
+      }
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [chatId]);
+
+  useEffect(() => {
+    if (previousChatIdRef.current && previousChatIdRef.current !== chatId) {
+      artifactManager.handleChatSwitch(previousChatIdRef.current, chatId);
+    }
+    previousChatIdRef.current = chatId;
+  }, [chatId]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -81,7 +100,10 @@ export const useArtifactSystem = (chatId: string) => {
 
   const handleChatScroll = useCallback(() => {
     if (chatScrollRef.current) {
-      scrollSyncService.handleChatUserScroll(chatScrollRef.current);
+      const el = chatScrollRef.current;
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+      setIsAtBottom(nearBottom);
+      scrollSyncService.handleChatUserScroll(el);
     }
   }, []);
 
@@ -91,11 +113,17 @@ export const useArtifactSystem = (chatId: string) => {
     }
   }, []);
 
-  const scrollChatToBottom = useCallback((smooth: boolean = true) => {
-    if (chatScrollRef.current && scrollSyncService.shouldAutoScrollChat()) {
+  const scrollChatToBottom = useCallback((smooth: boolean = true, force: boolean = false) => {
+    if (chatScrollRef.current && (force || scrollSyncService.shouldAutoScrollChat())) {
       scrollSyncService.scrollChatToBottom(chatScrollRef.current, smooth);
+      setIsAtBottom(true);
     }
   }, []);
+
+  /** Always scrolls to bottom regardless of user-scroll state (e.g. "Jump to latest" button). */
+  const forceScrollToBottom = useCallback((smooth: boolean = true) => {
+    scrollChatToBottom(smooth, true);
+  }, [scrollChatToBottom]);
 
   const getArtifactsForMessage = useCallback((messageId: string): Artifact[] => {
     return artifactManager.getArtifactsForMessage(messageId);
@@ -107,6 +135,22 @@ export const useArtifactSystem = (chatId: string) => {
 
   useEffect(() => {
     artifactManager.cleanupOldArtifacts();
+  }, []);
+
+  const floatingArtifacts = useMemo<Artifact[]>(() => {
+    return artifactManager.getArtifactsForChat(chatId);
+  }, [chatId, artifactState.artifacts]);
+
+  const openFullscreenArtifact = useCallback((artifact: Artifact) => {
+    setFullscreenArtifact(artifact);
+  }, []);
+
+  const closeFullscreenArtifact = useCallback(() => {
+    setFullscreenArtifact(null);
+  }, []);
+
+  const toggleChatFullscreen = useCallback(() => {
+    setIsChatFullscreen(prev => !prev);
   }, []);
 
   return {
@@ -121,9 +165,18 @@ export const useArtifactSystem = (chatId: string) => {
     getArtifactsForMessage,
     clearChatArtifacts,
     scrollChatToBottom,
+    forceScrollToBottom,
+    isAtBottom,
     handleChatScroll,
     handleArtifactScroll,
     chatScrollRef,
-    artifactScrollRef
+    artifactScrollRef,
+    isChatFullscreen,
+    setIsChatFullscreen,
+    toggleChatFullscreen,
+    fullscreenArtifact,
+    openFullscreenArtifact,
+    closeFullscreenArtifact,
+    floatingArtifacts
   };
 };

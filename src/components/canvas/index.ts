@@ -1,0 +1,18 @@
+export { CanvasBackground } from './CanvasBackground';
+export { CanvasTopBar } from './CanvasTopBar';
+export { EndlessCanvas } from './EndlessCanvas';
+export { CanvasArtifactCard } from './CanvasArtifactCard';
+export { AssetsThumbnailStrip } from './AssetsThumbnailStrip';
+export type { AssetEntry } from './AssetsThumbnailStrip';
+export { ArtifactFullscreenModal } from './ArtifactFullscreenModal';
+export { ThreadStatusBadge } from './ThreadStatusBadge';
+export { SubagentExecutionCard } from './SubagentExecutionCard';
+export type { SubagentStatus, SubagentLogEntry } from './SubagentExecutionCard';
+export { BrowserSessionCard } from './BrowserSessionCard';
+export type { BrowserSessionStatus } from './BrowserSessionCard';
+export { CanvasPopover } from './CanvasPopover';
+export type { CanvasPopoverItem } from './CanvasPopover';
+export { CanvasProjectBadge } from './CanvasProjectBadge';
+export type { CanvasProjectBadgeProps } from './CanvasProjectBadge';
+export { CanvasBottomDock } from './CanvasBottomDock';
+export type { CanvasBottomDockProps, CanvasBottomDockItem } from './CanvasBottomDock';

@@ -87,7 +87,7 @@ export const AgentChatInterface: React.FC<AgentChatInterfaceProps> = ({ agentId 
       case AgentRole.DOCUMENT_PROCESSING:
         return 'Document Processing';
       case AgentRole.TESTING_QA:
-        return 'Testing & QA';
+        return 'QA Automated Tester';
       case AgentRole.CUSTOM:
         return 'Custom';
       default:

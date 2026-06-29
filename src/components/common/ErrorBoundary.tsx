@@ -40,69 +40,19 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <Box
-          sx={{
-            padding: 3,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            backgroundColor: '#121212',
-            color: '#FFFFFF',
-          }}
-        >
-          <Paper 
-            sx={{ 
-              padding: 4, 
-              maxWidth: 800, 
-              margin: 'auto',
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-              border: '1px solid #FF0000'
-            }}
+        <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-4 p-8">
+          <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <span className="text-red-400 text-lg">!</span>
+          </div>
+          <p className="text-sm text-white/50 text-center max-w-xs">Something went wrong. Please refresh the page.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="text-xs text-brand-cyan border border-brand-cyan/30 px-4 py-2 rounded-lg hover:bg-brand-cyan/10 transition-colors"
           >
-            <Typography variant="h4" gutterBottom color="error">
-              Something went wrong
-            </Typography>
-            
-            <Typography variant="body1" paragraph>
-              The application encountered an error and could not continue.
-            </Typography>
-            
-            <Paper 
-              sx={{ 
-                padding: 2, 
-                backgroundColor: '#000000', 
-                overflowX: 'auto',
-                marginBottom: 2 
-              }}
-            >
-              <Typography variant="body2" component="pre" sx={{ color: '#FF6B6B' }}>
-                {this.state.error?.toString()}
-              </Typography>
-              
-              {this.state.errorInfo && (
-                <Typography variant="body2" component="pre" sx={{ color: '#AAAAAA', fontSize: '0.8rem' }}>
-                  {this.state.errorInfo.componentStack}
-                </Typography>
-              )}
-            </Paper>
-            
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={this.handleReset}
-              sx={{ 
-                marginTop: 2,
-                backgroundColor: '#00F3FF',
-                color: '#000000'
-              }}
-            >
-              Reload Application
-            </Button>
-          </Paper>
-        </Box>
+            Refresh
+          </button>
+        </div>
       );
     }
 

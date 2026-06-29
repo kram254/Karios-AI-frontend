@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BarChart3, DollarSign, Clock, TrendingUp, Zap, Activity, X } from 'lucide-react';
 import axios from 'axios';
 
+ const API_BASE_URL = String((import.meta as any).env?.VITE_BACKEND_URL || '').replace(/\/$/, '');
+ const apiUrl = (path: string) => (API_BASE_URL ? `${API_BASE_URL}${path}` : path);
+
 interface NodeMetrics {
   nodeId: string;
   nodeName: string;
@@ -40,7 +43,7 @@ export function PerformanceAnalytics({ workflowId, isOpen, onClose }: Performanc
   const loadMetrics = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/workflows/${workflowId}/metrics`, {
+      const response = await axios.get(apiUrl(`/api/workflows/${workflowId}/metrics`), {
         params: { timeRange }
       });
       setMetrics(response.data);

@@ -7,7 +7,12 @@ import {
   IconButton,
   Chip,
   TextField,
-  LinearProgress
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  ToggleButton
 } from '@mui/material';
 import {
   PlayArrow,
@@ -83,11 +88,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [lastError, setLastError] = useState<any>(null);
   const [currentScreenshot, setCurrentScreenshot] = useState<string>('');
+  const [currentScreenshotMime, setCurrentScreenshotMime] = useState<string>('image/png');
   const [actionOverlay, setActionOverlay] = useState<{x?: number, y?: number, type: string, message?: string, stepType?: string} | null>(null);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [realTimeSteps, setRealTimeSteps] = useState<any[]>([]);
   const [currentExecutingStep, setCurrentExecutingStep] = useState(-1);
+  const [approvalRequest, setApprovalRequest] = useState<{ taskId: string; stepIndex: number; step?: any; message?: string } | null>(null);
+  const [takeoverMode, setTakeoverMode] = useState(false);
+  const [streamStatus, setStreamStatus] = useState<{ streaming: boolean; intervalMs?: number } | null>(null);
 
   const screenshotCanvasRef = useRef<HTMLCanvasElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -141,6 +150,14 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           console.error('🔌 WS_OPEN - Failed to send get_status:', e);
         }
       }, 100);
+
+      setTimeout(() => {
+        try {
+          ws.send(JSON.stringify({ type: 'start_stream', intervalMs: 1000 }));
+        } catch (e) {
+          console.error('🔌 WS_OPEN - Failed to send start_stream:', e);
+        }
+      }, 250);
       
       // Start heartbeat to maintain connection
       const heartbeatInterval = setInterval(() => {
@@ -238,61 +255,135 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           console.warn('📨 PLAN_CREATED - No plan or steps in message');
         }
         break;
+
+      case 'approval_requested':
+        {
+          const taskId = data.task_id || data.taskId;
+          const stepIndex = (typeof data.stepIndex === 'number') ? data.stepIndex : (typeof data.step_index === 'number' ? data.step_index : -1);
+          if (taskId && stepIndex >= 0) {
+            setApprovalRequest({ taskId, stepIndex, step: data.step, message: data.message });
+          }
+        }
+        break;
+
+      case 'approval_granted':
+        setApprovalRequest(null);
+        break;
+
+      case 'stream_status':
+        if (typeof data.streaming === 'boolean') {
+          setStreamStatus({ streaming: data.streaming, intervalMs: typeof data.intervalMs === 'number' ? data.intervalMs : undefined });
+        }
+        break;
         
       case 'workflow_step_started':
-        if (data.step_number !== undefined) {
-          setCurrentStepIndex(data.step_number - 1);
-          setCurrentExecutingStep(data.step_number - 1);
-          setExecutionProgress(Math.min(((data.step_number - 1) / Math.max(workflowSteps.length, 1)) * 100, 95));
-          setRealTimeSteps(prev => prev.map((step, index) => 
-            index === data.step_number - 1 
-              ? { ...step, status: 'running' }
-              : step
-          ));
+        {
+          const stepNumber = (typeof data.step_number === 'number')
+            ? data.step_number
+            : ((typeof data.step_index === 'number') ? (data.step_index + 1) : undefined);
+          if (stepNumber !== undefined) {
+            setCurrentStepIndex(stepNumber - 1);
+            setCurrentExecutingStep(stepNumber - 1);
+            setExecutionProgress(Math.min(((stepNumber - 1) / Math.max(workflowSteps.length, 1)) * 100, 95));
+            setRealTimeSteps(prev => prev.map((step, index) =>
+              index === stepNumber - 1
+                ? { ...step, status: 'running' }
+                : step
+            ));
+          }
         }
         break;
         
       case 'workflow_step_completed':
-        if (data.step_number !== undefined) {
-          setCurrentStepIndex(data.step_number);
-          const progress = data.total_steps > 0 ? (data.step_number / data.total_steps) * 100 : 0;
-          setExecutionProgress(Math.min(progress, 95));
-          setRealTimeSteps(prev => prev.map((step, index) => 
-            index === data.step_number - 1 
-              ? { ...step, status: 'completed' }
-              : step
-          ));
-          if (data.screenshot) {
-            setCurrentScreenshot(data.screenshot);
+        {
+          const stepNumber = (typeof data.step_number === 'number')
+            ? data.step_number
+            : ((typeof data.step_index === 'number') ? (data.step_index + 1) : undefined);
+          if (stepNumber !== undefined) {
+            setCurrentStepIndex(stepNumber);
+            const totalSteps = (typeof data.total_steps === 'number' && data.total_steps > 0)
+              ? data.total_steps
+              : (workflowSteps.length > 0 ? workflowSteps.length : 0);
+            const progress = totalSteps > 0 ? (stepNumber / totalSteps) * 100 : 0;
+            setExecutionProgress(Math.min(progress, 95));
+            setRealTimeSteps(prev => prev.map((step, index) =>
+              index === stepNumber - 1
+                ? { ...step, status: 'completed' }
+                : step
+            ));
+            if (data.screenshot) {
+              setCurrentScreenshot(data.screenshot);
+            }
           }
         }
         break;
       case 'workflow_step_failed':
         console.warn('⚠️ WORKFLOW_STEP_FAILED:', data);
-        if (data.step_number !== undefined) {
-          setCurrentStepIndex(data.step_number);
-          setRealTimeSteps(prev => prev.map((step, index) => 
-            index === data.step_number - 1 
-              ? { ...step, status: 'failed' }
-              : step
-          ));
+        {
+          const stepNumber = (typeof data.step_number === 'number')
+            ? data.step_number
+            : ((typeof data.step_index === 'number') ? (data.step_index + 1) : undefined);
+          if (stepNumber !== undefined) {
+            setCurrentStepIndex(stepNumber);
+            setRealTimeSteps(prev => prev.map((step, index) =>
+              index === stepNumber - 1
+                ? { ...step, status: 'failed' }
+                : step
+            ));
+          }
         }
         setActionOverlay({
           type: 'error',
-          message: data.message || `Step ${data.step_number} failed`,
+          message: data.message || `Step ${(typeof data.step_number === 'number' ? data.step_number : (typeof data.step_index === 'number' ? data.step_index + 1 : ''))} failed`,
           stepType: data.step_type
         });
         break;
         
       case 'step_started':
-        if (data.step_index !== undefined) {
-          setCurrentStepIndex(data.step_index);
+        {
+          const idx = (typeof data.step_index === 'number')
+            ? data.step_index
+            : (typeof data.stepIndex === 'number' ? data.stepIndex : undefined);
+          if (idx !== undefined) {
+            setCurrentStepIndex(idx);
+          }
         }
         break;
         
       case 'step_completed':
-        if (data.step_index !== undefined) {
-          setCurrentStepIndex(data.step_index + 1);
+        {
+          const idx = (typeof data.step_index === 'number')
+            ? data.step_index
+            : (typeof data.stepIndex === 'number' ? data.stepIndex : undefined);
+          if (idx !== undefined) {
+            setCurrentStepIndex(idx + 1);
+          }
+        }
+        break;
+
+      case 'agent_status':
+        {
+          const agentType = data.agent_type || data.agentType || '';
+          const status = data.status || '';
+          const msg = data.message || '';
+          const overlayType = status === 'failed' ? 'error' : (status === 'completed' ? 'success' : 'executing');
+          setActionOverlay({
+            type: overlayType,
+            message: `${agentType}${agentType ? ': ' : ''}${msg}`,
+            stepType: agentType
+          });
+          if (status === 'completed') {
+            setTimeout(() => setActionOverlay(null), 1500);
+          }
+        }
+        break;
+
+      case 'screenshot_taken':
+        if (typeof data.screenshot === 'string') {
+          setCurrentScreenshot(data.screenshot);
+          if (typeof data.mime === 'string' && data.mime) {
+            setCurrentScreenshotMime(data.mime);
+          }
         }
         break;
         
@@ -357,7 +448,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         });
         break;
       case 'screenshot_update':
-        setCurrentScreenshot(data.screenshot);
+        if (typeof data.screenshot === 'string') {
+          setCurrentScreenshot(data.screenshot);
+          if (typeof data.mime === 'string' && data.mime) {
+            setCurrentScreenshotMime(data.mime);
+          }
+        }
+        if (typeof data.url === 'string' && data.url) {
+          setSession(prev => ({ ...prev, url: data.url }));
+        }
         break;
       case 'connection_established':
         // Sync sessionId from server and notify parent
@@ -395,51 +494,62 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         break;
         
       case 'action_started':
+        {
+        const actionId = data.actionId || data.action_id || `action_${Date.now()}`;
+        const actionType = data.actionType || data.action_type || data.action || 'action';
         setActionOverlay({
           type: 'executing',
-          message: data.message || `${data.action}: ${data.target}`,
-          stepType: data.action
+          message: data.message || `${actionType}: ${data.target || ''}`,
+          stepType: actionType
         });
         setSession(prev => {
-          const exists = prev.actions.some(a => a.id === data.actionId);
+          const exists = prev.actions.some(a => a.id === actionId);
           if (exists) return prev;
           const newAction: WebAutomationAction = {
-            id: data.actionId,
-            type: data.actionType || 'action',
-            target: undefined,
-            value: undefined,
+            id: actionId,
+            type: actionType,
+            target: data.target,
+            value: data.value,
             coordinates: Array.isArray(data.coordinates) ? [data.coordinates[0], data.coordinates[1]] : undefined,
             status: 'executing',
             timestamp: new Date().toISOString()
           };
           return { ...prev, actions: [...prev.actions, newAction] };
         });
-        updateActionStatus(data.actionId, 'executing');
+        updateActionStatus(actionId, 'executing');
         if (data.coordinates) {
           setActionOverlay({
             x: data.coordinates[0],
             y: data.coordinates[1],
-            type: data.actionType
+            type: actionType
           });
+        }
         }
         break;
         
       case 'action_completed':
         if (data.screenshot) {
           setCurrentScreenshot(data.screenshot);
+          if (typeof data.mime === 'string' && data.mime) {
+            setCurrentScreenshotMime(data.mime);
+          }
         }
+        {
+        const actionId = data.actionId || data.action_id;
+        const actionType = data.actionType || data.action_type || data.action || 'action';
         setActionOverlay({
           type: 'success',
-          message: data.message || `${data.action} completed`,
-          stepType: data.action
+          message: data.message || `${actionType} completed`,
+          stepType: actionType
         });
         setTimeout(() => setActionOverlay(null), 1500);
         setSession(prev => {
-          const exists = prev.actions.some(a => a.id === data.actionId);
+          if (!actionId) return prev;
+          const exists = prev.actions.some(a => a.id === actionId);
           if (!exists) {
             const newAction: WebAutomationAction = {
-              id: data.actionId,
-              type: data.actionType || 'action',
+              id: actionId,
+              type: actionType,
               status: 'completed',
               timestamp: new Date().toISOString()
             } as WebAutomationAction;
@@ -447,7 +557,10 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           }
           return prev;
         });
-        updateActionStatus(data.actionId, 'completed');
+        if (actionId) {
+          updateActionStatus(actionId, 'completed');
+        }
+        }
         break;
         
       case 'pong':
@@ -468,12 +581,16 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         console.log('WebSocket keep-alive response received');
         break;
       case 'action_failed':
+        {
+        const actionId = data.actionId || data.action_id;
+        const actionType = data.actionType || data.action_type || data.action || 'action';
         setSession(prev => {
-          const exists = prev.actions.some(a => a.id === data.actionId);
+          if (!actionId) return prev;
+          const exists = prev.actions.some(a => a.id === actionId);
           if (!exists) {
             const newAction: WebAutomationAction = {
-              id: data.actionId,
-              type: data.actionType || 'action',
+              id: actionId,
+              type: actionType,
               status: 'failed',
               timestamp: new Date().toISOString()
             } as WebAutomationAction;
@@ -481,8 +598,11 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           }
           return prev;
         });
-        updateActionStatus(data.actionId, 'failed');
+        if (actionId) {
+          updateActionStatus(actionId, 'failed');
+        }
         setActionOverlay(null);
+        }
         break;
       case 'session_update':
         setSession(prev => {
@@ -608,6 +728,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
       if (response.ok) {
         const result = await response.json();
         setCurrentScreenshot(result.screenshot);
+        if (typeof result?.mime === 'string' && result.mime) {
+          setCurrentScreenshotMime(result.mime);
+        }
         setSession(prev => ({
           ...prev,
           screenshots: [...prev.screenshots, result.screenshot]
@@ -651,6 +774,38 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
 
   const handleTakeScreenshot = () => {
     takeScreenshot();
+  };
+
+  const approveCurrentStep = async () => {
+    if (!approvalRequest) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/web-automation/task/${approvalRequest.taskId}/step/${approvalRequest.stepIndex}/approve`, {
+        method: 'POST'
+      });
+      setApprovalRequest(null);
+    } catch (e) {
+      console.error('Failed to approve step:', e);
+    }
+  };
+
+  const toggleTakeover = () => {
+    const next = !takeoverMode;
+    setTakeoverMode(next);
+    if (next) {
+      setStreamStatus(prev => prev ? { ...prev, streaming: false } : { streaming: false });
+    }
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        if (next) {
+          ws.send(JSON.stringify({ type: 'stop_stream' }));
+        } else {
+          ws.send(JSON.stringify({ type: 'start_stream', intervalMs: 1000 }));
+        }
+      } catch (e) {
+        console.error('Failed to toggle takeover stream:', e);
+      }
+    }
   };
 
   const addAction = (actionType: string, target?: string, value?: string, coordinates?: [number, number]) => {
@@ -727,9 +882,9 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
         ctx?.drawImage(img, 0, 0);
       };
       
-      img.src = `data:image/png;base64,${currentScreenshot}`;
+      img.src = `data:${currentScreenshotMime || 'image/png'};base64,${currentScreenshot}`;
     }
-  }, [currentScreenshot]);
+  }, [currentScreenshot, currentScreenshotMime]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#1a1a1a' }}>
@@ -797,6 +952,15 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
             {isRecording ? 'Stop Recording' : 'Record Actions'}
           </Button>
 
+          <Button
+            onClick={toggleTakeover}
+            variant={takeoverMode ? 'contained' : 'outlined'}
+            size="small"
+            color={takeoverMode ? 'warning' : 'primary'}
+          >
+            {takeoverMode ? 'End Takeover' : 'Takeover'}
+          </Button>
+
           <Chip
             label={session.status.toUpperCase()}
             color={
@@ -804,6 +968,12 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
               session.status === 'error' ? 'error' :
               session.status === 'paused' ? 'warning' : 'default'
             }
+            size="small"
+          />
+
+          <Chip
+            label={(streamStatus?.streaming && !takeoverMode) ? 'STREAMING' : (takeoverMode ? 'TAKEOVER' : 'NO STREAM')}
+            color={(streamStatus?.streaming && !takeoverMode) ? 'success' : (takeoverMode ? 'warning' : 'default')}
             size="small"
           />
         </Box>
@@ -1123,6 +1293,34 @@ export const WebAutomationBrowser: React.FC<WebAutomationBrowserProps> = ({
           }
         `}
       </style>
+
+      <Dialog open={Boolean(approvalRequest)} onClose={() => setApprovalRequest(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Approval Required</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {approvalRequest?.message || 'The automation is requesting permission to continue.'}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Step {typeof approvalRequest?.stepIndex === 'number' ? approvalRequest.stepIndex + 1 : ''}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApprovalRequest(null)} variant="outlined">Cancel</Button>
+          <Button onClick={approveCurrentStep} variant="contained">Approve</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+        <ToggleButton
+          value="takeover"
+          selected={takeoverMode}
+          onChange={toggleTakeover}
+          sx={{ mr: 1 }}
+        >
+          Takeover
+        </ToggleButton>
+      </Box>
+
     </Box>
   );
 };

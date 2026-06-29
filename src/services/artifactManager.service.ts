@@ -13,6 +13,7 @@ export interface Artifact extends ArtifactCandidate {
 export interface ArtifactState {
   artifacts: Map<string, Artifact>;
   activeArtifactId: string | null;
+  activeChatId: string | null;
   layoutMode: 'chat' | 'split' | 'artifact-focused';
   splitRatio: { chat: number; artifact: number };
   preferences: {
@@ -26,14 +27,16 @@ class ArtifactManagerService {
   private state: ArtifactState = {
     artifacts: new Map(),
     activeArtifactId: null,
+    activeChatId: null,
     layoutMode: 'chat',
     splitRatio: { chat: 100, artifact: 0 },
     preferences: {
       autoExpand: true,
-      defaultSplitRatio: { chat: 35, artifact: 65 },
+      defaultSplitRatio: { chat: 42, artifact: 58 },
       rememberLastArtifact: true
     }
   };
+  private chatArtifactHistory: Map<string, string | null> = new Map();
 
   private listeners: Set<(state: ArtifactState) => void> = new Set();
   private sessionStorageKey = 'artifact_manager_state';
@@ -75,11 +78,32 @@ class ArtifactManagerService {
     const artifact = this.state.artifacts.get(artifactId);
     if (!artifact) return;
 
+    try {
+      this.state.artifacts.forEach((a) => {
+        if (a.chatId === artifact.chatId && a.id !== artifactId) {
+          a.isExpanded = false;
+        }
+      });
+    } catch {}
+
     artifact.isExpanded = true;
     artifact.lastAccessedAt = Date.now();
     this.state.activeArtifactId = artifactId;
+    this.state.activeChatId = artifact.chatId;
     this.state.layoutMode = 'split';
-    this.state.splitRatio = this.state.preferences.defaultSplitRatio;
+    const hasActiveSplitRatio =
+      this.state.splitRatio.chat > 0 &&
+      this.state.splitRatio.chat < 100 &&
+      this.state.splitRatio.artifact > 0 &&
+      this.state.splitRatio.artifact < 100;
+    this.state.splitRatio = hasActiveSplitRatio
+      ? this.state.splitRatio
+      : this.state.preferences.defaultSplitRatio;
+    this.chatArtifactHistory.set(artifact.chatId, artifactId);
+
+    try {
+      window.dispatchEvent(new CustomEvent('canvas:sidebar-collapse', { detail: { collapse: true } }));
+    } catch {}
 
     this.notifyListeners();
     this.saveStateToStorage();
@@ -135,7 +159,16 @@ class ArtifactManagerService {
         this.state.splitRatio = { chat: 100, artifact: 0 };
         break;
       case 'split':
-        this.state.splitRatio = this.state.preferences.defaultSplitRatio;
+        {
+          const hasActiveSplitRatio =
+            this.state.splitRatio.chat > 0 &&
+            this.state.splitRatio.chat < 100 &&
+            this.state.splitRatio.artifact > 0 &&
+            this.state.splitRatio.artifact < 100;
+          this.state.splitRatio = hasActiveSplitRatio
+            ? this.state.splitRatio
+            : this.state.preferences.defaultSplitRatio;
+        }
         break;
       case 'artifact-focused':
         this.state.splitRatio = { chat: 20, artifact: 80 };
@@ -274,6 +307,55 @@ class ArtifactManagerService {
     });
 
     toDelete.forEach(id => this.deleteArtifact(id));
+  }
+
+  handleChatSwitch(fromChatId: string | null, toChatId: string): void {
+    if (fromChatId && this.state.activeArtifactId) {
+      this.chatArtifactHistory.set(fromChatId, this.state.activeArtifactId);
+    }
+
+    const activeArtifact = this.getActiveArtifact();
+    if (activeArtifact && activeArtifact.chatId !== toChatId) {
+      this.collapseArtifact();
+    }
+
+    this.state.activeChatId = toChatId;
+
+    if (this.state.preferences.rememberLastArtifact) {
+      const lastArtifactId = this.chatArtifactHistory.get(toChatId);
+      if (lastArtifactId) {
+        const artifact = this.state.artifacts.get(lastArtifactId);
+        if (artifact && artifact.chatId === toChatId) {
+          return;
+        }
+      }
+    }
+
+    this.notifyListeners();
+  }
+
+  getActiveChatId(): string | null {
+    return this.state.activeChatId;
+  }
+
+  isArtifactForCurrentChat(artifactId: string): boolean {
+    const artifact = this.state.artifacts.get(artifactId);
+    if (!artifact) return false;
+    return artifact.chatId === this.state.activeChatId;
+  }
+
+  getLastArtifactForChat(chatId: string): Artifact | null {
+    const lastId = this.chatArtifactHistory.get(chatId);
+    if (!lastId) return null;
+    const artifact = this.state.artifacts.get(lastId);
+    return artifact && artifact.chatId === chatId ? artifact : null;
+  }
+
+  resetForNewChat(): void {
+    this.state.activeArtifactId = null;
+    this.state.layoutMode = 'chat';
+    this.state.splitRatio = { chat: 100, artifact: 0 };
+    this.notifyListeners();
   }
 }
 

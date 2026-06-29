@@ -4,18 +4,32 @@ export type NodeType =
   | 'mcp-tool'
   | 'transform'
   | 'if-else'
+  | 'condition'
   | 'while'
+  | 'loop'
   | 'approval'
   | 'end'
   | 'note'
   | 'guardrail'
+  | 'guardrails'
   | 'set-state'
-  | 'file-search';
+  | 'file-search'
+  | 'webhook-trigger'
+  | 'schedule-trigger'
+  | 'integration'
+  | 'fork'
+  | 'join'
+  | 'error-handler'
+  | 'loop-advanced'
+  | 'skill';
 
 export interface WorkflowNode {
   id: string;
   type: 'custom';
   position: { x: number; y: number };
+  style?: Record<string, any>;
+  width?: number;
+  height?: number;
   data: {
     label: string;
     nodeType: NodeType;
@@ -45,6 +59,15 @@ export interface WorkflowNode {
       approvers?: string[];
       outputVariable?: string;
       inputVariables?: string[];
+      inputSchema?: {
+        fields: {
+          name: string;
+          type?: 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'json';
+          required?: boolean;
+          defaultValue?: any;
+          description?: string;
+        }[];
+      };
       noteText?: string;
       guardrailType?: 'moderation' | 'pii' | 'jailbreak' | 'hallucination' | 'custom';
       guardrailRules?: string[];
@@ -53,6 +76,23 @@ export interface WorkflowNode {
       stateValue?: any;
       searchQuery?: string;
       topK?: number;
+      webhookPath?: string;
+      webhookSecret?: string;
+      webhookMethods?: string[];
+      cronExpression?: string;
+      timezone?: string;
+      integration?: string;
+      action?: string;
+      integrationAction?: string;
+      params?: Record<string, any>;
+      integrationParams?: Record<string, any>;
+      credentials?: Record<string, string>;
+      approvalRequired?: boolean;
+      nodeWidth?: number;
+      nodeHeight?: number;
+      breakpointEnabled?: boolean;
+      pinnedEnabled?: boolean;
+      pinnedOutput?: any;
     };
     outputs?: Record<string, any>;
     inputs?: Record<string, any>;
@@ -64,8 +104,8 @@ export interface WorkflowEdge {
   id: string;
   source: string;
   target: string;
-  sourceHandle?: string;
-  targetHandle?: string;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
   label?: string;
   type?: 'default' | 'smoothstep' | 'step' | 'straight';
 }

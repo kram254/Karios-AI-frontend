@@ -1,0 +1,472 @@
+{
+  "project": "Karios AI - Home Page Redesign",
+  "design_system": "Huashu Design Principles",
+  "version": "2.0",
+  "objective": "Create a masterpiece-level landing page that appears crafted by a veteran designer, not AI-generated. Modern, unique, and following 2024-2025 AI orchestrator trends.",
+
+  "current_ui_elements_to_preserve": {
+    "navigation": [
+      "Logo (Karios AI with SparklesIcon)",
+      "Nav links: Features, Pricing, Docs, Login",
+      "CTA Button: Start Free"
+    ],
+    "hero_section": [
+      "Badge: 'Live multi-agent automation for teams'",
+      "Headline: 'AI Research & Automation That Saves You 90%'",
+      "Subheadline about cost savings and intelligent routing",
+      "CTA Buttons: Start Building, Login",
+      "Animated Bot Avatar with state cycling",
+      "Capability tags: Routing, Agents, Automation"
+    ],
+    "stats_section": [
+      "90% Cost Savings",
+      "10x Faster Results",
+      "99.9% Uptime SLA",
+      "6+ AI Models"
+    ],
+    "features_section": [
+      "Intelligent Cost Optimization card",
+      "Multi-Agent Automation card",
+      "Enterprise-Grade Security card"
+    ],
+    "use_cases_section": [
+      "For Developers card",
+      "For Data Teams card",
+      "For Researchers card",
+      "For Enterprises card"
+    ],
+    "cta_section": [
+      "'Ready to Save 90% on AI Costs?' headline",
+      "Start Free Trial button",
+      "Login button"
+    ],
+    "footer": [
+      "Product links",
+      "Resources links",
+      "Company links",
+      "Social links"
+    ]
+  },
+
+  "new_ui_elements_to_add": {
+    "pre_navigation": {
+      "announcement_bar": {
+        "description": "Thin top banner for product updates/releases",
+        "content": "🚀 New: Multi-agent teams with visual workflow builder",
+        "link": "/changelog",
+        "dismissible": true
+      }
+    },
+    "hero_section_additions": {
+      "live_demo_widget": {
+        "description": "Interactive mini-demo showing real agent coordination",
+        "elements": [
+          "Animated typing indicator",
+          "Mini message bubbles showing agent communication",
+          "Live cost savings counter animating",
+          "Model switching visualization"
+        ]
+      },
+      "social_proof_strip": {
+        "description": "Logos of integration partners or 'trusted by'",
+        "style": "Grayscale logos, subtle animation on hover",
+        "content": ["OpenAI", "Anthropic", "Google", "Perplexity", "Together AI"]
+      },
+      "scroll_indicator": {
+        "description": "Subtle animated scroll indicator at hero bottom"
+      }
+    },
+    "new_sections": {
+      "how_it_works": {
+        "position": "After stats, before features",
+        "title": "How Karios Works",
+        "subtitle": "Three simple steps to 90% cost savings",
+        "steps": [
+          {
+            "number": "01",
+            "title": "Connect Your Work",
+            "description": "Integrate your tools, APIs, and data sources in minutes",
+            "visual": "Animated connection nodes"
+          },
+          {
+            "number": "02",
+            "title": "Deploy Agents",
+            "description": "Configure specialized AI agents for your tasks",
+            "visual": "Agent avatar grid with hover states"
+          },
+          {
+            "number": "03",
+            "title": "Watch Savings Grow",
+            "description": "Real-time dashboard showing cost optimization in action",
+            "visual": "Animated chart/graph"
+          }
+        ]
+      },
+      "interactive_showcase": {
+        "position": "After features",
+        "title": "See It In Action",
+        "subtitle": "Interactive demo of multi-agent coordination",
+        "elements": [
+          "Tabbed interface: Research | Automation | Analysis",
+          "Live agent conversation visualization",
+          "Real-time cost comparison display",
+          "Output preview panel"
+        ]
+      },
+      "model_router_visualization": {
+        "position": "After how_it_works",
+        "title": "Intelligent Model Routing",
+        "subtitle": "The right model for every task, automatically",
+        "visualization": {
+          "type": "Animated flow diagram",
+          "elements": [
+            "Input query entering",
+            "Router brain analyzing complexity",
+            "Model selection: GPT-4, Claude, Gemini, Perplexity",
+            "Output delivery"
+          ]
+        }
+      },
+      "testimonials_section": {
+        "position": "After use cases",
+        "title": "Loved by Teams Worldwide",
+        "subtitle": "See what our customers are building",
+        "layout": "Bento grid of testimonial cards",
+        "cards": [
+          {
+            "type": "quote",
+            "content": "Customer testimonial with avatar",
+            "size": "large"
+          },
+          {
+            "type": "metric",
+            "content": "$50K saved this quarter",
+            "size": "small"
+          },
+          {
+            "type": "video",
+            "content": "Customer story preview",
+            "size": "medium"
+          }
+        ]
+      },
+      "pricing_preview": {
+        "position": "Before CTA section",
+        "title": "Simple, Transparent Pricing",
+        "subtitle": "Start free, scale as you grow",
+        "elements": [
+          "Free tier card (highlighted)",
+          "Pro tier card",
+          "Enterprise card",
+          "Compare all features link"
+        ]
+      },
+      "faq_section": {
+        "position": "After pricing preview",
+        "title": "Frequently Asked Questions",
+        "style": "Accordion with smooth animations",
+        "items": [
+          "How does the cost optimization work?",
+          "Can I use my own API keys?",
+          "What models are supported?",
+          "Is my data secure?",
+          "How do agents communicate?"
+        ]
+      }
+    },
+    "floating_elements": {
+      "feedback_button": {
+        "position": "Bottom right",
+        "style": "Floating action button",
+        "icon": "MessageCircle",
+        "action": "Open feedback modal"
+      },
+      "back_to_top": {
+        "position": "Bottom right, above feedback",
+        "style": "Appears after scrolling",
+        "animation": "Smooth scroll"
+      }
+    }
+  },
+
+  "design_specifications": {
+    "color_palette": {
+      "primary": {
+        "cyan": "#00D4B4",
+        "violet": "#8B5CF6",
+        "fuchsia": "#D946EF"
+      },
+      "background": {
+        "deep": "#04070F",
+        "surface": "#0A0E1A",
+        "elevated": "#111827"
+      },
+      "text": {
+        "primary": "#F8FAFC",
+        "secondary": "#94A3B8",
+        "muted": "#64748B"
+      },
+      "accents": {
+        "success": "#10B981",
+        "warning": "#F59E0B",
+        "error": "#EF4444",
+        "info": "#3B82F6"
+      }
+    },
+    "typography": {
+      "font_family": "Inter, SF Pro Display, -apple-system, sans-serif",
+      "heading_weights": [600, 700],
+      "body_weight": 400,
+      "sizes": {
+        "hero": "clamp(2.5rem, 5vw, 4rem)",
+        "h2": "clamp(1.75rem, 3vw, 2.5rem)",
+        "h3": "clamp(1.25rem, 2vw, 1.5rem)",
+        "body": "clamp(1rem, 1.25vw, 1.125rem)",
+        "small": "0.875rem"
+      }
+    },
+    "spacing_system": {
+      "base": "4px",
+      "scale": [4, 8, 12, 16, 24, 32, 48, 64, 96, 128]
+    },
+    "border_radius": {
+      "small": "8px",
+      "medium": "16px",
+      "large": "24px",
+      "xl": "32px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "card": "0 4px 24px rgba(0, 0, 0, 0.3)",
+      "elevated": "0 8px 32px rgba(0, 0, 0, 0.4)",
+      "glow_cyan": "0 0 40px rgba(0, 212, 180, 0.15)",
+      "glow_violet": "0 0 40px rgba(139, 92, 246, 0.15)"
+    },
+    "animation_timing": {
+      "fast": "150ms",
+      "normal": "300ms",
+      "slow": "500ms",
+      "spring": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+    }
+  },
+
+  "visual_effects": {
+    "background": {
+      "gradient_orbs": {
+        "description": "Large, slow-moving gradient orbs with heavy blur",
+        "colors": ["#00D4B4", "#8B5CF6", "#D946EF"],
+        "opacity": "0.08 - 0.15",
+        "animation": "20s infinite float"
+      },
+      "mesh_gradient": {
+        "description": "Subtle animated mesh gradient overlay",
+        "opacity": 0.03
+      },
+      "noise_texture": {
+        "description": "Fine grain noise overlay for depth",
+        "opacity": 0.02
+      }
+    },
+    "glassmorphism": {
+      "navbar": {
+        "background": "rgba(4, 7, 15, 0.7)",
+        "blur": "24px",
+        "border": "1px solid rgba(255, 255, 255, 0.06)"
+      },
+      "cards": {
+        "background": "rgba(17, 24, 39, 0.6)",
+        "blur": "16px",
+        "border": "1px solid rgba(255, 255, 255, 0.08)"
+      }
+    },
+    "micro_interactions": {
+      "button_hover": {
+        "scale": 1.02,
+        "brightness": 1.1,
+        "shadow_increase": true
+      },
+      "card_hover": {
+        "translate_y": -4,
+        "border_glow": true,
+        "shadow_expand": true
+      },
+      "link_hover": {
+        "underline_slide": true,
+        "color_shift": true
+      }
+    },
+    "scroll_animations": {
+      "reveal": {
+        "type": "Fade up with stagger",
+        "distance": "24px",
+        "duration": "600ms",
+        "easing": "cubic-bezier(0.16, 1, 0.3, 1)"
+      },
+      "parallax": {
+        "elements": ["Background orbs", "Hero avatar"],
+        "intensity": "subtle (0.1-0.2)"
+      }
+    }
+  },
+
+  "layout_principles": {
+    "container": {
+      "max_width": "1280px",
+      "padding": "clamp(16px, 4vw, 48px)"
+    },
+    "grid_system": {
+      "columns": 12,
+      "gap": "24px",
+      "responsive_breakpoints": {
+        "mobile": "< 640px",
+        "tablet": "640px - 1024px",
+        "desktop": "> 1024px"
+      }
+    },
+    "section_spacing": {
+      "default": "96px",
+      "mobile": "64px"
+    },
+    "visual_hierarchy": [
+      "Hero section - Full viewport height, maximum impact",
+      "Stats bar - Sticky or prominent position",
+      "How it works - Clear 3-step process",
+      "Features - Alternating layout or bento grid",
+      "Interactive showcase - Break up static content",
+      "Use cases - Real-world application examples",
+      "Testimonials - Social proof with metrics",
+      "Pricing - Clear value proposition",
+      "FAQ - Address objections",
+      "CTA - Final conversion push",
+      "Footer - Clean, organized links"
+    ]
+  },
+
+  "interaction_design": {
+    "scroll_behavior": {
+      "smooth_scroll": true,
+      "section_snap": false
+    },
+    "hover_states": {
+      "cards": "Lift with glow border",
+      "buttons": "Scale up with brightness",
+      "links": "Color shift with underline",
+      "images": "Subtle zoom or reveal"
+    },
+    "focus_states": {
+      "visible_focus_ring": true,
+      "ring_color": "#00D4B4",
+      "ring_width": "2px"
+    },
+    "loading_states": {
+      "skeleton": "Shimmer effect with brand colors",
+      "spinner": "Custom animated logo mark"
+    }
+  },
+
+  "responsive_behavior": {
+    "mobile": {
+      "navigation": "Hamburger menu with slide-out drawer",
+      "hero": "Stacked layout, reduced animation",
+      "stats": "2x2 grid",
+      "cards": "Single column, full width",
+      "font_sizes": "Reduced by ~15%"
+    },
+    "tablet": {
+      "navigation": "Condensed nav or hamburger",
+      "hero": "Side-by-side with reduced spacing",
+      "stats": "4 column row",
+      "cards": "2 columns"
+    },
+    "desktop": {
+      "navigation": "Full horizontal nav",
+      "hero": "Max impact layout",
+      "stats": "Full row with spacing",
+      "cards": "3-4 columns as designed"
+    }
+  },
+
+  "accessibility_requirements": {
+    "color_contrast": "WCAG AA minimum (4.5:1 for text)",
+    "reduced_motion": "Respect prefers-reduced-motion",
+    "keyboard_navigation": "Full tab navigation support",
+    "screen_reader": "Semantic HTML, ARIA labels",
+    "focus_indicators": "Visible focus states on all interactive elements"
+  },
+
+  "design_references": {
+    "inspiration_sites": [
+      "Linear.app - Clean, premium feel",
+      "Vercel.com - Modern developer aesthetic",
+      "Anthropic.com - Elegant AI presentation",
+      "Notion.so - Clear feature communication",
+      "Figma.com - Polished interactions",
+      "Raycast.com - Developer-focused clarity",
+      "Supabase.com - Technical but approachable",
+      "Warp.dev - Terminal/editor aesthetic"
+    ],
+    "key_traits_to_emulate": [
+      "Confidence without arrogance",
+      "Technical sophistication without complexity",
+      "Motion with purpose",
+      "Premium material finishes",
+      "Thoughtful whitespace",
+      "Consistent visual language",
+      "Surprising micro-interactions",
+      "Clear information hierarchy"
+    ]
+  },
+
+  "implementation_notes": {
+    "preserve_logic": [
+      "All existing React hooks and state management",
+      "Authentication flow",
+      "Chat context and routing",
+      "Animation state cycling for avatar",
+      "All navigation functionality"
+    ],
+    "tech_stack": {
+      "framework": "React + TypeScript",
+      "styling": "Tailwind CSS",
+      "animation": "Framer Motion",
+      "icons": "Lucide React",
+      "ui_components": "Custom + shadcn/ui patterns"
+    },
+    "performance_requirements": [
+      "Lazy load below-fold sections",
+      "Optimize LCP (largest contentful paint)",
+      "Minimize animation jank",
+      "Efficient image loading",
+      "Code split heavy components"
+    ]
+  },
+
+  "quality_criteria": {
+    "design_excellence": [
+      "Every element has a purpose",
+      "Visual rhythm guides the eye",
+      "Typography is impeccable",
+      "Spacing feels intentional",
+      "Colors harmonize perfectly",
+      "Motion enhances, never distracts"
+    ],
+    "veteran_designer_markers": [
+      "Asymmetric balance that feels right",
+      "Unexpected but delightful details",
+      "Consistent but not rigid",
+      "Hierarchy that requires no thought",
+      "Whitespace used as an active element",
+      "Micro-interactions that surprise",
+      "Transitions that feel physical"
+    ],
+    "ai_generated_avoidance": [
+      "No generic gradient backgrounds without purpose",
+      "No stock photo aesthetics",
+      "No repetitive patterns",
+      "No mismatched shadows or borders",
+      "No overwhelming animations",
+      "No inconsistent spacing",
+      "No placeholder-feeling content"
+    ]
+  }
+}

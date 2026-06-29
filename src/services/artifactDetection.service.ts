@@ -1,8 +1,9 @@
 export interface ArtifactCandidate {
-  type: 'code' | 'react' | 'html' | 'workflow' | 'markdown' | 'diagram' | 'data' | 'multi_agent_workflow' | 'web_automation';
+  type: 'code' | 'react' | 'html' | 'workflow' | 'markdown' | 'diagram' | 'data' | 'multi_agent_workflow' | 'web_automation' | 'svg';
   content: string;
   metadata: {
     language?: string;
+    mimeType?: string;
     title?: string;
     description?: string;
     confidence: number;
@@ -29,6 +30,12 @@ export class ArtifactDetectionService {
     const webAutomation = this.detectWebAutomation(messageContent);
     if (webAutomation) return webAutomation;
 
+    const chart = this.detectChart(messageContent);
+    if (chart) return chart;
+
+    const svg = this.detectSVG(messageContent);
+    if (svg) return svg;
+
     const code = this.detectCode(messageContent);
     if (code) return code;
 
@@ -43,6 +50,69 @@ export class ArtifactDetectionService {
 
     const structuredContent = this.detectStructuredContent(messageContent);
     if (structuredContent) return structuredContent;
+
+    return null;
+  }
+
+  private detectChart(content: string): ArtifactCandidate | null {
+    const match = content.match(/```(?:vega-lite|vegalite)\r?\n([\s\S]*?)```/i);
+    if (match) {
+      return {
+        type: 'markdown',
+        content: `\n\n\`\`\`vega-lite\n${match[1]}\n\`\`\`\n`,
+        metadata: {
+          mimeType: 'text/markdown',
+          title: 'Chart',
+          description: 'Vega-Lite visualization',
+          confidence: 0.92,
+          complexity: 'medium',
+          executable: true
+        },
+        shouldCreateArtifact: true
+      };
+    }
+    return null;
+  }
+
+  private detectSVG(content: string): ArtifactCandidate | null {
+    const svgBlock = content.match(/```svg\r?\n([\s\S]*?)```/i);
+    if (svgBlock && svgBlock[1]) {
+      const svg = svgBlock[1].trim();
+      if (svg) {
+        return {
+          type: 'svg',
+          content: svg,
+          metadata: {
+            language: 'svg',
+            mimeType: 'image/svg+xml',
+            title: 'SVG Graphic',
+            description: 'Scalable Vector Graphics',
+            confidence: 0.95,
+            complexity: 'low',
+            executable: false
+          },
+          shouldCreateArtifact: true
+        };
+      }
+    }
+
+    const svgInline = content.match(/<svg[\s\S]*?<\/svg>/i);
+    if (svgInline) {
+      return {
+        type: 'svg',
+        content: svgInline[0],
+        metadata: {
+          language: 'svg',
+          mimeType: 'image/svg+xml',
+          title: 'SVG Graphic',
+          description: 'Scalable Vector Graphics',
+          confidence: 0.92,
+          complexity: 'low',
+          executable: false
+        },
+        shouldCreateArtifact: true
+      };
+    }
 
     return null;
   }
@@ -107,12 +177,14 @@ export class ArtifactDetectionService {
     );
 
     if (hasAutomation && content.length > 300) {
+      const title = this.extractWebAutomationTitle(content);
+      const description = this.extractWebAutomationDescription(content);
       return {
         type: 'web_automation',
         content: content,
         metadata: {
-          title: 'Web Automation Task',
-          description: 'Automated browser interaction workflow',
+          title,
+          description,
           confidence: 0.80,
           complexity: 'medium',
           executable: true
@@ -121,6 +193,36 @@ export class ArtifactDetectionService {
       };
     }
     return null;
+  }
+
+  private extractWebAutomationTitle(content: string): string {
+    const headingMatch = content.match(/^#+\s+(.+)$/m);
+    if (headingMatch && headingMatch[1]) {
+      return headingMatch[1].trim().slice(0, 60);
+    }
+    const boldMatch = content.match(/\*\*([^*]+)\*\*/);
+    if (boldMatch && boldMatch[1] && boldMatch[1].length < 60) {
+      return boldMatch[1].trim();
+    }
+    const lines = content.split('\n').filter(l => l.trim().length > 10);
+    if (lines.length > 0) {
+      const firstLine = lines[0].replace(/^[-*#>\s]+/, '').trim();
+      if (firstLine.length > 5 && firstLine.length <= 80) {
+        return firstLine.slice(0, 60);
+      }
+    }
+    return 'Web Automation Results';
+  }
+
+  private extractWebAutomationDescription(content: string): string {
+    const lines = content.split('\n').filter(l => l.trim().length > 0);
+    for (const line of lines.slice(0, 5)) {
+      const clean = line.replace(/^[-*#>\s]+/, '').trim();
+      if (clean.length > 20 && clean.length < 150 && !clean.startsWith('http')) {
+        return clean.slice(0, 100);
+      }
+    }
+    return 'Automated browser interaction results';
   }
 
   private detectCode(content: string): ArtifactCandidate | null {
@@ -141,6 +243,7 @@ export class ArtifactDetectionService {
           content: code,
           metadata: {
             language,
+            mimeType: 'application/vnd.ant.code',
             title: `${language.toUpperCase()} Code`,
             description: `${lineCount} lines of ${language} code`,
             confidence: 0.95,
@@ -165,6 +268,7 @@ export class ArtifactDetectionService {
         content: match[0],
         metadata: {
           language: 'html',
+          mimeType: 'text/html',
           title: 'HTML Document',
           description: 'Interactive HTML content',
           confidence: 0.98,
@@ -199,6 +303,7 @@ export class ArtifactDetectionService {
           content: code,
           metadata: {
             language: 'jsx',
+            mimeType: 'application/vnd.ant.react',
             title: 'React Component',
             description: 'Interactive React component',
             confidence: 0.90,
@@ -227,6 +332,7 @@ export class ArtifactDetectionService {
           content: match[1],
           metadata: {
             language: 'mermaid',
+            mimeType: 'application/vnd.ant.mermaid',
             title: 'Diagram',
             description: 'Visual diagram representation',
             confidence: 0.92,
@@ -260,6 +366,7 @@ export class ArtifactDetectionService {
         type: 'markdown',
         content: content,
         metadata: {
+          mimeType: 'text/markdown',
           title: 'Documentation',
           description: 'Structured reference content',
           confidence: 0.75,

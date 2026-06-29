@@ -1,5 +1,5 @@
-// API Configuration
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+export const API_BASE_URL = BACKEND_URL;
 
 // API Endpoints
 export const API_ENDPOINTS = {

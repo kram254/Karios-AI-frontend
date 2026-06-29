@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote, Shield, Save, Search } from 'lucide-react';
+import { X, PlayCircle, Bot, Wrench, Shuffle, GitBranch, RotateCw, ShieldCheck, StopCircle, StickyNote, Shield, Save, Search, Webhook, Clock, Plug, Split, Merge, AlertTriangle, Puzzle, Repeat } from 'lucide-react';
 import type { NodeType } from '../../types/workflow';
 
 interface NodesLibraryProps {
@@ -16,12 +16,26 @@ const nodeCategories = [
     ],
   },
   {
+    title: 'Triggers',
+    nodes: [
+      { type: 'webhook-trigger' as NodeType, label: 'Webhook', icon: Webhook, color: '#3b82f6', description: 'HTTP webhook trigger' },
+      { type: 'schedule-trigger' as NodeType, label: 'Schedule', icon: Clock, color: '#f59e0b', description: 'Cron schedule trigger' },
+    ],
+  },
+  {
+    title: 'Integrations',
+    nodes: [
+      { type: 'integration' as NodeType, label: 'Integration', icon: Plug, color: '#10b981', description: 'External service call' },
+    ],
+  },
+  {
     title: 'AI & Data',
     nodes: [
       { type: 'agent' as NodeType, label: 'AI Agent', icon: Bot, color: '#3b82f6', description: 'LLM reasoning node' },
       { type: 'mcp-tool' as NodeType, label: 'MCP Tool', icon: Wrench, color: '#8b5cf6', description: 'External tool call' },
       { type: 'transform' as NodeType, label: 'Transform', icon: Shuffle, color: '#f59e0b', description: 'Data manipulation' },
       { type: 'file-search' as NodeType, label: 'File Search', icon: Search, color: '#06b6d4', description: 'Vector store query' },
+      { type: 'skill' as NodeType, label: 'Skill', icon: Puzzle, color: '#ec4899', description: 'Execute a reusable skill' },
     ],
   },
   {
@@ -41,6 +55,10 @@ const nodeCategories = [
     nodes: [
       { type: 'if-else' as NodeType, label: 'If/Else', icon: GitBranch, color: '#ec4899', description: 'Conditional branch' },
       { type: 'while' as NodeType, label: 'While Loop', icon: RotateCw, color: '#14b8a6', description: 'Loop iteration' },
+      { type: 'fork' as NodeType, label: 'Fork (Split)', icon: Split, color: '#8b5cf6', description: 'Parallel fan-out to multiple branches' },
+      { type: 'join' as NodeType, label: 'Join (Merge)', icon: Merge, color: '#8b5cf6', description: 'Wait for parallel branches to complete' },
+      { type: 'error-handler' as NodeType, label: 'Try/Catch', icon: AlertTriangle, color: '#f97316', description: 'Error handling with try/catch/finally' },
+      { type: 'loop-advanced' as NodeType, label: 'Advanced Loop', icon: Repeat, color: '#14b8a6', description: 'For-each, while, or repeat loop' },
     ],
   },
   {

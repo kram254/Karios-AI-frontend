@@ -15,9 +15,13 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    Slider
+    Slider,
+    Chip,
+    FormHelperText
 } from '@mui/material';
 import { Agent, AgentRole, AgentMode } from '../../types/agent';
+import { skillService } from '../../services/api/skill.service';
+import type { Skill } from '../../types/skill';
 
 // Tab Panel component
 interface TabPanelProps {
@@ -58,7 +62,7 @@ const languageFlags: Record<string, string> = {
 };
 
 // Role descriptions
-const roleDescriptions: Record<AgentRole, string> = {
+const roleDescriptions: Partial<Record<AgentRole, string>> = {
     [AgentRole.WEB_SCRAPING]: 'Extract and structure data from websites with intelligent parsing and multi-page navigation.',
     [AgentRole.WEB_AUTOMATION]: 'Automate browser interactions and workflows with precision using Selenium and Playwright.',
     [AgentRole.TASK_AUTOMATION]: 'Orchestrate complex multi-step tasks and processes with scheduling and monitoring.',
@@ -67,7 +71,7 @@ const roleDescriptions: Record<AgentRole, string> = {
     [AgentRole.DATA_ANALYSIS]: 'Process and analyze data to extract actionable insights with visualization support.',
     [AgentRole.EMAIL_AUTOMATION]: 'Manage and automate email communications with SMTP integration and campaign tracking.',
     [AgentRole.DOCUMENT_PROCESSING]: 'Analyze, extract, and transform document content with OCR and format conversion.',
-    [AgentRole.TESTING_QA]: 'Automated testing and quality assurance for web applications with comprehensive coverage.',
+    [AgentRole.TESTING_QA]: 'End-to-end automated testing, API validation, and quality assurance across web and mobile workflows.',
     [AgentRole.CUSTOM]: 'Custom agent role with specialized functionality based on your description.'
 };
 
@@ -87,6 +91,7 @@ interface AgentEditDialogProps {
         response_length?: number;
         mode?: AgentMode;
         actions?: string[];
+        skill_ids?: string[];
     }) => Promise<void>;
 }
 
@@ -114,6 +119,10 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
     const [responseLength, setResponseLength] = useState(150);
     const [language, setLanguage] = useState('en');
     const [selectedActions, setSelectedActions] = useState<string[]>([]);
+
+    const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
+    const [skillsLoading, setSkillsLoading] = useState(false);
+    const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
     
     // UI state
     const [loading, setLoading] = useState(false);
@@ -135,8 +144,41 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
             setResponseLength(agent.response_length ?? 150);
             setLanguage(agent.language || 'en');
             setSelectedActions(agent.actions || []);
+
+            try {
+                const rawSkillIds = (agent as any)?.skill_ids || (agent as any)?.skillIds;
+                if (Array.isArray(rawSkillIds)) {
+                    setSelectedSkillIds(rawSkillIds.map((x: any) => String(x)).filter((x: string) => x.trim()));
+                } else if ((agent as any)?.skills && Array.isArray((agent as any).skills)) {
+                    setSelectedSkillIds((agent as any).skills.map((s: any) => String(s?.id)).filter((x: string) => x.trim()));
+                } else {
+                    setSelectedSkillIds([]);
+                }
+            } catch {
+                setSelectedSkillIds([]);
+            }
         }
     }, [agent]);
+
+    useEffect(() => {
+        if (!open) return;
+        setSkillsLoading(true);
+        skillService.listSkills(true)
+            .then((res) => {
+                const list = (res as any)?.data;
+                if (Array.isArray(list)) {
+                    setAvailableSkills(list);
+                } else {
+                    setAvailableSkills([]);
+                }
+            })
+            .catch(() => {
+                setAvailableSkills([]);
+            })
+            .finally(() => {
+                setSkillsLoading(false);
+            });
+    }, [open]);
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setCurrentTab(newValue);
@@ -160,7 +202,8 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 response_style: responseStyle,
                 response_length: responseLength,
                 mode: mode,
-                actions: selectedActions
+                actions: selectedActions,
+                skill_ids: selectedSkillIds
             } as {
                 name: string;
                 description: string;
@@ -171,6 +214,7 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                 response_length: number;
                 mode: AgentMode;
                 actions: string[];
+                skill_ids: string[];
             };
             
             // Add role_description only if custom role is selected
@@ -247,6 +291,7 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                     <Tab label="BASIC INFO" />
                     <Tab label="ROLE" />
                     <Tab label="BEHAVIOR" />
+                    <Tab label="SKILLS" />
                 </Tabs>
             </Box>
             
@@ -350,7 +395,7 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                             <MenuItem value={AgentRole.DATA_ANALYSIS}>Data Analysis</MenuItem>
                             <MenuItem value={AgentRole.EMAIL_AUTOMATION}>Email Automation</MenuItem>
                             <MenuItem value={AgentRole.DOCUMENT_PROCESSING}>Document Processing</MenuItem>
-                            <MenuItem value={AgentRole.TESTING_QA}>Testing & QA</MenuItem>
+                            <MenuItem value={AgentRole.TESTING_QA}>QA Automated Tester</MenuItem>
                             <MenuItem value={AgentRole.CUSTOM}>Custom...</MenuItem>
                         </Select>
                     </FormControl>
@@ -426,7 +471,7 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                             Role Description
                         </Typography>
                         <Typography variant="body2">
-                            {roleDescriptions[role]}
+                            {roleDescriptions[role] ?? ''}
                         </Typography>
                     </Box>
                 </TabPanel>
@@ -590,6 +635,75 @@ const AgentEditDialog: React.FC<AgentEditDialogProps> = ({ open, agent, onClose,
                             ))}
                         </Box>
                     </Box>
+                </TabPanel>
+
+                <TabPanel value={currentTab} index={3}>
+                    <Typography variant="subtitle2" gutterBottom>
+                        Skills
+                    </Typography>
+                    <FormControl fullWidth sx={{ mb: 3 }}>
+                        <InputLabel sx={{ 
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            bgcolor: '#1A1A1A',
+                            px: 1
+                        }}>Skills</InputLabel>
+                        <Select
+                            multiple
+                            value={selectedSkillIds}
+                            onChange={(e) => {
+                                const value = e.target.value as any;
+                                const ids = Array.isArray(value)
+                                    ? value.map((x: any) => String(x)).filter((x: string) => x.trim())
+                                    : [];
+                                setSelectedSkillIds(ids);
+                            }}
+                            disabled={skillsLoading}
+                            sx={{
+                                color: '#FFFFFF',
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(0, 243, 255, 0.5)'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#00F3FF'
+                                },
+                                '& .MuiSvgIcon-root': {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
+                            }}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                    {(selected as string[]).map((id) => {
+                                        const s = availableSkills.find(x => String(x.id) === String(id));
+                                        return (
+                                            <Chip
+                                                key={id}
+                                                label={s?.name || id}
+                                                size="small"
+                                                sx={{ bgcolor: 'rgba(0, 243, 255, 0.12)', color: '#00F3FF', border: '1px solid rgba(0, 243, 255, 0.25)' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            )}
+                        >
+                            {skillsLoading && (
+                                <MenuItem value="" disabled>
+                                    Loading skills...
+                                </MenuItem>
+                            )}
+                            {!skillsLoading && availableSkills.map((s) => (
+                                <MenuItem key={s.id} value={s.id}>
+                                    {s.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                        <FormHelperText sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                            Selected skills are applied to this agent at runtime.
+                        </FormHelperText>
+                    </FormControl>
                 </TabPanel>
             </DialogContent>
             

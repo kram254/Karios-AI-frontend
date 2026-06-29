@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Box, Button, CircularProgress, Typography, Grid } from '@mui/material';
 import { TrendingDown, Savings, Receipt, Key, CreditCard, Refresh, SmartToy, Dashboard, Analytics, Home, Search, Notifications, Settings, Logout, Shield, TrendingUp, Storage, Memory } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -44,7 +45,7 @@ export const CustomerDashboard: React.FC = () => {
                 setApiCalls(healthResponse.data?.api?.total_calls || 0);
                 
             } catch (error) {
-                console.error('Error fetching dashboard data:', error);
+                toast.error('Failed to load dashboard data.');
                 // Set default values in case of error
                 setCredits(0);
                 setActiveChats(0);
@@ -66,10 +67,10 @@ export const CustomerDashboard: React.FC = () => {
     const handleSystemHealthCheck = async () => {
         try {
             await monitoringService.getSystemHealth();
-            alert('System health check complete - All systems operational');
+            toast.success('System health check complete — All systems operational');
         } catch (error) {
-            console.error('Error checking system health:', error);
-            alert('Error checking system health');
+            
+            toast.error('Error checking system health.');
         }
     };
     
@@ -80,10 +81,10 @@ export const CustomerDashboard: React.FC = () => {
             const userId = userResponse.data.id;
             
             const usageResponse = await monitoringService.getUserUsage(userId);
-            alert(`Token consumption: ${(usageResponse.data as any)?.token_usage || 0} tokens used`);
+            toast.success(`Token consumption: ${(usageResponse.data as any)?.token_usage || 0} tokens used`);
         } catch (error) {
-            console.error('Error checking token consumption:', error);
-            alert('Error checking token consumption');
+            
+            toast.error('Error checking token consumption.');
         }
     };
     

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Box, Card, CardContent, Typography } from '@mui/material';
 import { Clock, CheckCircle, XCircle, PlayCircle, PauseCircle } from 'lucide-react';
 import axios from 'axios';
@@ -29,7 +30,7 @@ export function AutomationTimeline() {
       setEvents(response.data.timeline || []);
       setLoading(false);
     } catch (error) {
-      console.error('Failed to fetch timeline:', error);
+      toast.error('Failed to load timeline.');
       setLoading(false);
     }
   };

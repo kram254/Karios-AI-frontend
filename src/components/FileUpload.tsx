@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { apiUrl } from '../config/env';
 import { Upload, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { notify } from '../services/notifications';
@@ -30,7 +31,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onUploadComplete, onSyst
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('https://agentando-ai-backend.onrender.com/api/admin/update-knowledge', {
+      const response = await fetch(apiUrl('/api/admin/update-knowledge'), {
         method: 'POST',
         body: formData,
       });

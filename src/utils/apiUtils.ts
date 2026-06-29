@@ -45,13 +45,7 @@ export const checkApiEndpoint = async (url: string): Promise<boolean> => {
  * @returns The base URL to use for API requests
  */
 export const getApiBaseUrl = (): string => {
-  const renderEndpoint = 'https://agentando-ai-backend-lrv9.onrender.com';
-  
-  // In development, use localhost
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:8000';
-  }
-  
-  // In production, use the render endpoint
-  return renderEndpoint;
+  // Always read from the typed env config — no hardcoded URLs here.
+  // Set VITE_BACKEND_URL in .env.development / .env.production.
+  return import.meta.env.VITE_BACKEND_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '');
 };

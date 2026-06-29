@@ -8,12 +8,14 @@ interface WebAutomationIntegrationProps {
   onAutomationResult?: (result: any) => void;
   isVisible?: boolean;
   showButton?: boolean;
+  sessionIdOverride?: string | null;
 }
 
 export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> = ({
   onAutomationResult,
   isVisible = false,
-  showButton = true
+  showButton = true,
+  sessionIdOverride = null
 }) => {
   const BACKEND_URL: string = (import.meta as any).env?.VITE_BACKEND_URL || window.location.origin;
   const HEARTBEAT_INTERVAL_SEC: number = (() => {
@@ -47,7 +49,20 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
   // WebSocket refs and helpers
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const MAX_RECONNECT_ATTEMPTS = 10;
   const reconnectTimerRef = useRef<number | null>(null);
+  const onAutomationResultRef = useRef(onAutomationResult);
+  const sessionStartedEmittedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    onAutomationResultRef.current = onAutomationResult;
+  }, [onAutomationResult]);
+
+  const touchHeartbeat = (ts?: number) => {
+    const now = typeof ts === 'number' ? ts : Date.now();
+    setLastHeartbeatAt(prev => (prev && now - prev < 750 ? prev : now));
+  };
 
   const buildWsUrl = (sid: string): string => {
     try {
@@ -76,13 +91,17 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       setIsOpen(true);
       setIsMinimized(false);
       const forceStart = event?.detail?.force || event?.detail?.immediate;
+      const requestedUrl = event?.detail?.url;
+      const requestedSessionId = event?.detail?.sessionId;
+      const explicitSid = (typeof requestedSessionId === 'string' && requestedSessionId) ? requestedSessionId : undefined;
+      const shouldSwitchSession = !!(explicitSid && currentSession && explicitSid !== currentSession);
       
       if (forceStart || !isAutomationActive) {
         console.log('🎬 Force starting automation - override current state');
         setIsAutomationActive(true);
         setAutomationStatus('running');
-        if (!currentSession) {
-          startAutomation();
+        if (!currentSession || shouldSwitchSession) {
+          startAutomation(typeof requestedUrl === 'string' ? requestedUrl : undefined, explicitSid);
         }
       } else {
         setIsAutomationActive(prev => {
@@ -90,10 +109,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           if (!prev) {
             console.log('🎬 Starting automation - not currently active');
             setAutomationStatus('running');
-            startAutomation();
+            startAutomation(typeof requestedUrl === 'string' ? requestedUrl : undefined, explicitSid);
             return true;
           } else {
             console.log('🎬 Automation already active, keeping current state');
+            if (forceStart && shouldSwitchSession) {
+              startAutomation(typeof requestedUrl === 'string' ? requestedUrl : undefined, explicitSid);
+            }
             return prev;
           }
         });
@@ -123,6 +145,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
     const connect = () => {
       if (stopped) return;
+      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+        return;
+      }
       const wsUrl = buildWsUrl(currentSession);
       console.log('📡 Connecting to WebSocket:', wsUrl);
       const ws = new WebSocket(wsUrl);
@@ -130,11 +155,13 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
       ws.onopen = () => {
         console.log('📡 WebSocket connection opened for session:', currentSession);
-        setLastHeartbeatAt(Date.now());
+        reconnectAttemptsRef.current = 0;
+        touchHeartbeat();
         setConnectionHealth('good');
         // Request latest status shortly after connection
         setTimeout(() => {
           try { ws.send(JSON.stringify({ type: 'get_status' })); } catch {}
+          try { ws.send(JSON.stringify({ type: 'start_stream', intervalMs: 2000 })); } catch {}
         }, 100);
         // Start heartbeat ping
         if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); }
@@ -154,14 +181,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       ws.onclose = (event) => {
         console.log('📡 WebSocket connection closed:', event.code, event.reason);
         if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
-        if (!stopped && event.code !== 1000) {
+        if (!stopped && event.code !== 1000 && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttemptsRef.current += 1;
           setConnectionHealth('lost');
           setAutomationStatus('paused');
-          console.log('📡 Attempting reconnection in 2000ms...');
+          console.log(`📡 Attempting reconnection ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS} in 5000ms...`);
           if (reconnectTimerRef.current) { window.clearTimeout(reconnectTimerRef.current); }
           reconnectTimerRef.current = window.setTimeout(() => {
             connect();
-          }, 2000);
+          }, 5000);
+        } else if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          console.log('📡 Max reconnection attempts reached, giving up');
+          setConnectionHealth('lost');
+          setAutomationStatus('error');
         }
       };
 
@@ -170,7 +202,7 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
         try {
           const data = JSON.parse(event.data);
           console.log('📡 Parsed WebSocket data:', data);
-          setLastHeartbeatAt(Date.now());
+          touchHeartbeat();
 
           if (data.type === 'plan_created') {
             console.log('📡 PLAN_CREATED event received:', data.plan);
@@ -188,8 +220,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               2: 'active'
             }));
             console.log('📡 Plan state updated, calling onAutomationResult');
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'plan_created', plan: data.plan, sessionId: data.execution_session_id || currentSession });
+            const cb = onAutomationResultRef.current;
+            if (cb) {
+              cb({ type: 'plan_created', plan: data.plan, sessionId: data.execution_session_id || currentSession });
               console.log('📡 onAutomationResult called for plan_created');
             }
           } else if (data.type === 'execution_started') {
@@ -200,21 +233,43 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               ...prev,
               2: 'active'
             }));
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'execution_started', sessionId: currentSession });
+            const cb = onAutomationResultRef.current;
+            if (cb) {
+              cb({ type: 'execution_started', sessionId: currentSession });
               console.log('📡 onAutomationResult called for execution_started');
             }
-          } else if (data.type === 'workflow_step_completed') {
-            console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
+          } else if (data.type === 'workflow_step_started') {
+            const idx = (typeof data.step_index === 'number')
+              ? data.step_index
+              : ((typeof data.step_number === 'number') ? (data.step_number - 1) : undefined);
             setAutomationStatus('running');
-            setLastHeartbeatAt(Date.now());
+            touchHeartbeat();
             setCurrentCrewMember(2);
             setCrewMemberStatus(prev => ({
               ...prev,
               2: 'active'
             }));
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
+                type: 'workflow_step_started',
+                sessionId: currentSession,
+                step_index: typeof idx === 'number' ? idx : undefined,
+                step: data.step
+              });
+            }
+          } else if (data.type === 'workflow_step_completed') {
+            console.log('📡 WORKFLOW_STEP_COMPLETED event received:', { step_index: data.step_index, progress: data.progress });
+            setAutomationStatus('running');
+            touchHeartbeat();
+            setCurrentCrewMember(2);
+            setCrewMemberStatus(prev => ({
+              ...prev,
+              2: 'active'
+            }));
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'workflow_step_completed',
                 sessionId: currentSession,
                 step_index: data.step_index,
@@ -225,9 +280,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           } else if (data.type === 'workflow_step_failed') {
             console.warn('📡 WORKFLOW_STEP_FAILED event received:', { step_index: data.step_index, error: data.error });
             setAutomationStatus('error');
-            setLastHeartbeatAt(Date.now());
-            if (onAutomationResult) {
-              onAutomationResult({
+            touchHeartbeat();
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'workflow_step_failed',
                 sessionId: currentSession,
                 step_index: data.step_index,
@@ -238,8 +294,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           } else if (data.type === 'workflow_error') {
             console.warn('📡 WORKFLOW_ERROR event received:', { step_index: data.step_index, error: data.error });
             setAutomationStatus('error');
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'workflow_error',
                 sessionId: currentSession,
                 step_index: data.step_index,
@@ -250,8 +307,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
           } else if (data.type === 'error') {
             console.warn('📡 ERROR event received:', data?.message || data);
             setAutomationStatus('error');
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'error',
                 sessionId: currentSession,
                 message: data.message,
@@ -267,8 +325,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               2: 'completed',
               3: 'active'
             }));
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'quality_improvement_started',
                 sessionId: currentSession,
                 attempt: data.attempt,
@@ -282,8 +341,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               ...prev,
               3: 'active'
             }));
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'quality_improvement_completed',
                 sessionId: currentSession,
                 attempt: data.attempt
@@ -302,9 +362,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 setAutomationStatus(statusUnion);
               }
             }
-            setLastHeartbeatAt(Date.now());
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
+            touchHeartbeat();
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({ type: 'status_update', sessionId: currentSession, status: data.status, url: data.url });
             }
           } else if (data.type === 'workflow_status_update') {
             console.log('📡 WORKFLOW_STATUS_UPDATE event received:', { status: data.status, url: data.url });
@@ -319,9 +380,10 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 setAutomationStatus(statusUnion);
               }
             }
-            setLastHeartbeatAt(Date.now());
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'workflow_status_update', sessionId: currentSession, status: data.status, url: data.url });
+            touchHeartbeat();
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({ type: 'workflow_status_update', sessionId: currentSession, status: data.status, url: data.url });
             }
           } else if (data.type === 'session_update') {
             console.log('📡 SESSION_UPDATE event received:', data.session);
@@ -336,25 +398,27 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
                 }
               }
             }
-            setLastHeartbeatAt(Date.now());
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'session_update', session: data.session, sessionId: currentSession });
+            touchHeartbeat();
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({ type: 'session_update', session: data.session, sessionId: currentSession });
             }
           } else if (data.type === 'workflow_heartbeat') {
-            setLastHeartbeatAt(Date.now());
+            touchHeartbeat();
           } else if (data.type === 'connection_established') {
             console.log('📡 CONNECTION_ESTABLISHED event received');
-            setLastHeartbeatAt(Date.now());
+            touchHeartbeat();
             if (!currentSession && typeof data.sessionId === 'string') {
               setCurrentSession(data.sessionId);
             }
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'connection_established', sessionId: currentSession });
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({ type: 'connection_established', sessionId: currentSession });
             }
           } else if (data.type === 'keep_alive') {
             try { wsRef.current?.send(JSON.stringify({ type: 'keep_alive_response' })); } catch {}
           } else if (data.type === 'keep_alive_response' || data.type === 'pong') {
-            setLastHeartbeatAt(Date.now());
+            touchHeartbeat();
           } else if (data.type === 'automation_session_selected') {
             console.log('📡 AUTOMATION_SESSION_SELECTED event received:', data.sessionId);
             if (typeof data.sessionId === 'string' && data.sessionId !== currentSession) {
@@ -364,8 +428,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               setAutomationStatus('running');
             }
           } else if (data.type === 'action_started') {
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'action_started',
                 sessionId: currentSession,
                 actionId: data.actionId,
@@ -374,8 +439,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               });
             }
           } else if (data.type === 'action_completed') {
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'action_completed',
                 sessionId: currentSession,
                 actionId: data.actionId,
@@ -383,8 +449,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               });
             }
           } else if (data.type === 'action_failed') {
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'action_failed',
                 sessionId: currentSession,
                 actionId: data.actionId,
@@ -392,8 +459,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               });
             }
           } else if (data.type === 'screenshot_update') {
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'screenshot_update',
                 sessionId: currentSession,
                 screenshot: data.screenshot
@@ -423,18 +491,24 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
             setIsOpen(true);
             setIsAutomationActive(true);
             setAutomationStatus('running');
-            if (onAutomationResult) {
-              onAutomationResult({
-                type: 'session_started',
-                sessionId: data.sessionId,
-                visible: data.visible,
-                headless: data.headless
-              });
+            {
+              const cb = onAutomationResultRef.current;
+              const sid = (typeof data.sessionId === 'string' && data.sessionId) ? data.sessionId : null;
+              if (cb && sid && sessionStartedEmittedRef.current !== sid) {
+                sessionStartedEmittedRef.current = sid;
+                cb({
+                  type: 'session_started',
+                  sessionId: sid,
+                  visible: data.visible,
+                  headless: data.headless
+                });
+              }
             }
           } else if (data.type === 'display_limitation') {
             console.warn('📡 DISPLAY_LIMITATION event received:', data.message);
-            if (onAutomationResult) {
-              onAutomationResult({
+            {
+              const cb = onAutomationResultRef.current;
+              if (cb) cb({
                 type: 'display_limitation',
                 sessionId: currentSession,
                 message: data.message,
@@ -449,8 +523,9 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
               2: 'completed',
               3: 'completed'
             });
-            if (onAutomationResult) {
-              onAutomationResult({ type: 'workflow_completed', sessionId: currentSession, results: (data.results ?? data.result), score: data.score });
+            const cb = onAutomationResultRef.current;
+            if (cb) {
+              cb({ type: 'workflow_completed', sessionId: currentSession, results: (data.results ?? data.result), score: data.score });
               console.log('📡 onAutomationResult called for workflow_completed');
             }
             setIsAutomationActive(false);
@@ -484,11 +559,12 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
 
     return () => {
       stopped = true;
+      reconnectAttemptsRef.current = 0;
       if (reconnectTimerRef.current) { window.clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
       if (heartbeatRef.current) { window.clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
       if (wsRef.current) { try { wsRef.current.close(); } catch {} wsRef.current = null; }
     };
-  }, [currentSession, BACKEND_URL, HEARTBEAT_INTERVAL_SEC, workflowDispatched, onAutomationResult]);
+  }, [currentSession, BACKEND_URL, HEARTBEAT_INTERVAL_SEC]);
 
   useEffect(() => {
     setWorkflowDispatched(false);
@@ -588,15 +664,19 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
     }
   };
 
-  const startAutomation = async (url?: string) => {
+  const startAutomation = async (url?: string, explicitSessionId?: string) => {
     try {
       if (isStarting) return;
-      if (currentSession) return;
+      if (currentSession && !(typeof explicitSessionId === 'string' && explicitSessionId && explicitSessionId !== currentSession)) return;
       setIsStarting(true);
       console.log('🚀 WebAutomation start requested with URL:', url);
       console.log('🚀 BACKEND_URL:', BACKEND_URL);
       console.log('🚀 visibleMode:', visibleMode);
-      const sessionId = `session_${Date.now()}`;
+      const sessionId = (typeof explicitSessionId === 'string' && explicitSessionId)
+        ? explicitSessionId
+        : ((typeof sessionIdOverride === 'string' && sessionIdOverride)
+          ? sessionIdOverride
+          : `session_${Date.now()}`);
       console.log('🚀 Generated sessionId:', sessionId);
       setCurrentSession(sessionId);
       setIsAutomationActive(true);
@@ -656,26 +736,35 @@ export const WebAutomationIntegration: React.FC<WebAutomationIntegrationProps> =
       
       if (response.ok) {
         console.log('🚀 Backend automation session started successfully');
-        setCurrentSession(sessionId);
+        let resolvedSessionId = sessionId;
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed.sessionId === 'string' && parsed.sessionId) {
+            resolvedSessionId = parsed.sessionId;
+          }
+        } catch {}
+        setCurrentSession(resolvedSessionId);
         setIsAutomationActive(true);
         setAutomationStatus('running');
-        console.log('🚀 Local state updated:', { sessionId, isAutomationActive: true, status: 'running' });
+        console.log('🚀 Local state updated:', { sessionId: resolvedSessionId, isAutomationActive: true, status: 'running' });
         
         window.dispatchEvent(new CustomEvent('automation:session_start', {
-          detail: { sessionId, chatId }
+          detail: { sessionId: resolvedSessionId, chatId }
         }));
         
-        if (onAutomationResult) {
-          const resultPayload = {
-            type: 'session_started',
-            sessionId,
-            status: 'running',
-            chatId
-          };
-          console.log('🚀 Calling onAutomationResult with:', resultPayload);
-          onAutomationResult(resultPayload);
-        } else {
-          console.log('🚀 No onAutomationResult callback provided');
+        {
+          const cb = onAutomationResultRef.current;
+          if (cb && sessionStartedEmittedRef.current !== resolvedSessionId) {
+            sessionStartedEmittedRef.current = resolvedSessionId;
+            const resultPayload = {
+              type: 'session_started',
+              sessionId: resolvedSessionId,
+              status: 'running',
+              chatId
+            };
+            console.log('🚀 Calling onAutomationResult with:', resultPayload);
+            cb(resultPayload);
+          }
         }
       } else {
         console.error('🚀 WebAutomation start response not ok:', status, text);

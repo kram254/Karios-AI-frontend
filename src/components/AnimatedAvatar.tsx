@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 interface AnimatedAvatarProps {
   state: 'thinking' | 'searching' | 'browsing' | 'scraping' | 'processing' | 'idle';
   message: string;
+  size?: 'tiny' | 'small' | 'normal';
 }
 
 const eyeStates: Record<string, { left: string; right: string; focusIntensity: number; blinkPattern: number }> = {
@@ -14,7 +15,7 @@ const eyeStates: Record<string, { left: string; right: string; focusIntensity: n
   idle: { left: '●', right: '●', focusIntensity: 1, blinkPattern: 2.5 },
 };
 
-const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) => {
+const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state']; size?: 'tiny' | 'small' | 'normal' }> = ({ state, size = 'normal' }) => {
   const [animationOffset, setAnimationOffset] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
   const [progressPhase, setProgressPhase] = useState(0);
@@ -87,9 +88,17 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
 
   const displayEyeState = isBlinking ? { left: '━', right: '━' } : currentEyeState;
 
+  const sizeConfig = {
+    tiny: { container: 'w-3 h-3', sphere: 'w-2.5 h-2.5', eye: 'w-0.5 h-1', eyeGap: 'gap-0.5', fontSize: '4px', shadow: '2px' },
+    small: { container: 'w-8 h-8', sphere: 'w-6 h-6', eye: 'w-1.5 h-2', eyeGap: 'gap-1', fontSize: '6px', shadow: '3px' },
+    normal: { container: 'w-20 h-20', sphere: 'w-14 h-14', eye: 'w-3 h-4', eyeGap: 'gap-2', fontSize: '12px', shadow: '8px' }
+  };
+
+  const config = sizeConfig[size];
+
   return (
     <div 
-      className="relative w-20 h-20 flex items-center justify-center"
+      className={`relative ${config.container} flex items-center justify-center`}
       style={{ 
         transform: `
           scale(${pulseScale})
@@ -99,7 +108,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
         filter: `drop-shadow(0 4px 8px rgba(59, 130, 246, ${ringOpacity * 0.5}))`
       }}
     >
-      {state !== 'idle' && (
+      {false && (
         <div
           className="absolute inset-0 rounded-full border-2"
           style={{
@@ -113,7 +122,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
         />
       )}
 
-      {state !== 'idle' && (
+      {false && (
         <div
           className="absolute inset-1 rounded-full border-2"
           style={{
@@ -128,7 +137,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
       )}
       {/* Main sphere with enhanced 3D gradient */}
       <div 
-        className="w-14 h-14 rounded-full flex items-center justify-center relative overflow-hidden"
+        className={`${config.sphere} rounded-full flex items-center justify-center relative overflow-hidden`}
         style={{
           background: `
             radial-gradient(ellipse 45% 35% at ${50 + rotateY * 0.8}% ${35 - rotateX * 0.5}%, 
@@ -160,7 +169,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
       >
         {/* Eyes with enhanced dynamic positioning */}
         <div 
-          className="flex items-center justify-center gap-2"
+          className={`flex items-center justify-center ${config.eyeGap}`}
           style={{
             transform: `
               translateX(${eyeMoveX}px)
@@ -170,7 +179,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
         >
           {/* Left Eye */}
           <div 
-            className="w-3 h-4 bg-white rounded-full flex items-center justify-center transition-all duration-75"
+            className={`${config.eye} bg-white rounded-full flex items-center justify-center transition-all duration-75`}
             style={{ 
               boxShadow: `
                 0 ${2 + Math.sin(animationOffset * 3.1) * 0.5}px ${4 + Math.cos(animationOffset * 2.7) * 0.8}px rgba(0, 0, 0, 0.4),
@@ -185,7 +194,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
             <span 
               className="text-blue-600 font-bold leading-none"
               style={{ 
-                fontSize: '12px',
+                fontSize: config.fontSize,
                 fontFamily: 'ui-monospace, monospace',
                 transform: `scale(1)`
               }}
@@ -196,7 +205,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
           
           {/* Right Eye */}
           <div 
-            className="w-3 h-4 bg-white rounded-full flex items-center justify-center transition-all duration-75"
+            className={`${config.eye} bg-white rounded-full flex items-center justify-center transition-all duration-75`}
             style={{ 
               boxShadow: `
                 0 ${2 + Math.sin(animationOffset * 3.1 + 0.5) * 0.5}px ${4 + Math.cos(animationOffset * 2.7 + 0.5) * 0.8}px rgba(0, 0, 0, 0.4),
@@ -211,7 +220,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
             <span 
               className="text-blue-600 font-bold leading-none"
               style={{ 
-                fontSize: '12px',
+                fontSize: config.fontSize,
                 fontFamily: 'ui-monospace, monospace',
                 transform: `scale(1)`
               }}
@@ -290,7 +299,7 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
         }}
       />
 
-      {state !== 'idle' && (
+      {false && (
         <>
           <div
             className="absolute inset-0 rounded-full"
@@ -327,10 +336,10 @@ const Avatar2D: React.FC<{ state: AnimatedAvatarProps['state'] }> = ({ state }) 
   );
 };
 
-const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message }) => {
+const AnimatedAvatar: React.FC<AnimatedAvatarProps> = ({ state, message, size = 'normal' }) => {
   return (
     <div className="flex flex-col items-center">
-      <Avatar2D state={state} />
+      <Avatar2D state={state} size={size} />
       <div className="text-xs text-gray-400 mt-3 text-center max-w-40">
         {message}
       </div>

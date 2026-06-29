@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PhaseCard } from './PhaseCard';
 import { Maximize2, Minimize2, Move, Upload, Check, Plus, Settings, Trash2, Link2, Download, UploadCloud, RotateCcw, Copy, ZoomIn, ZoomOut, Grid, ShieldCheck, Play, Workflow, Layers, Eye } from 'lucide-react';
 import { TemplateSelector } from './workflow/TemplateSelector';
@@ -44,6 +44,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   const [currentExecution, setCurrentExecution] = useState<{ id: string; name: string } | null>(null);
   const [canvasBackground, setCanvasBackground] = useState<'grid' | 'dots' | 'plain'>('dots');
   const [showSettings, setShowSettings] = useState(false);
+  const debouncedUpdateRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (phases && phases.length > 0) {
@@ -66,7 +67,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           const centerY = (minY + maxY) / 2;
           const canvasWidth = canvasRef.current.clientWidth;
           const canvasHeight = canvasRef.current.clientHeight;
-          setPan({ x: canvasWidth / 2 - centerX - 160, y: canvasHeight / 2 - centerY - 100 });
+          setPan({ x: canvasWidth / 2 - centerX * 3 - 160, y: canvasHeight / 2 - centerY * 3 - 100 });
         }
       }, 100);
     }
@@ -81,7 +82,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     setDraggedItem(null);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -90,12 +91,20 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (nodeDraggedId !== null) {
       const wx = (x - pan.x) / zoom;
       const wy = (y - pan.y) / zoom;
-      setNodePositions(prev => ({
-        ...prev,
-        [nodeDraggedId]: { x: snapToGrid ? Math.round(wx / 20) * 20 : wx, y: snapToGrid ? Math.round(wy / 20) * 20 : wy }
-      }));
+      const newPos = { x: snapToGrid ? Math.round(wx / 20) * 20 : wx, y: snapToGrid ? Math.round(wy / 20) * 20 : wy };
+      
+      if (debouncedUpdateRef.current) {
+        clearTimeout(debouncedUpdateRef.current);
+      }
+      
+      debouncedUpdateRef.current = setTimeout(() => {
+        setNodePositions(prev => ({
+          ...prev,
+          [nodeDraggedId]: newPos
+        }));
+      }, 50);
     }
-  };
+  }, [nodeDraggedId, pan.x, pan.y, zoom, snapToGrid]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -191,10 +200,10 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     }
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning || !panStartRef.current) return;
     setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y });
-  };
+  }, [isPanning]);
 
   const handleCanvasMouseUp = () => {
     setIsPanning(false);
@@ -221,12 +230,18 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     };
     
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      } catch {}
       const response = await fetch(`${API_BASE_URL}/api/workflows/execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ workflowId: workflow.id, inputVariables: {} })
       });
-      const execution = await response.json();
+      const raw = await response.json();
+      const execution = (raw as any)?.execution || raw;
       setCurrentExecution({ id: execution.id, name: workflowName });
     } catch (error) {
       console.error('Failed to execute workflow:', error);
@@ -237,7 +252,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (e.ctrlKey) {
       e.preventDefault();
       const delta = -Math.sign(e.deltaY) * 0.1;
-      const next = Math.min(2, Math.max(0.5, zoom + delta));
+      const next = Math.min(3, Math.max(0.5, zoom + delta));
       setZoom(next);
     }
   };
@@ -329,7 +344,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     nodes.forEach((n, i) => { const col = i % 4; const row = Math.floor(i / 4); layout[n.id] = { x: 40 + col * 320, y: 40 + row * 260 }; });
     setNodePositions(layout);
     setPan({ x: 0, y: 0 });
-    setZoom(1);
+    setZoom(3);
   };
 
   const centerView = () => {
@@ -344,8 +359,8 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     const centerY = (minY + maxY) / 2;
     const canvasWidth = canvasRef.current?.clientWidth || 1000;
     const canvasHeight = canvasRef.current?.clientHeight || 600;
-    setPan({ x: canvasWidth / 2 - centerX, y: canvasHeight / 2 - centerY });
-    setZoom(1);
+    setPan({ x: canvasWidth / 2 - centerX * 3, y: canvasHeight / 2 - centerY * 3 });
+    setZoom(3);
   };
 
   const openEditor = (id: string) => {
@@ -417,7 +432,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 <input value={workflowName} onChange={e => setWorkflowName(e.target.value)} placeholder="Workflow name" className="px-3 py-2 rounded-md bg-gray-800 border border-gray-600 text-white placeholder-gray-400 text-sm focus:border-indigo-500 focus:outline-none" />
                 <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="px-2 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors"><ZoomOut className="w-4 h-4" /></button>
                 <span className="text-xs text-gray-400">{Math.round(zoom * 100)}%</span>
-                <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="px-2 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors"><ZoomIn className="w-4 h-4" /></button>
+                <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="px-2 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white transition-colors"><ZoomIn className="w-4 h-4" /></button>
                 <button onClick={() => setSnapToGrid(s => !s)} className={`px-3 py-2 rounded-md flex items-center gap-2 transition-colors ${snapToGrid ? 'bg-indigo-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-white'}`}><Grid className="w-4 h-4" />{snapToGrid ? 'Snap' : 'Free'}</button>
                 <button onClick={validateGraph} className="px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white flex items-center gap-2 transition-colors"><ShieldCheck className="w-4 h-4" />Validate</button>
               </div>
@@ -623,9 +638,9 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           onWheel={handleWheel}
           style={{
             backgroundImage: canvasBackground === 'dots' 
-              ? 'radial-gradient(circle, #374151 1.5px, transparent 1.5px)' 
+              ? 'radial-gradient(circle, #60a5fa 1.5px, transparent 1.5px)' 
               : canvasBackground === 'grid'
-              ? 'linear-gradient(#374151 1px, transparent 1px), linear-gradient(90deg, #374151 1px, transparent 1px)'
+              ? 'linear-gradient(#22c55e 1px, transparent 1px), linear-gradient(90deg, #22c55e 1px, transparent 1px)'
               : 'none',
             backgroundSize: canvasBackground === 'dots' ? '24px 24px' : canvasBackground === 'grid' ? '24px 24px' : 'auto',
             backgroundPosition: canvasBackground === 'plain' ? '0 0' : `${pan.x}px ${pan.y}px`

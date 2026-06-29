@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Button, Typography, Paper, Chip, LinearProgress } from '@mui/material';
+import React, { useRef, useState } from 'react';
+import { Box, Button, Typography, Paper, Chip, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { PlayArrow, Stop, Refresh } from '@mui/icons-material';
 
 interface WorkflowNode {
@@ -14,17 +14,57 @@ interface WorkflowNode {
 
 interface WorkflowAutomationBridgeProps {
   nodes: WorkflowNode[];
+  sessionId?: string;
+  isBrowserReady?: boolean;
   onExecute?: (steps: any[]) => void;
 }
 
 export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> = ({
   nodes,
+  sessionId,
+  isBrowserReady,
   onExecute
 }) => {
   const [converting, setConverting] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [automationSteps, setAutomationSteps] = useState<any[]>([]);
+  const [executeError, setExecuteError] = useState<string>('');
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const [approvalPayload, setApprovalPayload] = useState<any>(null);
+  const approvalResolverRef = useRef<((ok: boolean) => void) | null>(null);
+
+  const isHighRiskInstruction = (text: string) => {
+    const t = String(text || '').toLowerCase();
+    if (!t.trim()) return false;
+    return (
+      t.includes('purchase') ||
+      t.includes('buy') ||
+      t.includes('checkout') ||
+      t.includes('place order') ||
+      t.includes('send email') ||
+      t.includes('email ') ||
+      t.includes('delete') ||
+      t.includes('remove') ||
+      t.includes('unsubscribe')
+    );
+  };
+
+  const requestApproval = (payload: any) => {
+    return new Promise<boolean>((resolve) => {
+      approvalResolverRef.current = resolve;
+      setApprovalPayload(payload);
+      setApprovalOpen(true);
+    });
+  };
+
+  const resolveApproval = (ok: boolean) => {
+    setApprovalOpen(false);
+    const resolver = approvalResolverRef.current;
+    approvalResolverRef.current = null;
+    setApprovalPayload(null);
+    if (resolver) resolver(ok);
+  };
 
   const convertWorkflowToAutomation = () => {
     setConverting(true);
@@ -33,6 +73,61 @@ export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> =
       const { nodeType, config } = node.data;
       
       switch (nodeType) {
+        case 'start':
+        case 'end':
+        case 'note':
+        case 'guardrail':
+        case 'guardrails':
+          return null;
+        case 'approval':
+          return {
+            type: 'approval',
+            instruction: typeof (config as any)?.prompt === 'string' && String((config as any).prompt).trim()
+              ? String((config as any).prompt)
+              : (typeof node.data.label === 'string' && node.data.label.trim() ? node.data.label : 'Approval required'),
+            nodeId: node.id
+          };
+        case 'agent':
+          return {
+            type: 'act',
+            instruction: typeof config?.prompt === 'string' && config.prompt.trim() ? config.prompt : 'run agent step',
+            nodeId: node.id
+          };
+        case 'integration': {
+          const integration = typeof (config as any)?.integration === 'string' ? String((config as any).integration) : '';
+          const integrationAction = typeof (config as any)?.integrationAction === 'string' ? String((config as any).integrationAction) : '';
+          return {
+            type: 'act',
+            instruction: integration || integrationAction
+              ? `run integration ${integration}${integrationAction ? `:${integrationAction}` : ''}`
+              : 'run integration step',
+            nodeId: node.id
+          };
+        }
+        case 'mcp-tool':
+          return {
+            type: 'act',
+            instruction: typeof (config as any)?.tool === 'string' && String((config as any).tool).trim()
+              ? `use tool ${(config as any).tool}`
+              : 'run tool step',
+            nodeId: node.id
+          };
+        case 'transform':
+          return {
+            type: 'act',
+            instruction: typeof (config as any)?.code === 'string' && String((config as any).code).trim()
+              ? String((config as any).code)
+              : 'run transform step',
+            nodeId: node.id
+          };
+        case 'file-search':
+          return {
+            type: 'act',
+            instruction: typeof (config as any)?.searchQuery === 'string' && String((config as any).searchQuery).trim()
+              ? `search for ${(config as any).searchQuery}`
+              : 'run search step',
+            nodeId: node.id
+          };
         case 'action':
           return {
             type: 'act',
@@ -64,7 +159,7 @@ export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> =
             nodeId: node.id
           };
       }
-    });
+    }).filter(Boolean);
     
     setAutomationSteps(steps);
     setConverting(false);
@@ -72,33 +167,59 @@ export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> =
 
   const executeAutomation = async () => {
     if (!automationSteps.length) return;
+    setExecuteError('');
+    if (sessionId && !isBrowserReady) {
+      setExecuteError('Start the browser in Automation Studio before executing workflow steps');
+      return;
+    }
     
     setExecuting(true);
     setCurrentStep(0);
 
     try {
       const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:8000';
-      const sessionId = `workflow_${Date.now()}`;
+      const sid = sessionId || `workflow_${Date.now()}`;
 
-      await fetch(`${BACKEND_URL}/api/web-automation/initialize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: sessionId,
-          browser_type: 'chromium',
-          visible: true
-        })
-      });
+      if (!sessionId) {
+        await fetch(`${BACKEND_URL}/api/web-automation/initialize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: sid,
+            browser_type: 'chromium',
+            visible: true
+          })
+        });
+      }
 
       for (let i = 0; i < automationSteps.length; i++) {
         setCurrentStep(i + 1);
         const step = automationSteps[i];
 
+        if (step?.type === 'approval') {
+          const ok = await requestApproval({ kind: 'approval', stepIndex: i, step });
+          if (!ok) {
+            setExecuting(false);
+            setCurrentStep(0);
+            return;
+          }
+          continue;
+        }
+
+        if (typeof step?.instruction === 'string' && isHighRiskInstruction(step.instruction)) {
+          const ok = await requestApproval({ kind: 'risk', stepIndex: i, step });
+          if (!ok) {
+            setExecuting(false);
+            setCurrentStep(0);
+            return;
+          }
+        }
+
         const response = await fetch(`${BACKEND_URL}/api/web-automation/execute-action`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sessionId: sessionId,
+            sessionId: sid,
             action_type: step.type,
             instruction: step.instruction,
             mode: 'stagehand'
@@ -127,6 +248,12 @@ export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> =
   const stopExecution = () => {
     setExecuting(false);
     setCurrentStep(0);
+    if (approvalResolverRef.current) {
+      approvalResolverRef.current(false);
+      approvalResolverRef.current = null;
+    }
+    setApprovalOpen(false);
+    setApprovalPayload(null);
   };
 
   return (
@@ -151,6 +278,12 @@ export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> =
           sx={{ bgcolor: 'rgba(0, 243, 255, 0.2)', color: '#00F3FF', fontWeight: 600 }}
         />
       </Box>
+
+      {executeError && (
+        <Typography variant="body2" sx={{ color: '#f59e0b', mt: 2 }}>
+          {executeError}
+        </Typography>
+      )}
 
       {executing && (
         <Box sx={{ mb: 3 }}>
@@ -270,6 +403,43 @@ export const WorkflowAutomationBridge: React.FC<WorkflowAutomationBridgeProps> =
           </Box>
         </Box>
       )}
+      <Dialog
+        open={approvalOpen}
+        onClose={() => resolveApproval(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'rgba(10, 10, 10, 0.95)', color: 'white' }}>
+          {approvalPayload?.kind === 'approval' ? 'Approval required' : 'Confirm action'}
+        </DialogTitle>
+        <DialogContent sx={{ bgcolor: 'rgba(10, 10, 10, 0.95)', color: 'white' }}>
+          <Typography variant="body2" sx={{ color: '#A3A3A3', mb: 1 }}>
+            {approvalPayload?.kind === 'approval'
+              ? 'This workflow includes an approval step. Confirm to continue.'
+              : 'This instruction looks potentially risky. Confirm before continuing.'}
+          </Typography>
+          <Paper sx={{ p: 1.5, bgcolor: 'rgba(26, 26, 26, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '12px' }}>
+            <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 600, display: 'block', mb: 0.5 }}>
+              Step #{typeof approvalPayload?.stepIndex === 'number' ? approvalPayload.stepIndex + 1 : '-'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'white', whiteSpace: 'pre-wrap' }}>
+              {String(approvalPayload?.step?.instruction || '')}
+            </Typography>
+          </Paper>
+        </DialogContent>
+        <DialogActions sx={{ bgcolor: 'rgba(10, 10, 10, 0.95)' }}>
+          <Button onClick={() => resolveApproval(false)} sx={{ color: '#A3A3A3' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => resolveApproval(true)}
+            sx={{ background: 'linear-gradient(135deg, #00F3FF 0%, #0077FF 100%)', color: '#000', fontWeight: 700 }}
+          >
+            Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

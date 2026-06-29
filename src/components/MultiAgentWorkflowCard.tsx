@@ -219,14 +219,13 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
             <Brain className="w-5 h-5 text-[#00F3FF]" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Multi-Agent Workflow</h3>
-            <p className="text-sm text-gray-400">Task ID: {taskId}</p>
+            <h3 className="text-lg font-semibold text-white">Task Progress</h3>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 px-2 py-1 bg-[#2A2A2A] rounded-full">
+          {false && <span className="text-xs text-gray-400 px-2 py-1 bg-[#2A2A2A] rounded-full">
             {workflowStage}
-          </span>
+          </span>}
           {expanded ? (
             <ChevronUp className="w-5 h-5 text-gray-400" />
           ) : (
@@ -291,15 +290,15 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
               <li key={`plan-step-${step.step_number || index}`}
                   className="bg-[#111c3a] border border-[#00F3FF]/10 rounded-lg p-3">
                 <div className="text-white font-medium text-sm mb-1">{step.action || step.description || `Step ${step.step_number || index + 1}`}</div>
-                <div className="text-xs text-gray-400">Tool: {step.tool_name || 'Unassigned'}</div>
+                {false && <div className="text-xs text-gray-400">Tool: {step.tool_name || 'Unassigned'}</div>}
                 {step.expected_output && (
                   <div className="text-xs text-gray-400 mt-1">Expected: {step.expected_output}</div>
                 )}
-                {Array.isArray(step.parameters) ? step.parameters.length > 0 && (
+                {false && (Array.isArray(step.parameters) ? step.parameters.length > 0 && (
                   <div className="text-xs text-gray-500 mt-1">Parameters: {step.parameters.join(', ')}</div>
                 ) : step.parameters && (
                   <div className="text-xs text-gray-500 mt-1">Parameters: {JSON.stringify(step.parameters)}</div>
-                )}
+                ))}
               </li>
             ))}
           </ol>
@@ -381,18 +380,18 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-white font-medium text-sm">
-                        {update.agent_type.replace('_', ' ')}
-                        {update.step_id && (
+                        {({'PROMPT_REFINER': 'Understanding request', 'PLANNER': 'Creating plan', 'TASK_EXECUTOR': 'Executing tasks', 'REVIEWER': 'Reviewing results', 'FORMATTER': 'Preparing output'} as Record<string, string>)[update.agent_type] || update.agent_type.replace('_', ' ')}
+                        {false && update.step_id && (
                           <span className="text-xs text-gray-400 ml-2">
                             (Step: {update.step_id})
                           </span>
                         )}
                       </span>
-                      {getStatusIcon(update.status)}
+                      {false && getStatusIcon(update.status)}
                     </div>
                     <p className="text-gray-300 text-sm">{update.message}</p>
                   </div>
-                  {update.timestamp && (
+                  {false && update.timestamp && (
                     <span className="text-xs text-gray-500">
                       {new Date(update.timestamp).toLocaleTimeString()}
                     </span>
@@ -400,7 +399,7 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
                 </div>
                 
                 {/* Show additional data if available */}
-                {update.data && Object.keys(update.data).length > 0 && (
+                {false && update.data && Object.keys(update.data).length > 0 && (
                   <div className="mt-2 p-2 bg-[#1A1A1A]/50 rounded text-xs text-gray-400">
                     <details>
                       <summary className="cursor-pointer hover:text-gray-300">
@@ -418,7 +417,7 @@ const MultiAgentWorkflowCard: React.FC<MultiAgentWorkflowCardProps> = ({
             {agentUpdates.length === 0 && (
               <div className="text-center py-8">
                 <Loader2 className="w-8 h-8 text-[#00F3FF] animate-spin mx-auto mb-2" />
-                <p className="text-gray-400 text-sm">Initializing workflow...</p>
+                <p className="text-gray-400 text-sm">Getting started...</p>
               </div>
             )}
           </motion.div>

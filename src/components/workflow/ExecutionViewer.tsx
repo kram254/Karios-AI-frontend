@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, Square, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
+const API_BASE_URL = String((import.meta as any).env?.VITE_BACKEND_URL || '').replace(/\/$/, '');
+const apiUrl = (path: string) => (API_BASE_URL ? `${API_BASE_URL}${path}` : path);
+
 interface ExecutionViewerProps {
   executionId: string;
   workflowName: string;
@@ -28,12 +31,18 @@ export const ExecutionViewer: React.FC<ExecutionViewerProps> = ({
   useEffect(() => {
     const fetchExecution = async () => {
       try {
-        const response = await fetch(`/api/workflows/executions/${executionId}`);
-        const data = await response.json();
+        const headers: Record<string, string> = {};
+        try {
+          const token = localStorage.getItem('token');
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+        } catch {}
+        const response = await fetch(apiUrl(`/api/workflows/executions/${executionId}`), { headers });
+        const raw = await response.json();
+        const data = (raw as any)?.execution || raw;
         setExecution(data);
-        setNodeResults(data.nodeResults || {});
+        setNodeResults((data as any).nodeResults || {});
         
-        if (data.status === 'completed' || data.status === 'failed') {
+        if ((data as any).status === 'completed' || (data as any).status === 'failed') {
           setIsPolling(false);
         }
       } catch (error) {

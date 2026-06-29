@@ -3,6 +3,7 @@ import { workflowStateSyncService } from './workflowStateSync.service';
 import { chatIsolationService } from './chatIsolation.service';
 import { websocketStateManager } from './websocketStateManager.service';
 import { stateRecoveryService } from './stateRecovery.service';
+import { artifactManager } from './artifactManager.service';
 
 type StateEventType = 
   | 'chat:switch'
@@ -12,7 +13,10 @@ type StateEventType =
   | 'workflow:complete'
   | 'workflow:error'
   | 'state:corrupted'
-  | 'state:recovered';
+  | 'state:recovered'
+  | 'artifact:expand'
+  | 'artifact:collapse'
+  | 'artifact:switch';
 
 interface StateEvent {
   type: StateEventType;
@@ -198,13 +202,19 @@ class GlobalStateCoordinator {
     workflows: any;
     websockets: any;
     storage: any;
+    artifacts: any;
   } {
     return {
       coordinator: 'operational',
       isolation: chatIsolationService.getStats(),
       workflows: workflowStateSyncService.getStatsSummary(),
       websockets: websocketStateManager.getStats(),
-      storage: stateManager.getStorageStats()
+      storage: stateManager.getStorageStats(),
+      artifacts: {
+        activeChatId: artifactManager.getActiveChatId(),
+        activeArtifact: artifactManager.getActiveArtifact()?.id || null,
+        layoutMode: artifactManager.getState().layoutMode
+      }
     };
   }
 

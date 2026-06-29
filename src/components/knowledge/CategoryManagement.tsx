@@ -1,27 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Box,
-    Paper,
-    Typography,
-    Button,
-    TextField,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    IconButton,
-    Grid,
-    Chip,
-    Tooltip,
-    Alert,
-    CircularProgress
-} from '@mui/material';
-import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
     Folder as FolderIcon,
-    Description as DescriptionIcon
+    Description as DescriptionIcon,
+    Close as CloseIcon,
+    Check as CheckIcon,
+    Warning as WarningIcon,
+    Search as SearchIcon
 } from '@mui/icons-material';
 import { categoryService } from '../../services/api/category.service';
 import { Category } from '../../types/knowledge';
@@ -44,6 +31,8 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
     const [formData, setFormData] = useState({ name: '', description: '' });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
     useEffect(() => {
         fetchCategories();
@@ -53,35 +42,27 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
         setLoading(true);
         try {
             const response = await categoryService.getCategories();
-            console.log('Fetched categories:', response.data);
-            
-            // Make sure we have the complete data with knowledge items
+
             if (response.data && response.data.length > 0) {
                 const categoriesWithItems = await Promise.all(response.data.map(async (category) => {
                     try {
-                        // Get detailed category data with knowledge items
                         const detailedResponse = await categoryService.getCategoryById(category.id);
-                        console.log(`Detailed category ${category.id}:`, detailedResponse.data);
-                        
-                        // If the detailed response doesn't have knowledge_items, try the specialized endpoint
+
                         if (!detailedResponse.data.knowledge_items || detailedResponse.data.knowledge_items.length === 0) {
                             const itemsResponse = await categoryService.getKnowledgeItemsByCategory(category.id);
-                            console.log(`Items for category ${category.id}:`, itemsResponse.data);
-                            
-                            // Merge the items with the category
+
                             return {
                                 ...detailedResponse.data,
                                 knowledge_items: itemsResponse.data || [],
                             };
                         }
-                        
+
                         return detailedResponse.data;
                     } catch (err) {
-                        console.error(`Failed to fetch detailed data for category ${category.id}:`, err);
                         return category;
                     }
                 }));
-                
+
                 setCategories(categoriesWithItems);
                 if (categoriesWithItems.length > 0 && !selectedCategory) {
                     setSelectedCategory(categoriesWithItems[0]);
@@ -90,7 +71,6 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                 setCategories([]);
             }
         } catch (err) {
-            console.error('Failed to fetch categories:', err);
             setError('Failed to load categories. Please try again.');
         } finally {
             setLoading(false);
@@ -100,10 +80,10 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
     const handleOpenDialog = (category?: Category) => {
         if (category) {
             setFormData({ name: category.name, description: category.description });
-            setSelectedCategory(category);
+            setEditingCategory(category);
         } else {
             setFormData({ name: '', description: '' });
-            setSelectedCategory(null);
+            setEditingCategory(null);
         }
         setIsDialogOpen(true);
     };
@@ -111,15 +91,17 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
     const handleCloseDialog = () => {
         setIsDialogOpen(false);
         setError(null);
+        setEditingCategory(null);
     };
 
     const handleOpenDeleteDialog = (category: Category) => {
-        setSelectedCategory(category);
+        setEditingCategory(category);
         setIsDeleteDialogOpen(true);
     };
 
     const handleCloseDeleteDialog = () => {
         setIsDeleteDialogOpen(false);
+        setEditingCategory(null);
     };
 
     const handleSelectCategory = (category: Category) => {
@@ -138,28 +120,27 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
         setLoading(true);
         setError(null);
         try {
-            if (selectedCategory) {
-                // Update existing category
-                await categoryService.updateCategory(selectedCategory.id, {
+            if (editingCategory) {
+                await categoryService.updateCategory(editingCategory.id, {
                     name: formData.name.trim(),
                     description: formData.description.trim()
                 });
+                setSuccess('Category updated successfully!');
             } else {
-                // Create new category
                 await categoryService.createCategory({
                     name: formData.name.trim(),
                     description: formData.description.trim()
                 });
+                setSuccess('Category created successfully!');
             }
-            
-            // Refresh categories list
+
             await fetchCategories();
             setIsDialogOpen(false);
+            setEditingCategory(null);
             if (onCategoryCreated) {
                 await onCategoryCreated();
             }
         } catch (error) {
-            console.error('Failed to save category:', error);
             setError('Failed to save category. Please try again.');
         } finally {
             setLoading(false);
@@ -167,28 +148,25 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
     };
 
     const handleDeleteCategory = async () => {
-        if (!selectedCategory) return;
+        if (!editingCategory) return;
 
-        const deletedCategoryId = selectedCategory.id;
+        const deletedCategoryId = editingCategory.id;
         setLoading(true);
         setError(null);
         try {
             await categoryService.deleteCategory(deletedCategoryId);
             setSuccess('Category deleted successfully!');
             handleCloseDeleteDialog();
-            
-            // Completely refetch categories instead of filtering locally
+
             const response = await categoryService.getCategories();
             const freshCategories = response.data || [];
             setCategories(freshCategories);
-            
-            // Reset selection properly
+
             setSelectedCategory(null);
             if (onCategorySelect) {
                 onCategorySelect(null);
             }
-            
-            // Only select a new category if there are any left
+
             if (freshCategories.length > 0) {
                 const newCategory = freshCategories[0];
                 setTimeout(() => {
@@ -199,7 +177,6 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
                 }, 300);
             }
         } catch (error) {
-            console.error('Failed to delete category:', error);
             setError('Failed to delete category. Please try again.');
             handleCloseDeleteDialog();
         } finally {
@@ -207,355 +184,224 @@ export const CategoryManagement: React.FC<CategoryManagementProps> = ({
         }
     };
 
+    const filteredCategories = categories.filter(cat =>
+        cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
-        <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6">
+        <div className="km-container">
+            <div className="km-header">
+                <h2 className="km-title">
+                    <FolderIcon className="km-title-icon" />
                     Knowledge Categories
-                </Typography>
-                <Button 
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog()}
-                    sx={{ 
-                        bgcolor: '#00F3FF',
-                        color: '#000000',
-                        '&:hover': {
-                            bgcolor: '#00D6E0',
-                        }
-                    }}
-                >
+                </h2>
+                <button className="km-add-btn" onClick={() => handleOpenDialog()}>
+                    <AddIcon />
                     Add Category
-                </Button>
-            </Box>
+                </button>
+            </div>
 
             {error && (
-                <Alert 
-                    severity="error" 
-                    sx={{ mb: 2 }}
-                    onClose={() => setError(null)}
-                >
+                <div className="km-alert km-alert-error">
+                    <WarningIcon />
                     {error}
-                </Alert>
+                    <button className="km-alert-close" onClick={() => setError(null)}>
+                        <CloseIcon fontSize="small" />
+                    </button>
+                </div>
             )}
 
             {success && (
-                <Alert 
-                    severity="success" 
-                    sx={{ mb: 2 }}
-                    onClose={() => setSuccess(null)}
-                >
+                <div className="km-alert km-alert-success">
+                    <CheckIcon />
                     {success}
-                </Alert>
+                    <button className="km-alert-close" onClick={() => setSuccess(null)}>
+                        <CloseIcon fontSize="small" />
+                    </button>
+                </div>
+            )}
+
+            {categories.length > 0 && (
+                <div className="km-search-container">
+                    <input
+                        type="text"
+                        className="km-search-input"
+                        placeholder="Search categories..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <SearchIcon className="km-search-icon" />
+                </div>
             )}
 
             {loading && categories.length === 0 ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                    <CircularProgress sx={{ color: '#00F3FF' }} />
-                </Box>
+                <div className="km-loading">
+                    <div className="km-loading-spinner"></div>
+                    <span className="km-loading-text">Loading categories...</span>
+                </div>
             ) : categories.length === 0 ? (
-                <Box sx={{ 
-                    p: 4, 
-                    textAlign: 'center',
-                    border: '1px dashed rgba(255, 255, 255, 0.2)',
-                    borderRadius: 2,
-                    bgcolor: 'rgba(0, 0, 0, 0.2)'
-                }}>
-                    <FolderIcon sx={{ fontSize: 48, color: 'rgba(255, 255, 255, 0.3)', mb: 2 }} />
-                    <Typography variant="h6">No Categories</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Create your first category to organize your knowledge base
-                    </Typography>
-                    <Button 
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        onClick={() => handleOpenDialog()}
-                        sx={{ 
-                            borderColor: '#00F3FF',
-                            color: '#00F3FF',
-                            '&:hover': {
-                                borderColor: '#00D6E0',
-                                bgcolor: 'rgba(0, 243, 255, 0.1)',
-                            }
-                        }}
-                    >
+                <div className="km-empty-state">
+                    <div className="km-empty-icon">
+                        <FolderIcon />
+                    </div>
+                    <h3 className="km-empty-title">No Categories Yet</h3>
+                    <p className="km-empty-text">
+                        Create your first category to organize your knowledge base and power your AI agents
+                    </p>
+                    <button className="km-empty-btn" onClick={() => handleOpenDialog()}>
+                        <AddIcon />
                         Add First Category
-                    </Button>
-                </Box>
+                    </button>
+                </div>
             ) : (
-                <Grid container spacing={2}>
-                    {categories.map(category => (
-                        <Grid item xs={12} sm={6} md={4} key={category.id}>
-                            <Paper 
-                                sx={{ 
-                                    p: 2, 
-                                    position: 'relative',
-                                    bgcolor: '#1A1A1A',
-                                    color: '#FFFFFF',
-                                    border: selectedCategory?.id === category.id 
-                                        ? '1px solid #00F3FF' 
-                                        : '1px solid rgba(255, 255, 255, 0.1)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    '&:hover': {
-                                        borderColor: '#00F3FF',
-                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-                                    }
-                                }}
-                                onClick={() => handleSelectCategory(category)}
-                            >
-                                <Box sx={{ 
-                                    position: 'absolute', 
-                                    top: 12, 
-                                    right: 12,
-                                    display: 'flex',
-                                    gap: 1
-                                }}>
-                                    <IconButton 
-                                        size="small" 
+                <div className="km-categories-grid">
+                    {filteredCategories.map(category => (
+                        <div
+                            key={category.id}
+                            className={`km-category-card ${selectedCategory?.id === category.id ? 'selected' : ''}`}
+                            onClick={() => handleSelectCategory(category)}
+                        >
+                            <div className="km-card-header">
+                                <div className="km-card-icon">
+                                    <FolderIcon />
+                                </div>
+                                <div className="km-card-actions">
+                                    <button
+                                        className="km-action-btn edit"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleOpenDialog(category);
                                         }}
-                                        sx={{ 
-                                            color: '#00F3FF',
-                                            bgcolor: 'rgba(0, 0, 0, 0.2)',
-                                            '&:hover': {
-                                                bgcolor: 'rgba(0, 0, 0, 0.3)',
-                                            }
-                                        }}
                                     >
                                         <EditIcon fontSize="small" />
-                                    </IconButton>
-                                    <IconButton 
-                                        size="small"
+                                    </button>
+                                    <button
+                                        className="km-action-btn delete"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleOpenDeleteDialog(category);
                                         }}
-                                        sx={{ 
-                                            color: '#f44336',
-                                            bgcolor: 'rgba(0, 0, 0, 0.2)',
-                                            '&:hover': {
-                                                bgcolor: 'rgba(0, 0, 0, 0.3)',
-                                            }
-                                        }}
                                     >
                                         <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                </Box>
+                                    </button>
+                                </div>
+                                {selectedCategory?.id === category.id && (
+                                    <div className="km-card-check">
+                                        <CheckIcon fontSize="small" />
+                                    </div>
+                                )}
+                            </div>
 
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2, mt: 1 }}>
-                                    <FolderIcon sx={{ color: '#00F3FF', mr: 1, fontSize: 32 }} />
-                                    <Box>
-                                        <Typography variant="h6" sx={{ 
-                                            mb: 0.5, 
-                                            pr: 6, 
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 1,
-                                            WebkitBoxOrient: 'vertical'
-                                        }}>
-                                            {category.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ 
-                                            mb: 1,
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            height: '40px'
-                                        }}>
-                                            {category.description || 'No description'}
-                                        </Typography>
-                                    </Box>
-                                </Box>
+                            <h3 className="km-card-title">{category.name}</h3>
+                            <p className="km-card-description">
+                                {category.description || 'No description provided'}
+                            </p>
 
-                                <Box sx={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                                    pt: 1.5,
-                                    mt: 1.5
-                                }}>
-                                    <Chip 
-                                        label={(() => {
-                                            // Calculate count with detailed logging for debugging
-                                            const itemCount = category.knowledge_items?.length || 0;
-                                            console.log(`Category ${category.name} knowledge_items:`, category.knowledge_items);
-                                            console.log(`Category ${category.name} item count:`, itemCount);
-                                            return `${itemCount} Items`;
-                                        })()} 
-                                        size="small"
-                                        sx={{ 
-                                            bgcolor: 'rgba(0, 243, 255, 0.1)',
-                                            color: '#00F3FF',
-                                            borderRadius: '4px'
-                                        }}
-                                    />
-                                    <Typography variant="caption" color="text.secondary">
-                                        Created {new Date(category.created_at).toLocaleDateString()}
-                                    </Typography>
-                                </Box>
-                            </Paper>
-                        </Grid>
+                            <div className="km-card-footer">
+                                <div className="km-item-count">
+                                    <DescriptionIcon fontSize="small" />
+                                    {category.knowledge_items?.length || 0} Items
+                                </div>
+                                <span className="km-date">
+                                    {new Date(category.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
                     ))}
-                </Grid>
+                </div>
             )}
 
-            {/* Create/Edit Dialog */}
-            <Dialog 
-                open={isDialogOpen} 
-                onClose={handleCloseDialog}
-                PaperProps={{
-                    sx: { bgcolor: '#1A1A1A', color: '#FFFFFF' }
-                }}
-            >
-                <DialogTitle>
-                    {selectedCategory ? 'Edit Category' : 'Create New Category'}
-                </DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        id="name"
-                        name="name"
-                        label="Category Name"
-                        type="text"
-                        fullWidth
-                        variant="outlined"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                        InputLabelProps={{
-                            sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                        }}
-                        InputProps={{
-                            sx: { 
-                                color: '#FFFFFF',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.5)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#00F3FF'
-                                }
-                            }
-                        }}
-                        sx={{ mb: 2 }}
-                    />
-                    <TextField
-                        margin="dense"
-                        id="description"
-                        name="description"
-                        label="Description"
-                        type="text"
-                        fullWidth
-                        variant="outlined"
-                        multiline
-                        rows={4}
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        InputLabelProps={{
-                            sx: { color: 'rgba(255, 255, 255, 0.7)' }
-                        }}
-                        InputProps={{
-                            sx: { 
-                                color: '#FFFFFF',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.23)'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255, 255, 255, 0.5)'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#00F3FF'
-                                }
-                            }
-                        }}
-                    />
-                    {error && (
-                        <Alert severity="error" sx={{ mt: 2 }}>
-                            {error}
-                        </Alert>
-                    )}
-                </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button 
-                        onClick={handleCloseDialog}
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={handleCreateCategory}
-                        variant="contained"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-                        sx={{ 
-                            bgcolor: '#00F3FF',
-                            color: '#000000',
-                            '&:hover': {
-                                bgcolor: '#00D6E0',
-                            },
-                            '&.Mui-disabled': {
-                                bgcolor: 'rgba(0, 243, 255, 0.3)'
-                            }
-                        }}
-                    >
-                        {selectedCategory ? 'Update' : 'Create'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {isDialogOpen && (
+                <div className="km-dialog-overlay" onClick={handleCloseDialog}>
+                    <div className="km-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="km-dialog-header">
+                            <h3 className="km-dialog-title">
+                                {editingCategory ? 'Edit Category' : 'Create New Category'}
+                            </h3>
+                            <button className="km-dialog-close" onClick={handleCloseDialog}>
+                                <CloseIcon />
+                            </button>
+                        </div>
+                        <div className="km-dialog-content">
+                            {error && (
+                                <div className="km-alert km-alert-error">
+                                    <WarningIcon />
+                                    {error}
+                                </div>
+                            )}
+                            <div className="km-form-group">
+                                <label className="km-form-label">Category Name *</label>
+                                <input
+                                    type="text"
+                                    className="km-form-input"
+                                    placeholder="Enter category name..."
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="km-form-group">
+                                <label className="km-form-label">Description</label>
+                                <textarea
+                                    className="km-form-textarea"
+                                    placeholder="Enter category description..."
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="km-dialog-footer">
+                            <button className="km-btn km-btn-cancel" onClick={handleCloseDialog}>
+                                Cancel
+                            </button>
+                            <button
+                                className="km-btn km-btn-primary"
+                                onClick={handleCreateCategory}
+                                disabled={loading}
+                            >
+                                {loading ? 'Saving...' : (editingCategory ? 'Update' : 'Create')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog 
-                open={isDeleteDialogOpen} 
-                onClose={handleCloseDeleteDialog}
-                PaperProps={{
-                    sx: { bgcolor: '#1A1A1A', color: '#FFFFFF' }
-                }}
-            >
-                <DialogTitle>
-                    Delete Category
-                </DialogTitle>
-                <DialogContent>
-                    <Typography variant="body1">
-                        Are you sure you want to delete the category <strong>{selectedCategory?.name}</strong>?
-                    </Typography>
-                    <Typography variant="body2" color="error" sx={{ mt: 2 }}>
-                        This will also delete all knowledge items in this category. This action cannot be undone.
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button 
-                        onClick={handleCloseDeleteDialog}
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={handleDeleteCategory}
-                        variant="contained"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-                        sx={{ 
-                            bgcolor: '#f44336',
-                            color: '#FFFFFF',
-                            '&:hover': {
-                                bgcolor: '#e53935',
-                            }
-                        }}
-                    >
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+            {isDeleteDialogOpen && (
+                <div className="km-dialog-overlay" onClick={handleCloseDeleteDialog}>
+                    <div className="km-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="km-dialog-header">
+                            <h3 className="km-dialog-title">Delete Category</h3>
+                            <button className="km-dialog-close" onClick={handleCloseDeleteDialog}>
+                                <CloseIcon />
+                            </button>
+                        </div>
+                        <div className="km-dialog-content">
+                            <p style={{ color: '#FFFFFF', margin: 0 }}>
+                                Are you sure you want to delete <strong>{editingCategory?.name}</strong>?
+                            </p>
+                            <div className="km-delete-warning">
+                                <WarningIcon className="km-delete-warning-icon" />
+                                <p className="km-delete-warning-text">
+                                    This will permanently delete all knowledge items in this category. This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="km-dialog-footer">
+                            <button className="km-btn km-btn-cancel" onClick={handleCloseDeleteDialog}>
+                                Cancel
+                            </button>
+                            <button
+                                className="km-btn km-btn-danger"
+                                onClick={handleDeleteCategory}
+                                disabled={loading}
+                            >
+                                {loading ? 'Deleting...' : 'Delete Category'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };

@@ -23,6 +23,63 @@ interface UnifiedSkill {
     originalData: Skill | AgentSkill;
 }
 
+const PREINSTALLED_CATALOG = [
+    { slug: 'pdf', name: 'PDF Toolkit', icon: '📕', category: 'Documents & Office', description: 'Read, extract text & tables, merge, split, rotate, watermark, fill forms, and OCR scanned PDFs.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'docx', name: 'Word Documents', icon: '📘', category: 'Documents & Office', description: 'Create and edit Word docs with formatting, tracked changes, and comments.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'xlsx', name: 'Spreadsheets', icon: '📊', category: 'Documents & Office', description: 'Build and edit Excel workbooks: formulas, pivot tables, charts, and data transforms.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'pptx', name: 'Presentations', icon: '📑', category: 'Documents & Office', description: 'Generate and edit slide decks, layouts, and templates from scratch.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'doc-converter', name: 'Document Converter', icon: '🔄', category: 'Documents & Office', description: 'Convert between Markdown, HTML, DOCX, PDF, and EPUB (Pandoc-based).', defaultEnabled: true, needsCredentials: false },
+    { slug: 'data-cleaner', name: 'CSV / Data Cleaner', icon: '🧹', category: 'Data & Analysis', description: 'Clean, dedupe, normalize, type-infer, and reshape messy CSV / Excel data.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'data-viz', name: 'Chart & Data Visualizer', icon: '📈', category: 'Data & Analysis', description: 'Turn datasets into bar, line, pie, and heatmap charts as PNG/SVG.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'sql-assistant', name: 'SQL Assistant', icon: '🗄️', category: 'Data & Analysis', description: 'Write, explain, and optimize SQL queries; design and review schemas.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'doc-extractor', name: 'Document Data Extractor', icon: '🧾', category: 'Data & Analysis', description: 'Pull structured fields from invoices, receipts, forms, and statements into JSON.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'web-research', name: 'Deep Web Research', icon: '🔎', category: 'Research & Web', description: 'Multi-source research with synthesized, cited answers across the open web.', defaultEnabled: true, needsCredentials: true },
+    { slug: 'web-scraper', name: 'Web Scraper', icon: '🕸️', category: 'Research & Web', description: 'Reliable scraping and clean content extraction from any URL.', defaultEnabled: false, needsCredentials: true },
+    { slug: 'video-summarizer', name: 'Video / YouTube Summarizer', icon: '🎬', category: 'Research & Web', description: 'Fetch a transcript and produce a summary, chapters, and key takeaways.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'readability', name: 'Article to Clean Markdown', icon: '📰', category: 'Research & Web', description: 'Strip a web article down to clean, readable Markdown — no ads or nav.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'email-composer', name: 'Email Composer', icon: '✉️', category: 'Communication & Productivity', description: 'Draft professional emails with tone control, replies, and follow-ups.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'meeting-notes', name: 'Meeting Notes to Actions', icon: '📝', category: 'Communication & Productivity', description: 'Turn transcripts and notes into decisions, action items, and owners.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'summarizer', name: 'Smart Summarizer', icon: '🧠', category: 'Communication & Productivity', description: 'Condense long text, threads, or docs into a TL;DR, bullets, or a brief.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'scheduler', name: 'Calendar & Scheduling', icon: '📅', category: 'Communication & Productivity', description: 'Parse availability, propose meeting times, and draft calendar invites (ICS).', defaultEnabled: false, needsCredentials: false },
+    { slug: 'internal-comms', name: 'Internal Comms', icon: '📣', category: 'Communication & Productivity', description: 'Status reports, newsletters, announcements, and FAQs in your house voice.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'proofreader', name: 'Proofreader & Style Editor', icon: '✅', category: 'Writing & Content', description: 'Grammar, spelling, clarity, and tone edits — with explanations.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'seo-optimizer', name: 'SEO Content Optimizer', icon: '🔍', category: 'Writing & Content', description: 'On-page SEO audit, keyword & meta suggestions, and content scoring.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'translator', name: 'Translator', icon: '🌐', category: 'Writing & Content', description: 'Translate across languages with tone and glossary control.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'resume-tailor', name: 'Resume & Cover Letter Tailor', icon: '📄', category: 'Writing & Content', description: 'Tailor a resume or cover letter to a specific job description.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'image-editor', name: 'Image Editor', icon: '🖼️', category: 'Design & Media', description: 'Background removal, resize, crop, format convert, watermark, and compress.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'canvas-design', name: 'Social Graphics / Canvas', icon: '🎨', category: 'Design & Media', description: 'Create social posts, posters, and visual assets as PNG / PDF.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'gif-creator', name: 'GIF Creator', icon: '🎞️', category: 'Design & Media', description: 'Build animated GIFs optimized for chat and social platforms.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'advanced-image-techniques', name: 'Advanced Image Techniques', icon: '🪄', category: 'Design & Media', description: 'Professional Gemini image patterns: style transfer, product placement, background replacement, batch variations.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'hyperframes', name: 'HyperFrames Video', icon: '🎞️', category: 'Motion & Video', description: 'Author HTML video compositions and render them to MP4 — summaries, social hooks, animated data viz, title cards.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'video-prompting', name: 'Cinematic Video Prompting', icon: '🎥', category: 'Motion & Video', description: 'Cinematic techniques and professional patterns for Veo 3.1 video generation — camera moves, composition, lighting.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'gsap', name: 'GSAP Animation', icon: '💫', category: 'Motion & Video', description: 'GSAP animation patterns for HyperFrames compositions: animated text, transitions, easing, and timeline-driven motion.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'website-to-hyperframes', name: 'Website to Video', icon: '🖥️', category: 'Motion & Video', description: 'Convert a webpage, blog post, or article into a HyperFrames video composition.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'remotion-to-hyperframes', name: 'Remotion to HyperFrames', icon: '⚛️', category: 'Motion & Video', description: 'Migrate a Remotion composition (React) to HyperFrames (HTML).', defaultEnabled: false, needsCredentials: false },
+    { slug: 'video-continuation-patterns', name: 'Video Continuation', icon: '⏭️', category: 'Motion & Video', description: 'Extend and continue AI-generated videos via native extension or frame extraction; chain clips into sequences.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'hyperframes-registry', name: 'HyperFrames Registry', icon: '🗃️', category: 'Motion & Video', description: 'Browse the HyperFrames composition registry for reusable templates: intros, lower-thirds, end cards, social hooks.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'hyperframes-cli', name: 'HyperFrames CLI', icon: '⌨️', category: 'Motion & Video', description: 'Reference for the HyperFrames CLI (init, preview, render) and its flags — output format, fps, duration, headless.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'code-reviewer', name: 'Code Reviewer & Simplifier', icon: '🧑‍💻', category: 'Developer & Automation', description: 'Review, refactor, and simplify code without changing behavior.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'git-helper', name: 'Git & PR Helper', icon: '🌿', category: 'Developer & Automation', description: 'Branching, commits, worktrees, and clean PR descriptions & workflows.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'webapp-testing', name: 'Web App Tester', icon: '🧪', category: 'Developer & Automation', description: 'Automated browser tests of a local or remote app via Playwright.', defaultEnabled: false, needsCredentials: false },
+    { slug: 'github-push', name: 'GitHub Push', icon: '⬆️', category: 'Developer & Automation', description: 'Clone private repos and push commits directly over authenticated HTTPS using a stored PAT.', defaultEnabled: false, needsCredentials: true },
+    { slug: 'planner', name: 'Task & Project Planner', icon: '🗂️', category: 'Meta & Personal', description: 'Persistent multi-step planning with files that survive context resets.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'skill-creator', name: 'Skill Creator', icon: '✨', category: 'Meta & Personal', description: 'Interactively scaffolds a new, valid SKILL.md skill from a description or docs URL.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'context-builder', name: 'Context Builder', icon: '🧩', category: 'Meta & Personal', description: 'Reads connected integrations (Slack, Notion, Linear, Calendar, GitHub) and builds structured memories about your projects, teammates, and org.', defaultEnabled: true, needsCredentials: false },
+    { slug: 'connection-setup-wizard', name: 'Connection Setup Wizard', icon: '🔌', category: 'Meta & Personal', description: 'Interactive wizard to configure data-warehouse & integration connections (Databricks, Snowflake, BigQuery, Postgres) with test & save.', defaultEnabled: true, needsCredentials: false },
+];
+
+const PREINSTALLED_CATEGORIES = [
+    'Documents & Office',
+    'Data & Analysis',
+    'Research & Web',
+    'Communication & Productivity',
+    'Writing & Content',
+    'Design & Media',
+    'Motion & Video',
+    'Developer & Automation',
+    'Meta & Personal',
+];
+
 export default function SkillLibrary() {
     const [skills, setSkills] = useState<Skill[]>([]);
     const [installedSkills, setInstalledSkills] = useState<AgentSkill[]>([]);
@@ -42,11 +99,17 @@ export default function SkillLibrary() {
     const [definitionRaw, setDefinitionRaw] = useState('{}');
     const [categoryInput, setCategoryInput] = useState('general');
     const [contentInput, setContentInput] = useState('');
+    const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
 
     const selectedSkill = useMemo(() => {
         if (!selectedId) return null;
         return skills.find(s => String(s.id) === String(selectedId)) || null;
     }, [skills, selectedId]);
+
+    const filteredPreinstalled = useMemo(() => {
+        if (!activeCategoryFilter) return PREINSTALLED_CATALOG;
+        return PREINSTALLED_CATALOG.filter(s => s.category === activeCategoryFilter);
+    }, [activeCategoryFilter]);
 
     const reloadLibrarySkills = async () => {
         try {
@@ -121,6 +184,28 @@ export default function SkillLibrary() {
             await reloadInstalledSkills();
         } catch (error) {
             toast.error('Failed to install skill');
+        }
+    };
+
+    const handlePreinstalledToggle = async (slug: string, displayName: string, description: string, category: string) => {
+        const existing = installedSkills.find(s => s.name === slug);
+        try {
+            if (existing) {
+                await agentSkillsService.toggleSkill(existing.id, !existing.enabled);
+                toast.success(`${displayName} ${!existing.enabled ? 'enabled' : 'disabled'}`);
+            } else {
+                await agentSkillsService.installSkill({
+                    name: slug,
+                    description,
+                    category: category.split(' & ')[0].toLowerCase().replace(/\s/g, '-'),
+                    content: description,
+                    metadata: { preinstalled: true, displayName, displayCategory: category },
+                });
+                toast.success(`${displayName} installed`);
+            }
+            await reloadInstalledSkills();
+        } catch {
+            toast.error('Failed to update skill');
         }
     };
 
@@ -249,6 +334,15 @@ export default function SkillLibrary() {
         api: 'rgba(34, 197, 94, 0.3)',
         testing: 'rgba(234, 179, 8, 0.3)',
         role: 'rgba(0, 243, 255, 0.3)',
+        'Documents & Office': 'rgba(0, 243, 255, 0.3)',
+        'Data & Analysis': 'rgba(139, 92, 246, 0.3)',
+        'Research & Web': 'rgba(255, 0, 184, 0.3)',
+        'Communication & Productivity': 'rgba(16, 185, 129, 0.3)',
+        'Writing & Content': 'rgba(245, 158, 11, 0.3)',
+        'Design & Media': 'rgba(236, 72, 153, 0.3)',
+        'Motion & Video': 'rgba(249, 115, 22, 0.3)',
+        'Developer & Automation': 'rgba(59, 130, 246, 0.3)',
+        'Meta & Personal': 'rgba(20, 184, 166, 0.3)',
     };
 
     return (
@@ -309,6 +403,73 @@ export default function SkillLibrary() {
                         )}
                     </Box>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: '65vh', overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(0, 243, 255, 0.3)', borderRadius: '8px', '&:hover': { background: 'rgba(0, 243, 255, 0.5)' } } }}>
+                        {activeTab === 'library' && (
+                            <>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography sx={{ color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Pre-installed Skills</Typography>
+                                    <Typography sx={{ color: '#888', fontSize: 11 }}>
+                                        {filteredPreinstalled.filter(s => installedSkills.find(i => i.name === s.slug)?.enabled).length}/{PREINSTALLED_CATALOG.length} active
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+                                    <Chip
+                                        label="All"
+                                        size="small"
+                                        onClick={() => setActiveCategoryFilter(null)}
+                                        sx={{ height: 20, fontSize: 10, cursor: 'pointer', bgcolor: !activeCategoryFilter ? 'rgba(0,243,255,0.15)' : 'rgba(255,255,255,0.06)', color: !activeCategoryFilter ? '#00F3FF' : '#888', border: !activeCategoryFilter ? '1px solid rgba(0,243,255,0.4)' : '1px solid transparent' }}
+                                    />
+                                    {PREINSTALLED_CATEGORIES.map(cat => (
+                                        <Chip
+                                            key={cat}
+                                            label={cat.split(' & ')[0]}
+                                            size="small"
+                                            onClick={() => setActiveCategoryFilter(activeCategoryFilter === cat ? null : cat)}
+                                            sx={{ height: 20, fontSize: 10, cursor: 'pointer', bgcolor: activeCategoryFilter === cat ? 'rgba(0,243,255,0.15)' : 'rgba(255,255,255,0.06)', color: activeCategoryFilter === cat ? '#00F3FF' : '#888', border: activeCategoryFilter === cat ? '1px solid rgba(0,243,255,0.4)' : '1px solid transparent' }}
+                                        />
+                                    ))}
+                                </Box>
+                                {filteredPreinstalled.map(skill => {
+                                    const installed = installedSkills.find(s => s.name === skill.slug);
+                                    const isOn = installed?.enabled ?? false;
+                                    return (
+                                        <Box
+                                            key={skill.slug}
+                                            sx={{
+                                                p: 1.5,
+                                                borderRadius: 1.5,
+                                                border: isOn ? '1px solid rgba(0,243,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                                                bgcolor: isOn ? 'rgba(0,243,255,0.04)' : 'rgba(0,0,0,0.25)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'flex-start',
+                                                gap: 1,
+                                            }}
+                                        >
+                                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                                                    <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{skill.icon} {skill.name}</Typography>
+                                                    <Chip label={skill.category.split(' & ')[0]} size="small" sx={{ height: 18, fontSize: 9, bgcolor: categoryColors[skill.category] || categoryColors.general, color: '#fff' }} />
+                                                    {skill.needsCredentials && <Chip label="Needs key" size="small" sx={{ height: 18, fontSize: 9, bgcolor: 'rgba(245,158,11,0.25)', color: '#F59E0B' }} />}
+                                                    {isOn && <Chip label="Active" size="small" sx={{ height: 18, fontSize: 9, bgcolor: 'rgba(34,197,94,0.3)', color: '#22C55E' }} />}
+                                                </Box>
+                                                <Typography sx={{ color: '#A0A7B5', fontSize: 11, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{skill.description}</Typography>
+                                            </Box>
+                                            <Switch
+                                                size="small"
+                                                checked={isOn}
+                                                onChange={() => handlePreinstalledToggle(skill.slug, skill.name, skill.description, skill.category)}
+                                                sx={{ flexShrink: 0, '& .MuiSwitch-switchBase.Mui-checked': { color: '#00F3FF' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: 'rgba(0,243,255,0.4)' } }}
+                                            />
+                                        </Box>
+                                    );
+                                })}
+                                {skills.length > 0 && (
+                                    <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.06)', pt: 1, mt: 0.5 }}>
+                                        <Typography sx={{ color: '#888', fontSize: 11, mb: 0.5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Library Skills</Typography>
+                                    </Box>
+                                )}
+                            </>
+                        )}
                         {activeTab === 'library' && skills.map((s) => (
                             <Box
                                 key={s.id}

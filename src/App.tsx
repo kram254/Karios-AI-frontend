@@ -51,6 +51,7 @@ const AgentAnalyticsDashboard = lazy(() => import('./pages/AgentAnalyticsDashboa
 const AutonomousTasksPage  = lazy(() => import('./pages/AutonomousTasksPage'));
 const ToolManagementPanel  = lazy(() => import('./components/tools/ToolManagementPanel'));
 const AgentSkillsManager   = lazy(() => import('./components/AgentSkillsManager').then(m => ({ default: m.AgentSkillsManager })));
+const SkillsGallery        = lazy(() => import('./components/skills/SkillLibrary'));
 const UserProfile          = lazy(() => import('./pages/UserProfile').then(m => ({ default: m.UserProfile })));
 const UserManagement       = lazy(() => import('./pages/UserManagement').then(m => ({ default: m.UserManagement })));
 const Pricing              = lazy(() => import('./pages/Pricing'));
@@ -240,7 +241,7 @@ function App() {
 
                         {/* Knowledge / Skills / Tools */}
                         <Route path="/knowledge"          element={<KnowledgeManagement />} />
-                        <Route path="/skills"             element={<AgentSkillsManager />} />
+                        <Route path="/skills"             element={<SkillsGallery />} />
                         <Route path="/tools"              element={<ToolManagementPanel />} />
 
                         {/* Dashboards */}

@@ -336,6 +336,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!isCollapsed && <span className={getNavLabelClass(isActive('/knowledge'))}>Knowledge</span>}
         </button>
 
+        {/* Skills */}
+        <button
+          onClick={() => navigate('/skills')}
+          className={getNavItemClass(isActive('/skills'))}
+          title="Skills"
+        >
+          <Zap {...navIconProps} className={getNavIconClass(isActive('/skills'))} />
+          {!isCollapsed && <span className={getNavLabelClass(isActive('/skills'))}>Skills</span>}
+        </button>
+
         {/* Library */}
         <button
           onClick={() => navigate('/library')}

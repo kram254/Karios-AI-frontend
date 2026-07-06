@@ -80,6 +80,18 @@ const PREINSTALLED_CATEGORIES = [
     'Meta & Personal',
 ];
 
+const SKILL_CATS: Record<string, { ic: string; color: string; tint: string }> = {
+    'Documents & Office':           { ic: '📄', color: '#00F3FF', tint: 'rgba(0,243,255,0.12)' },
+    'Data & Analysis':              { ic: '📊', color: '#8B5CF6', tint: 'rgba(139,92,246,0.14)' },
+    'Research & Web':               { ic: '🔎', color: '#FF00B8', tint: 'rgba(255,0,184,0.12)' },
+    'Communication & Productivity': { ic: '✉️', color: '#10B981', tint: 'rgba(16,185,129,0.13)' },
+    'Writing & Content':            { ic: '✍️', color: '#F59E0B', tint: 'rgba(245,158,11,0.13)' },
+    'Design & Media':               { ic: '🎨', color: '#EC4899', tint: 'rgba(236,72,153,0.13)' },
+    'Motion & Video':               { ic: '🎬', color: '#F97316', tint: 'rgba(249,115,22,0.13)' },
+    'Developer & Automation':       { ic: '⚙️', color: '#3B82F6', tint: 'rgba(59,130,246,0.13)' },
+    'Meta & Personal':              { ic: '✨', color: '#14B8A6', tint: 'rgba(20,184,166,0.13)' },
+};
+
 export default function SkillLibrary() {
     const [skills, setSkills] = useState<Skill[]>([]);
     const [installedSkills, setInstalledSkills] = useState<AgentSkill[]>([]);
@@ -100,6 +112,9 @@ export default function SkillLibrary() {
     const [categoryInput, setCategoryInput] = useState('general');
     const [contentInput, setContentInput] = useState('');
     const [activeCategoryFilter, setActiveCategoryFilter] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [enabledOnly, setEnabledOnly] = useState(false);
+    const [sheetSkill, setSheetSkill] = useState<typeof PREINSTALLED_CATALOG[0] | null>(null);
 
     const selectedSkill = useMemo(() => {
         if (!selectedId) return null;
@@ -345,471 +360,386 @@ export default function SkillLibrary() {
         'Meta & Personal': 'rgba(20, 184, 166, 0.3)',
     };
 
+    const enabledCount = installedSkills.filter(s => s.enabled).length;
+
     return (
-        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, width: '100%', maxWidth: '1400px', mx: 'auto' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+        <Box sx={{ p: { xs: 2, sm: 3 }, width: '100%', maxWidth: '1400px', mx: 'auto', overflowY: 'auto', height: '100%' }}>
+
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', mb: 2.5 }}>
                 <Box>
-                    <Typography variant="h5" sx={{ color: 'white', mb: 0.5 }}>Skill Library</Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>Create reusable prompt/tool/policy bundles and apply them to agents or workflow nodes.</Typography>
+                    <Typography sx={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Skills</Typography>
+                    <Typography sx={{ fontSize: 13.5, color: 'rgba(255,255,255,0.38)', mt: 0.75, maxWidth: 560, lineHeight: 1.5 }}>
+                        {PREINSTALLED_CATALOG.length} pre-installed skills give your agents real capabilities. Flip a switch to enable one — or import your own.
+                    </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Tooltip title={showInternal ? 'Hide internal skills' : 'Show internal skills'}>
-                        <IconButton onClick={() => setShowInternal(!showInternal)} sx={{ color: showInternal ? '#00F3FF' : '#888' }}>
-                            {showInternal ? <Eye size={18} /> : <EyeOff size={18} />}
-                        </IconButton>
-                    </Tooltip>
-                    <Button 
-                        variant="outlined" 
-                        onClick={handleSync} 
+                    <Button
+                        variant="outlined"
+                        onClick={handleSync}
                         disabled={syncing}
-                        startIcon={syncing ? <CircularProgress size={16} /> : <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />}
-                        sx={{ borderColor: 'rgba(59,130,246,0.5)', color: '#3B82F6' }}
+                        startIcon={syncing ? <CircularProgress size={14} /> : <RefreshCw size={15} />}
+                        sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)', '&:hover': { borderColor: 'rgba(0,243,255,0.3)', color: '#fff' } }}
                     >
-                        Sync Skills
+                        Sync
                     </Button>
-                    <Button 
-                        variant="contained" 
-                        onClick={() => setInstallDialogOpen(true)} 
-                        startIcon={<Plug size={16} />}
-                        sx={{ bgcolor: '#22C55E', color: '#000', '&:hover': { bgcolor: '#16A34A' } }}
+                    <Button
+                        variant="outlined"
+                        onClick={openCreate}
+                        startIcon={<Plus size={15} />}
+                        sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)', '&:hover': { borderColor: 'rgba(0,243,255,0.3)', color: '#fff' } }}
                     >
-                        Install Skill
+                        New Skill
                     </Button>
-                    <Button variant="contained" onClick={openCreate} sx={{ bgcolor: '#00F3FF', color: '#000', '&:hover': { bgcolor: '#00D1DD' } }}>New Skill</Button>
-                    <Button variant="outlined" onClick={reload} disabled={loading} sx={{ borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}>Refresh</Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => setInstallDialogOpen(true)}
+                        startIcon={<Plus size={16} />}
+                        sx={{ bgcolor: '#00F3FF', color: '#000', fontWeight: 600, boxShadow: '0 0 16px rgba(0,243,255,0.35)', '&:hover': { bgcolor: '#00D1DD', boxShadow: '0 0 28px rgba(0,243,255,0.45)' } }}
+                    >
+                        Import Skill
+                    </Button>
                 </Box>
             </Box>
 
-            <Tabs 
-                value={activeTab} 
-                onChange={(_, v) => { setActiveTab(v); setSelectedId(null); }}
-                sx={{ mb: 2, '& .MuiTab-root': { color: '#888' }, '& .Mui-selected': { color: '#00F3FF' }, '& .MuiTabs-indicator': { bgcolor: '#00F3FF' } }}
-            >
-                <Tab value="library" label={`Library Skills (${skills.length})`} />
-                <Tab value="installed" label={`Installed Skills (${installedSkills.length})`} />
-            </Tabs>
+            <Box sx={{ height: 1, bgcolor: 'rgba(255,255,255,0.06)', mb: 2.5 }} />
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '420px 1fr' }, gap: 2 }}>
-                <Paper sx={{ bgcolor: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: '16px', p: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'white' }}>
-                            {activeTab === 'library' ? 'Library Skills' : 'Installed Skills'}
-                        </Typography>
-                        {activeTab === 'library' && selectedSkill && (
-                            <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                <Button size="small" onClick={openEdit} sx={{ color: '#00F3FF', fontSize: 12 }}>Edit</Button>
-                                <Button size="small" onClick={remove} sx={{ color: '#ef4444', fontSize: 12 }}>Delete</Button>
-                            </Box>
-                        )}
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 3 }}>
+                {[
+                    { n: PREINSTALLED_CATALOG.length, l: 'Skills' },
+                    { n: enabledCount, l: 'Enabled', accent: true },
+                    { n: PREINSTALLED_CATEGORIES.length, l: 'Categories' },
+                    { n: skills.length, l: 'Library' },
+                ].map(stat => (
+                    <Box key={stat.l} sx={{ bgcolor: '#0F1012', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', p: '12px 16px', minWidth: 110 }}>
+                        <Typography sx={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: stat.accent ? '#00F3FF' : '#fff' }}>{stat.n}</Typography>
+                        <Typography sx={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.07em', mt: 0.25 }}>{stat.l}</Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: '65vh', overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(0, 243, 255, 0.3)', borderRadius: '8px', '&:hover': { background: 'rgba(0, 243, 255, 0.5)' } } }}>
-                        {activeTab === 'library' && (
-                            <>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                    <Typography sx={{ color: '#fff', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Pre-installed Skills</Typography>
-                                    <Typography sx={{ color: '#888', fontSize: 11 }}>
-                                        {filteredPreinstalled.filter(s => installedSkills.find(i => i.name === s.slug)?.enabled).length}/{PREINSTALLED_CATALOG.length} active
-                                    </Typography>
+                ))}
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2.5 }}>
+                <Box sx={{ flex: 1, minWidth: 220, position: 'relative' }}>
+                    <Box sx={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.38)', pointerEvents: 'none', display: 'flex', zIndex: 1 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    </Box>
+                    <Box
+                        component="input"
+                        value={searchQuery}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                        placeholder="Search skills — try 'pdf', 'email', 'translate'…"
+                        sx={{
+                            width: '100%', bgcolor: '#0F1012', border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '12px', color: '#fff', fontSize: 13.5, pl: '38px', pr: 1.75, py: 1.25,
+                            outline: 'none', fontFamily: 'inherit', transition: 'all 0.2s',
+                            '&::placeholder': { color: 'rgba(255,255,255,0.38)' },
+                            '&:focus': { borderColor: 'rgba(0,243,255,0.5)', boxShadow: 'inset 0 0 0 1px rgba(0,243,255,0.3)' },
+                        }}
+                    />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                    <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)' }}>Enabled only</Typography>
+                    <Box
+                        component="button"
+                        onClick={() => setEnabledOnly(!enabledOnly)}
+                        sx={{
+                            width: 40, height: 22, borderRadius: 999, border: 'none', flexShrink: 0, cursor: 'pointer',
+                            bgcolor: enabledOnly ? '#00F3FF' : 'rgba(255,255,255,0.12)',
+                            boxShadow: enabledOnly ? '0 0 16px rgba(0,243,255,0.35)' : 'none',
+                            position: 'relative', transition: 'all 0.2s', p: 0,
+                        }}
+                    >
+                        <Box sx={{
+                            position: 'absolute', top: 3, left: enabledOnly ? 21 : 3,
+                            width: 16, height: 16, borderRadius: '50%',
+                            bgcolor: enabledOnly ? '#001317' : '#fff',
+                            transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        }} />
+                    </Box>
+                </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 0.875, flexWrap: 'wrap', mb: 3.25 }}>
+                <Box
+                    component="button"
+                    onClick={() => setActiveCategoryFilter(null)}
+                    sx={{
+                        fontSize: 12, px: 1.625, py: 0.875, borderRadius: 999, border: '1px solid',
+                        borderColor: !activeCategoryFilter ? 'rgba(0,243,255,0.45)' : 'rgba(255,255,255,0.08)',
+                        color: !activeCategoryFilter ? '#00F3FF' : 'rgba(255,255,255,0.65)',
+                        bgcolor: !activeCategoryFilter ? 'rgba(0,243,255,0.1)' : '#0F1012',
+                        cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s', fontFamily: 'inherit',
+                        '&:hover': { borderColor: 'rgba(0,243,255,0.25)', color: '#fff' },
+                    }}
+                >
+                    All
+                </Box>
+                {PREINSTALLED_CATEGORIES.map(cat => {
+                    const meta = SKILL_CATS[cat];
+                    const count = PREINSTALLED_CATALOG.filter(s => s.category === cat).length;
+                    const isActive = activeCategoryFilter === cat;
+                    return (
+                        <Box
+                            key={cat}
+                            component="button"
+                            onClick={() => setActiveCategoryFilter(isActive ? null : cat)}
+                            sx={{
+                                fontSize: 12, px: 1.625, py: 0.875, borderRadius: 999, border: '1px solid',
+                                borderColor: isActive ? 'rgba(0,243,255,0.45)' : 'rgba(255,255,255,0.08)',
+                                color: isActive ? '#00F3FF' : 'rgba(255,255,255,0.65)',
+                                bgcolor: isActive ? 'rgba(0,243,255,0.1)' : '#0F1012',
+                                cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s', fontFamily: 'inherit',
+                                '&:hover': { borderColor: 'rgba(0,243,255,0.25)', color: '#fff' },
+                            }}
+                        >
+                            {meta?.ic} {cat} <Box component="span" sx={{ opacity: 0.6 }}>{count}</Box>
+                        </Box>
+                    );
+                })}
+            </Box>
+
+            {PREINSTALLED_CATEGORIES
+                .filter(cat => !activeCategoryFilter || cat === activeCategoryFilter)
+                .map(cat => {
+                    const meta = SKILL_CATS[cat];
+                    const catSkills = PREINSTALLED_CATALOG.filter(s => s.category === cat).filter(s => {
+                        if (enabledOnly) {
+                            const inst = installedSkills.find(i => i.name === s.slug);
+                            if (!inst?.enabled) return false;
+                        }
+                        if (searchQuery) {
+                            const q = searchQuery.toLowerCase();
+                            return (s.name + s.slug + s.description + s.category).toLowerCase().includes(q);
+                        }
+                        return true;
+                    });
+                    if (catSkills.length === 0) return null;
+                    const activeCount = catSkills.filter(s => installedSkills.find(i => i.name === s.slug)?.enabled).length;
+                    return (
+                        <Box key={cat} sx={{ mb: 4 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.375, mb: 1.75 }}>
+                                <Box sx={{ width: 30, height: 30, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, bgcolor: meta?.tint }}>
+                                    {meta?.ic}
                                 </Box>
-                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
-                                    <Chip
-                                        label="All"
-                                        size="small"
-                                        onClick={() => setActiveCategoryFilter(null)}
-                                        sx={{ height: 20, fontSize: 10, cursor: 'pointer', bgcolor: !activeCategoryFilter ? 'rgba(0,243,255,0.15)' : 'rgba(255,255,255,0.06)', color: !activeCategoryFilter ? '#00F3FF' : '#888', border: !activeCategoryFilter ? '1px solid rgba(0,243,255,0.4)' : '1px solid transparent' }}
-                                    />
-                                    {PREINSTALLED_CATEGORIES.map(cat => (
-                                        <Chip
-                                            key={cat}
-                                            label={cat.split(' & ')[0]}
-                                            size="small"
-                                            onClick={() => setActiveCategoryFilter(activeCategoryFilter === cat ? null : cat)}
-                                            sx={{ height: 20, fontSize: 10, cursor: 'pointer', bgcolor: activeCategoryFilter === cat ? 'rgba(0,243,255,0.15)' : 'rgba(255,255,255,0.06)', color: activeCategoryFilter === cat ? '#00F3FF' : '#888', border: activeCategoryFilter === cat ? '1px solid rgba(0,243,255,0.4)' : '1px solid transparent' }}
-                                        />
-                                    ))}
+                                <Typography sx={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>{cat}</Typography>
+                                <Box sx={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', bgcolor: 'rgba(255,255,255,0.06)', px: 1, py: 0.25, borderRadius: 999, fontVariantNumeric: 'tabular-nums' }}>
+                                    {activeCount}/{catSkills.length} on
                                 </Box>
-                                {filteredPreinstalled.map(skill => {
-                                    const installed = installedSkills.find(s => s.name === skill.slug);
+                                <Box sx={{ flex: 1, height: 1, bgcolor: 'rgba(255,255,255,0.06)' }} />
+                            </Box>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 1.75 }}>
+                                {catSkills.map(skill => {
+                                    const installed = installedSkills.find(i => i.name === skill.slug);
                                     const isOn = installed?.enabled ?? false;
+                                    const srcStyle = skill.source === 'official'
+                                        ? { bg: 'rgba(0,243,255,0.1)', color: '#00F3FF', border: 'rgba(0,243,255,0.22)' }
+                                        : skill.source === 'community'
+                                            ? { bg: 'rgba(139,92,246,0.12)', color: '#b79bff', border: 'rgba(139,92,246,0.25)' }
+                                            : { bg: 'rgba(255,0,184,0.1)', color: '#ff7ad6', border: 'rgba(255,0,184,0.25)' };
+                                    const srcLabel = skill.source === 'official' ? 'Official' : skill.source === 'community' ? 'Community' : 'Karios';
                                     return (
                                         <Box
                                             key={skill.slug}
                                             sx={{
-                                                p: 1.5,
-                                                borderRadius: 1.5,
-                                                border: isOn ? '1px solid rgba(0,243,255,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                                                bgcolor: isOn ? 'rgba(0,243,255,0.04)' : 'rgba(0,0,0,0.25)',
+                                                bgcolor: '#0F1012',
+                                                border: '1px solid',
+                                                borderColor: isOn ? 'rgba(0,243,255,0.35)' : 'rgba(255,255,255,0.07)',
+                                                borderRadius: '16px',
+                                                p: 2,
                                                 display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'flex-start',
-                                                gap: 1,
+                                                flexDirection: 'column',
+                                                gap: 1.5,
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                                transition: 'all 0.2s',
+                                                '&:hover': { borderColor: 'rgba(0,243,255,0.25)', transform: 'translateY(-2px)', boxShadow: '0 0 28px rgba(0,243,255,0.1)' },
+                                                ...(isOn && { boxShadow: 'inset 0 0 0 1px rgba(0,243,255,0.16)' }),
                                             }}
                                         >
-                                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                                                    <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{skill.icon} {skill.name}</Typography>
-                                                    <Chip label={skill.category.split(' & ')[0]} size="small" sx={{ height: 18, fontSize: 9, bgcolor: categoryColors[skill.category] || categoryColors.general, color: '#fff' }} />
-                                                    {skill.needsCredentials && <Chip label="Needs key" size="small" sx={{ height: 18, fontSize: 9, bgcolor: 'rgba(245,158,11,0.25)', color: '#F59E0B' }} />}
-                                                    {isOn && <Chip label="Active" size="small" sx={{ height: 18, fontSize: 9, bgcolor: 'rgba(34,197,94,0.3)', color: '#22C55E' }} />}
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                                <Box sx={{
+                                                    width: 40, height: 40, borderRadius: '11px', display: 'flex',
+                                                    alignItems: 'center', justifyContent: 'center', fontSize: 19,
+                                                    flexShrink: 0, bgcolor: meta?.tint,
+                                                    border: '1px solid', borderColor: (meta?.color || '#fff') + '33',
+                                                }}>
+                                                    {skill.icon}
                                                 </Box>
-                                                <Typography sx={{ color: '#A0A7B5', fontSize: 11, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{skill.description}</Typography>
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                    <Typography
+                                                        onClick={() => setSheetSkill(skill)}
+                                                        sx={{ fontSize: 14.5, fontWeight: 600, color: '#fff', lineHeight: 1.2, cursor: 'pointer', '&:hover': { color: '#00F3FF' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                                    >
+                                                        {skill.name}
+                                                    </Typography>
+                                                    <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(255,255,255,0.38)', mt: 0.375 }}>{skill.slug}</Typography>
+                                                </Box>
+                                                <Box
+                                                    component="button"
+                                                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); handlePreinstalledToggle(skill.slug, skill.name, skill.description, skill.category); }}
+                                                    sx={{
+                                                        width: 40, height: 22, borderRadius: 999, border: 'none', flexShrink: 0, cursor: 'pointer',
+                                                        bgcolor: isOn ? '#00F3FF' : 'rgba(255,255,255,0.12)',
+                                                        boxShadow: isOn ? '0 0 16px rgba(0,243,255,0.35)' : 'none',
+                                                        position: 'relative', transition: 'all 0.2s', p: 0,
+                                                    }}
+                                                >
+                                                    <Box sx={{
+                                                        position: 'absolute', top: 3, left: isOn ? 21 : 3,
+                                                        width: 16, height: 16, borderRadius: '50%',
+                                                        bgcolor: isOn ? '#001317' : '#fff',
+                                                        transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                    }} />
+                                                </Box>
                                             </Box>
-                                            <Switch
-                                                size="small"
-                                                checked={isOn}
-                                                onChange={() => handlePreinstalledToggle(skill.slug, skill.name, skill.description, skill.category)}
-                                                sx={{ flexShrink: 0, '& .MuiSwitch-switchBase.Mui-checked': { color: '#00F3FF' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: 'rgba(0,243,255,0.4)' } }}
-                                            />
+                                            <Typography sx={{ fontSize: 12.7, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 38 }}>
+                                                {skill.description}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mt: 'auto' }}>
+                                                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid', borderColor: (meta?.color || '#fff') + '40', color: meta?.color, bgcolor: meta?.tint, lineHeight: 1.3 }}>
+                                                    {meta?.ic} {cat.split(' ')[0]}
+                                                </Box>
+                                                <Box component="span" sx={{ display: 'inline-flex', fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid', borderColor: srcStyle.border, color: srcStyle.color, bgcolor: srcStyle.bg, lineHeight: 1.3 }}>
+                                                    {srcLabel}
+                                                </Box>
+                                                {isOn && (
+                                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid rgba(16,185,129,0.22)', color: '#10B981', bgcolor: 'rgba(16,185,129,0.1)', lineHeight: 1.3 }}>
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg> Active
+                                                    </Box>
+                                                )}
+                                                {skill.needsCredentials && (
+                                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B', bgcolor: 'rgba(245,158,11,0.1)', lineHeight: 1.3, ml: 'auto' }}>
+                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg> Needs key
+                                                    </Box>
+                                                )}
+                                            </Box>
                                         </Box>
                                     );
                                 })}
-                                {skills.length > 0 && (
-                                    <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.06)', pt: 1, mt: 0.5 }}>
-                                        <Typography sx={{ color: '#888', fontSize: 11, mb: 0.5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Library Skills</Typography>
-                                    </Box>
-                                )}
-                            </>
-                        )}
-                        {activeTab === 'library' && skills.map((s) => (
-                            <Box
-                                key={s.id}
-                                onClick={() => setSelectedId(String(s.id))}
-                                sx={{
-                                    p: 1.5,
-                                    borderRadius: 1.5,
-                                    cursor: 'pointer',
-                                    border: String(selectedId) === String(s.id) ? '1px solid rgba(0,243,255,0.7)' : '1px solid rgba(255,255,255,0.08)',
-                                    bgcolor: String(selectedId) === String(s.id) ? 'rgba(0,243,255,0.06)' : 'rgba(0,0,0,0.25)',
-                                }}
-                            >
-                                <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{s.name}</Typography>
-                                {s.description && (
-                                    <Typography sx={{ color: '#A0A7B5', fontSize: 12, mt: 0.5, lineHeight: 1.4 }}>{s.description}</Typography>
-                                )}
                             </Box>
-                        ))}
-                        {activeTab === 'installed' && installedSkills.map((s) => (
-                            <Box
-                                key={`installed-${s.id}`}
-                                onClick={() => setSelectedId(`installed-${s.id}`)}
-                                sx={{
-                                    p: 1.5,
-                                    borderRadius: 1.5,
-                                    cursor: 'pointer',
-                                    border: selectedId === `installed-${s.id}` ? '1px solid rgba(0,243,255,0.7)' : '1px solid rgba(255,255,255,0.08)',
-                                    bgcolor: selectedId === `installed-${s.id}` ? 'rgba(0,243,255,0.06)' : 'rgba(0,0,0,0.25)',
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                            <Typography sx={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{s.name}</Typography>
-                                            <Chip 
-                                                label={s.category || 'general'} 
-                                                size="small" 
-                                                sx={{ 
-                                                    height: 20, 
-                                                    fontSize: 10, 
-                                                    bgcolor: categoryColors[s.category || 'general'] || categoryColors.general,
-                                                    color: '#fff'
-                                                }} 
-                                            />
-                                            {s.enabled && <Chip label="Active" size="small" sx={{ height: 18, fontSize: 9, bgcolor: 'rgba(34, 197, 94, 0.3)', color: '#22C55E' }} />}
-                                        </Box>
-                                        {s.description && (
-                                            <Typography sx={{ color: '#A0A7B5', fontSize: 12, lineHeight: 1.4 }}>{s.description}</Typography>
-                                        )}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', gap: 0.5, ml: 1 }}>
-                                        <Tooltip title={s.enabled ? 'Disable' : 'Enable'}>
-                                            <IconButton 
-                                                size="small" 
-                                                onClick={(e) => { e.stopPropagation(); handleToggleSkill(s.id, s.enabled); }}
-                                                sx={{ color: s.enabled ? '#22C55E' : '#888' }}
-                                            >
-                                                {s.enabled ? <Power size={16} /> : <PowerOff size={16} />}
-                                            </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="Remove">
-                                            <IconButton 
-                                                size="small" 
-                                                onClick={(e) => { e.stopPropagation(); handleRemoveInstalledSkill(s.id); }}
-                                                sx={{ color: '#ef4444' }}
-                                            >
-                                                <Trash2 size={16} />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </Box>
-                                </Box>
-                            </Box>
-                        ))}
-                        {activeTab === 'library' && !loading && skills.length === 0 && (
-                            <Typography sx={{ color: '#888', fontSize: 13 }}>No skills yet. Create one.</Typography>
-                        )}
-                        {activeTab === 'installed' && !loading && installedSkills.length === 0 && (
-                            <Box sx={{ textAlign: 'center', py: 4 }}>
-                                <Typography sx={{ color: '#888', fontSize: 13, mb: 2 }}>No installed skills yet.</Typography>
-                                <Button variant="contained" onClick={handleSync} startIcon={<RefreshCw size={16} />} sx={{ bgcolor: '#3B82F6', '&:hover': { bgcolor: '#2563EB' } }}>
-                                    Sync from File System
-                                </Button>
-                            </Box>
-                        )}
-                        {loading && (
-                            <Typography sx={{ color: '#888', fontSize: 13 }}>Loading...</Typography>
-                        )}
-                    </Box>
-                </Paper>
+                        </Box>
+                    );
+                })}
 
-                <Paper sx={{ bgcolor: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: '16px', p: 2, maxHeight: '70vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>Details</Typography>
-                    <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-track': { background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(0, 243, 255, 0.3)', borderRadius: '8px', '&:hover': { background: 'rgba(0, 243, 255, 0.5)' } } }}>
-                    {activeTab === 'library' && !selectedSkill && (
-                        <Typography sx={{ color: '#888', fontSize: 13 }}>Select a skill to view its details.</Typography>
-                    )}
-                    {activeTab === 'installed' && !selectedId?.startsWith('installed-') && (
-                        <Typography sx={{ color: '#888', fontSize: 13 }}>Select an installed skill to view its details.</Typography>
-                    )}
-                    {activeTab === 'installed' && selectedId?.startsWith('installed-') && (() => {
-                        const installedId = parseInt(selectedId.replace('installed-', ''));
-                        const installedSkill = installedSkills.find(s => s.id === installedId);
-                        if (!installedSkill) return <Typography sx={{ color: '#888', fontSize: 13 }}>Skill not found.</Typography>;
-                        return (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                <Box>
-                                    <Typography sx={{ color: '#888', fontSize: 12 }}>Name</Typography>
-                                    <Typography sx={{ color: '#fff', fontSize: 14 }}>{installedSkill.name}</Typography>
+            {PREINSTALLED_CATEGORIES
+                .filter(cat => !activeCategoryFilter || cat === activeCategoryFilter)
+                .every(cat => {
+                    return PREINSTALLED_CATALOG.filter(s => s.category === cat).filter(s => {
+                        if (enabledOnly) { const inst = installedSkills.find(i => i.name === s.slug); return !!(inst?.enabled); }
+                        if (searchQuery) { const q = searchQuery.toLowerCase(); return (s.name + s.slug + s.description + s.category).toLowerCase().includes(q); }
+                        return true;
+                    }).length === 0;
+                }) && (
+                    <Box sx={{ textAlign: 'center', py: 7.5, color: 'rgba(255,255,255,0.38)' }}>
+                        <Typography sx={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', mb: 0.75 }}>No skills match your filters</Typography>
+                        <Typography sx={{ fontSize: 13 }}>Try clearing search or switching category.</Typography>
+                    </Box>
+                )}
+
+            {sheetSkill && (() => {
+                const s = sheetSkill;
+                const meta = SKILL_CATS[s.category];
+                const installed = installedSkills.find(i => i.name === s.slug);
+                const isOn = installed?.enabled ?? false;
+                const srcLabel = s.source === 'official' ? 'Official' : s.source === 'community' ? 'Community' : 'Karios';
+                return (
+                    <>
+                        <Box onClick={() => setSheetSkill(null)} sx={{ position: 'fixed', inset: 0, bgcolor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 400 }} />
+                        <Box sx={{ position: 'fixed', top: 0, right: 0, height: '100vh', width: 480, maxWidth: '92vw', bgcolor: '#0d1015', borderLeft: '1px solid rgba(0,243,255,0.18)', boxShadow: '-8px 0 48px rgba(0,0,0,0.7)', zIndex: 410, display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={{ p: '20px 22px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'flex-start', gap: 1.625 }}>
+                                <Box sx={{ width: 46, height: 46, borderRadius: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, bgcolor: meta?.tint, border: '1px solid', borderColor: (meta?.color || '#fff') + '33' }}>
+                                    {s.icon}
                                 </Box>
-                                <Box>
-                                    <Typography sx={{ color: '#888', fontSize: 12 }}>Description</Typography>
-                                    <Typography sx={{ color: '#fff', fontSize: 14 }}>{installedSkill.description || 'No description'}</Typography>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography sx={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{s.name}</Typography>
+                                    <Typography sx={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(255,255,255,0.38)', mt: 0.375 }}>{s.slug} · v1.0</Typography>
                                 </Box>
-                                <Box>
-                                    <Typography sx={{ color: '#888', fontSize: 12 }}>Category</Typography>
-                                    <Chip label={installedSkill.category || 'general'} size="small" sx={{ bgcolor: categoryColors[installedSkill.category || 'general'], color: '#fff' }} />
-                                </Box>
-                                <Box>
-                                    <Typography sx={{ color: '#888', fontSize: 12 }}>Status</Typography>
-                                    <Typography sx={{ color: installedSkill.enabled ? '#22C55E' : '#888', fontWeight: 600 }}>
-                                        {installedSkill.enabled ? 'Enabled' : 'Disabled'}
-                                    </Typography>
-                                </Box>
-                                {installedSkill.content && (
-                                    <Box>
-                                        <Typography sx={{ color: '#888', fontSize: 12, mb: 0.5 }}>Content</Typography>
-                                        <Box sx={{ bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 1.5, p: 1.5, maxHeight: 300, overflow: 'auto' }}>
-                                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 11, color: '#A0A7B5' }}>{installedSkill.content}</pre>
-                                        </Box>
+                                <IconButton onClick={() => setSheetSkill(null)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#fff' } }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                </IconButton>
+                            </Box>
+                            <Box sx={{ p: '20px 22px', overflowY: 'auto', flex: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(0,243,255,0.3)', borderRadius: '8px' } }}>
+                                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 2 }}>
+                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid', borderColor: (meta?.color || '#fff') + '40', color: meta?.color, bgcolor: meta?.tint }}>
+                                        {meta?.ic} {s.category}
                                     </Box>
-                                )}
-                                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                                    <Button 
-                                        variant="contained" 
-                                        onClick={() => handleToggleSkill(installedSkill.id, installedSkill.enabled)}
-                                        startIcon={installedSkill.enabled ? <PowerOff size={16} /> : <Power size={16} />}
-                                        sx={{ bgcolor: installedSkill.enabled ? '#888' : '#22C55E', '&:hover': { bgcolor: installedSkill.enabled ? '#666' : '#16A34A' } }}
-                                    >
-                                        {installedSkill.enabled ? 'Disable' : 'Enable'}
-                                    </Button>
-                                    <Button 
-                                        variant="outlined" 
-                                        onClick={() => handleRemoveInstalledSkill(installedSkill.id)}
-                                        startIcon={<Trash2 size={16} />}
-                                        sx={{ borderColor: 'rgba(239,68,68,0.5)', color: '#ef4444' }}
+                                    <Box component="span" sx={{ display: 'inline-flex', fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid rgba(0,243,255,0.22)', color: '#00F3FF', bgcolor: 'rgba(0,243,255,0.1)' }}>
+                                        {srcLabel}
+                                    </Box>
+                                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid rgba(16,185,129,0.22)', color: '#10B981', bgcolor: 'rgba(16,185,129,0.1)' }}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg> Validated
+                                    </Box>
+                                    {s.needsCredentials && (
+                                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 10.5, fontWeight: 500, px: 1.125, py: 0.375, borderRadius: 999, border: '1px solid rgba(245,158,11,0.25)', color: '#F59E0B', bgcolor: 'rgba(245,158,11,0.1)' }}>
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg> Needs key
+                                        </Box>
+                                    )}
+                                </Box>
+                                <Typography sx={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.38)', mb: 1 }}>What it does</Typography>
+                                <Typography sx={{ fontSize: 13.5, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, mb: 2.5 }}>{s.description}</Typography>
+                                <Typography sx={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.38)', mb: 1 }}>SKILL.md</Typography>
+                                <Box sx={{ bgcolor: '#08090c', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', p: 1.75, fontFamily: 'monospace', fontSize: 11.5, lineHeight: 1.65, color: 'rgba(255,255,255,0.65)', whiteSpace: 'pre-wrap', overflowX: 'auto', mb: 2.5 }}>
+                                    <Box component="span" sx={{ color: '#00F3FF' }}>---{'\n'}name: </Box>
+                                    <Box component="span" sx={{ color: '#ff7ad6' }}>{s.slug}</Box>
+                                    {'\n'}
+                                    <Box component="span" sx={{ color: '#00F3FF' }}>description:</Box>{' '}{s.description}{'\n'}
+                                    <Box component="span" sx={{ color: '#00F3FF' }}>license:</Box>{' '}<Box component="span" sx={{ color: '#ff7ad6' }}>{s.source === 'official' ? 'Proprietary' : 'Apache-2.0'}</Box>{'\n'}
+                                    <Box component="span" sx={{ color: '#00F3FF' }}>metadata:{'\n'}  author:</Box>{' '}<Box component="span" sx={{ color: '#ff7ad6' }}>{s.source === 'karios' ? 'karios-ai' : s.source}</Box>{'\n'}
+                                    <Box component="span" sx={{ color: '#00F3FF' }}>  version:</Box>{' '}<Box component="span" sx={{ color: '#ff7ad6' }}>"1.0"</Box>{'\n'}
+                                    <Box component="span" sx={{ color: '#00F3FF' }}>---</Box>
+                                </Box>
+                                <Typography sx={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.38)', mb: 1 }}>Progressive disclosure</Typography>
+                                <Typography sx={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 }}>
+                                    Only the <Box component="span" sx={{ color: 'rgba(255,255,255,0.65)' }}>name + description</Box> (~100 tokens) stay in context. The full body loads when a task matches; bundled scripts load on demand.
+                                </Typography>
+                            </Box>
+                            <Box sx={{ p: '16px 22px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 1.25, alignItems: 'center' }}>
+                                <Box
+                                    component="button"
+                                    onClick={() => handlePreinstalledToggle(s.slug, s.name, s.description, s.category)}
+                                    sx={{
+                                        width: 40, height: 22, borderRadius: 999, border: 'none', flexShrink: 0, cursor: 'pointer',
+                                        bgcolor: isOn ? '#00F3FF' : 'rgba(255,255,255,0.12)',
+                                        boxShadow: isOn ? '0 0 16px rgba(0,243,255,0.35)' : 'none',
+                                        position: 'relative', transition: 'all 0.2s', p: 0,
+                                    }}
+                                >
+                                    <Box sx={{ position: 'absolute', top: 3, left: isOn ? 21 : 3, width: 16, height: 16, borderRadius: '50%', bgcolor: isOn ? '#001317' : '#fff', transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)' }} />
+                                </Box>
+                                <Typography sx={{ fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>{isOn ? 'Enabled' : 'Disabled'}</Typography>
+                                <Box sx={{ flex: 1 }} />
+                                {installed && (
+                                    <Button
+                                        size="small"
+                                        onClick={() => { handleRemoveInstalledSkill(installed.id); setSheetSkill(null); }}
+                                        startIcon={<Trash2 size={14} />}
+                                        sx={{ bgcolor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: 12, '&:hover': { bgcolor: 'rgba(239,68,68,0.2)' } }}
                                     >
                                         Remove
                                     </Button>
-                                </Box>
-                            </Box>
-                        );
-                    })()}
-                    {activeTab === 'library' && selectedSkill && (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                            <TextField
-                                label="Name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                fullWidth
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': { color: '#fff', borderRadius: '14px' },
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                                }}
-                            />
-                            <TextField
-                                label="Description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                fullWidth
-                                multiline
-                                minRows={2}
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': { color: '#fff', borderRadius: '14px' },
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                                }}
-                            />
-                            <TextField
-                                label="Tags (comma separated)"
-                                value={tagsRaw}
-                                onChange={(e) => setTagsRaw(e.target.value)}
-                                fullWidth
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': { color: '#fff', borderRadius: '14px' },
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                                }}
-                            />
-                            <FormControlLabel
-                                control={<Checkbox checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} sx={{ color: '#00F3FF' }} />}
-                                label={<Typography sx={{ color: '#A0A7B5' }}>Public</Typography>}
-                            />
-                            <TextField
-                                label="Definition (JSON)"
-                                value={definitionRaw}
-                                onChange={(e) => setDefinitionRaw(e.target.value)}
-                                fullWidth
-                                multiline
-                                minRows={14}
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.7)' } }}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': { color: '#fff', fontFamily: 'monospace', fontSize: 12, borderRadius: '14px' },
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.15)' },
-                                }}
-                            />
-                            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-                                <Button variant="contained" onClick={() => { setMode('edit'); setDialogOpen(true); }} sx={{ bgcolor: '#00F3FF', color: '#000', '&:hover': { bgcolor: '#00D1DD' } }}>Edit</Button>
-                                <Button variant="outlined" onClick={remove} sx={{ borderColor: 'rgba(239,68,68,0.5)', color: '#ef4444' }}>Delete</Button>
+                                )}
                             </Box>
                         </Box>
-                    )}
-                    </Box>
-                </Paper>
-            </Box>
+                    </>
+                );
+            })()}
 
             <Dialog
                 open={dialogOpen}
                 onClose={closeDialog}
                 maxWidth="md"
                 fullWidth
-                sx={{
-                    '& .MuiBackdrop-root': {
-                        backdropFilter: 'blur(10px)',
-                        backgroundColor: 'rgba(0, 0, 0, 0.72)'
-                    }
-                }}
-                PaperProps={{
-                    sx: {
-                        position: 'relative',
-                        backgroundColor: 'rgba(17, 24, 39, 0.98)',
-                        backdropFilter: 'blur(24px)',
-                        color: '#FFFFFF',
-                        borderRadius: '24px',
-                        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 243, 255, 0.15)',
-                        border: '1px solid rgba(0, 243, 255, 0.2)',
-                        maxHeight: '90vh',
-                        overflow: 'hidden'
-                    }
-                }}
+                sx={{ '& .MuiBackdrop-root': { backdropFilter: 'blur(10px)', backgroundColor: 'rgba(0, 0, 0, 0.72)' } }}
+                PaperProps={{ sx: { position: 'relative', backgroundColor: 'rgba(17, 24, 39, 0.98)', backdropFilter: 'blur(24px)', color: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 243, 255, 0.15)', border: '1px solid rgba(0, 243, 255, 0.2)', maxHeight: '90vh', overflow: 'hidden' } }}
             >
-                <DialogTitle
-                    sx={{
-                        color: '#FFFFFF',
-                        fontWeight: 600,
-                        borderBottom: '1px solid rgba(0, 243, 255, 0.15)',
-                        background: 'linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, rgba(17, 24, 39, 0.8) 100%)',
-                        backdropFilter: 'blur(16px)',
-                        borderRadius: '24px 24px 0 0',
-                        py: 2.5
-                    }}
-                >
+                <DialogTitle sx={{ color: '#FFFFFF', fontWeight: 600, borderBottom: '1px solid rgba(0, 243, 255, 0.15)', background: 'linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, rgba(17, 24, 39, 0.8) 100%)', backdropFilter: 'blur(16px)', borderRadius: '24px 24px 0 0', py: 2.5 }}>
                     {mode === 'create' ? 'Create Skill' : 'Edit Skill'}
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, pb: 2, maxHeight: '60vh', overflowY: 'auto', '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(0, 243, 255, 0.3)', borderRadius: '10px', '&:hover': { background: 'rgba(0, 243, 255, 0.5)' } } }}>
-                    <TextField
-                        label="Name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        fullWidth
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                color: '#FFFFFF',
-                                borderRadius: '16px',
-                                backgroundColor: 'rgba(26, 35, 50, 0.8)',
-                                transition: 'all 0.3s ease',
-                                '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' },
-                                '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' },
-                                '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' }
-                            }
-                        }}
-                    />
-                    <TextField
-                        label="Description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        maxRows={4}
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                color: '#FFFFFF',
-                                borderRadius: '16px',
-                                backgroundColor: 'rgba(26, 35, 50, 0.8)',
-                                transition: 'all 0.3s ease',
-                                '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' },
-                                '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' },
-                                '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' }
-                            }
-                        }}
-                    />
-                    <TextField
-                        label="Tags (comma separated)"
-                        value={tagsRaw}
-                        onChange={(e) => setTagsRaw(e.target.value)}
-                        fullWidth
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                color: '#FFFFFF',
-                                borderRadius: '16px',
-                                backgroundColor: 'rgba(26, 35, 50, 0.8)',
-                                transition: 'all 0.3s ease',
-                                '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' },
-                                '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' },
-                                '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' }
-                            }
-                        }}
-                    />
-                    <FormControlLabel
-                        control={<Checkbox checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} sx={{ color: '#AAAAAA', '&.Mui-checked': { color: '#00F3FF' } }} />}
-                        label={<Typography sx={{ color: '#A0A7B5' }}>Public</Typography>}
-                    />
-                    <TextField
-                        label="Definition (JSON)"
-                        value={definitionRaw}
-                        onChange={(e) => setDefinitionRaw(e.target.value)}
-                        fullWidth
-                        multiline
-                        minRows={10}
-                        maxRows={16}
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                color: '#FFFFFF',
-                                fontFamily: 'monospace',
-                                fontSize: 13,
-                                lineHeight: 1.6,
-                                borderRadius: '16px',
-                                backgroundColor: 'rgba(26, 35, 50, 0.8)',
-                                transition: 'all 0.3s ease',
-                                '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' },
-                                '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' },
-                                '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' }
-                            }
-                        }}
-                    />
+                    <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} fullWidth InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
+                    <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline minRows={2} maxRows={4} InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
+                    <TextField label="Tags (comma separated)" value={tagsRaw} onChange={(e) => setTagsRaw(e.target.value)} fullWidth InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
+                    <FormControlLabel control={<Checkbox checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} sx={{ color: '#AAAAAA', '&.Mui-checked': { color: '#00F3FF' } }} />} label={<Typography sx={{ color: '#A0A7B5' }}>Public</Typography>} />
+                    <TextField label="Definition (JSON)" value={definitionRaw} onChange={(e) => setDefinitionRaw(e.target.value)} fullWidth multiline minRows={10} maxRows={16} InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6, borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
                 </DialogContent>
                 <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(0, 243, 255, 0.15)', background: 'linear-gradient(180deg, rgba(17, 24, 39, 0.5) 0%, rgba(10, 10, 10, 0.8) 100%)', backdropFilter: 'blur(16px)', gap: 1.5 }}>
                     <Button onClick={closeDialog} variant="outlined" sx={{ borderColor: 'rgba(255,255,255,0.3)', color: '#FFFFFF', borderRadius: '14px', px: 3, py: 1, transition: 'all 0.3s ease', '&:hover': { borderColor: 'rgba(0, 243, 255, 0.5)', backgroundColor: 'rgba(0, 243, 255, 0.05)', transform: 'translateY(-2px)' } }}>Cancel</Button>
@@ -822,82 +752,27 @@ export default function SkillLibrary() {
                 onClose={() => setInstallDialogOpen(false)}
                 maxWidth="md"
                 fullWidth
-                PaperProps={{
-                    sx: {
-                        backgroundColor: 'rgba(17, 24, 39, 0.98)',
-                        backdropFilter: 'blur(24px)',
-                        color: '#FFFFFF',
-                        borderRadius: '24px',
-                        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 243, 255, 0.15)',
-                        border: '1px solid rgba(0, 243, 255, 0.2)',
-                        maxHeight: '90vh',
-                        overflow: 'hidden'
-                    }
-                }}
+                PaperProps={{ sx: { backgroundColor: 'rgba(17, 24, 39, 0.98)', backdropFilter: 'blur(24px)', color: '#FFFFFF', borderRadius: '24px', boxShadow: '0 25px 80px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 243, 255, 0.15)', border: '1px solid rgba(0, 243, 255, 0.2)', maxHeight: '90vh', overflow: 'hidden' } }}
             >
                 <DialogTitle sx={{ color: '#FFFFFF', fontWeight: 600, borderBottom: '1px solid rgba(0, 243, 255, 0.15)', background: 'linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, rgba(17, 24, 39, 0.8) 100%)', backdropFilter: 'blur(16px)', borderRadius: '24px 24px 0 0', py: 2.5 }}>
                     Install New Skill
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, pb: 2, maxHeight: '60vh', overflowY: 'auto', '&::-webkit-scrollbar': { width: '8px' }, '&::-webkit-scrollbar-track': { background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }, '&::-webkit-scrollbar-thumb': { background: 'rgba(0, 243, 255, 0.3)', borderRadius: '10px', '&:hover': { background: 'rgba(0, 243, 255, 0.5)' } } }}>
-                    <TextField
-                        label="Name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        fullWidth
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }}
-                    />
-                    <TextField
-                        label="Description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        maxRows={4}
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }}
-                    />
-                    <TextField
-                        label="Category"
-                        value={categoryInput}
-                        onChange={(e) => setCategoryInput(e.target.value)}
-                        fullWidth
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }}
-                    />
-                    <TextField
-                        label="Skill Content / Prompt"
-                        value={contentInput}
-                        onChange={(e) => setContentInput(e.target.value)}
-                        fullWidth
-                        multiline
-                        minRows={8}
-                        maxRows={12}
-                        placeholder="Enter the skill prompt, policy, or tool configuration..."
-                        InputLabelProps={{ sx: { color: '#A0A7B5' } }}
-                        sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6, borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }}
-                    />
+                    <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} fullWidth InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
+                    <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} fullWidth multiline minRows={2} maxRows={4} InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
+                    <TextField label="Category" value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} fullWidth InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
+                    <TextField label="Skill Content / Prompt" value={contentInput} onChange={(e) => setContentInput(e.target.value)} fullWidth multiline minRows={8} maxRows={12} placeholder="Enter the skill prompt, policy, or tool configuration..." InputLabelProps={{ sx: { color: '#A0A7B5' } }} sx={{ '& .MuiOutlinedInput-root': { color: '#FFFFFF', fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6, borderRadius: '16px', backgroundColor: 'rgba(26, 35, 50, 0.8)', transition: 'all 0.3s ease', '& fieldset': { borderColor: 'rgba(0, 243, 255, 0.2)' }, '&:hover fieldset': { borderColor: 'rgba(0, 243, 255, 0.4)' }, '&.Mui-focused fieldset': { borderColor: '#00F3FF', boxShadow: '0 0 10px rgba(0, 243, 255, 0.3)' } } }} />
                 </DialogContent>
                 <DialogActions sx={{ p: 3, borderTop: '1px solid rgba(0, 243, 255, 0.15)', background: 'linear-gradient(180deg, rgba(17, 24, 39, 0.5) 0%, rgba(10, 10, 10, 0.8) 100%)', backdropFilter: 'blur(16px)', gap: 1.5 }}>
                     <Button onClick={() => setInstallDialogOpen(false)} variant="outlined" sx={{ borderColor: 'rgba(255,255,255,0.3)', color: '#FFFFFF', borderRadius: '14px', px: 3, py: 1, transition: 'all 0.3s ease', '&:hover': { borderColor: 'rgba(0, 243, 255, 0.5)', backgroundColor: 'rgba(0, 243, 255, 0.05)', transform: 'translateY(-2px)' } }}>Cancel</Button>
-                    <Button 
+                    <Button
                         onClick={() => {
                             if (!name.trim()) { toast.error('Name is required'); return; }
                             if (!contentInput.trim()) { toast.error('Content is required'); return; }
-                            handleInstallSkill({
-                                name: name.trim(),
-                                description: description.trim(),
-                                category: categoryInput.trim() || 'general',
-                                content: contentInput.trim(),
-                                metadata: {}
-                            });
-                            setName('');
-                            setDescription('');
-                            setCategoryInput('general');
-                            setContentInput('');
-                        }} 
-                        variant="contained" 
+                            handleInstallSkill({ name: name.trim(), description: description.trim(), category: categoryInput.trim() || 'general', content: contentInput.trim(), metadata: {} });
+                            setName(''); setDescription(''); setCategoryInput('general'); setContentInput('');
+                        }}
+                        variant="contained"
                         sx={{ bgcolor: '#22C55E', color: '#000', borderRadius: '14px', px: 3, py: 1, fontWeight: 600, boxShadow: '0 0 20px rgba(34, 197, 94, 0.4)', transition: 'all 0.3s ease', '&:hover': { bgcolor: '#16A34A', boxShadow: '0 0 30px rgba(34, 197, 94, 0.6)', transform: 'translateY(-2px)' } }}
                     >
                         Install Skill
